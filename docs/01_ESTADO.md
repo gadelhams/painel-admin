@@ -1,9 +1,105 @@
 # Severino — estado real
 
-**Atualizado em 14/08/2026, noite (upgrade de voz — camada 3 ElevenLabs +
-fluidez).** Este arquivo registra o que está **provado funcionando**, com as
-evidências colhidas de fora (curl contra o processo em execução, nunca só
-leitura do código — regra 4 dos padrões gerais).
+**Atualizado em 14/08/2026, madrugada seguinte (FUSÃO no painel-admin).**
+Este arquivo registra o que está **provado funcionando**, com as evidências
+colhidas de fora (curl contra o processo em execução, nunca só leitura do
+código — regra 4 dos padrões gerais).
+
+## Fusão no painel-admin: EXECUTADA E PROVADA (14/08/2026, noite)
+
+Decisão expressa do dono revogando a separação em projetos irmãos (nota
+datada no topo do [`00_PLANO.md`](00_PLANO.md)). Resultado: **um app, um
+processo, porta 7777** — dashboard em `/`, chat em `/severino/`; a 7778
+deixou de existir. O repo `github.com/gadelhams/severino` foi arquivado como
+lápide; código e história seguem em `github.com/gadelhams/painel-admin`
+(privado).
+
+| Mudança estrutural | Onde |
+|---|---|
+| Coletores extraídos e compartilhados: rotas HTTP e ferramentas do motor chamam as MESMAS funções — zero HTTP para o próprio processo | `coletores.js` (novo) |
+| Servidor único: rotas do painel + `POST /api/conversa` (SSE) + `GET/POST /api/tts` + estáticos com `/severino/` (redirect de `/severino`) | `servidor.js` |
+| Motor com persona atualizada (o painel é o corpo, não um irmão que pode cair); portão só-leitura intacto (`tools: []` + allowlist) | `motor.js` |
+| Dependência única `@anthropic-ai/claude-agent-sdk` **0.3.232** (a mesma fixada pelo severino); engines `>=22.9` | `package.json` |
+| `.env` migrado por move (nunca lido/impresso); `git check-ignore` confirma cobertura antes de qualquer commit | `painel-admin/.env` |
+| Severino removido do catálogo de projetos (deixou de ser irmão) | `projetos.js` |
+
+### Provas de aceite (14/08/2026, ~23:37–23:41, processo fundido PID 52612)
+
+Sintaxe: `node --check` OK em `servidor.js`, `coletores.js`, `motor.js`,
+`projetos.js`, `publico/app.js`, `publico/severino/chat.js`,
+`publico/severino/voz.js`.
+
+APIs do painel vivas no processo fundido:
+
+```
+GET /api/projetos  -> 200 · 8 projetos (severino AUSENTE do catálogo)
+                      LoreEngine: main, commit 2026-08-14T13:53 "Lint do
+                      verificar-datas (formatação Biome)…" · portas ativas
+                      ao vivo: LoreEngine:5432, Mapa Khorvaire:54329
+GET /api/producao  -> 200 · Corre do Tarado -> HTTP 200 500ms ·
+                      Caddy do host (astargne.com) -> HTTP 301 485ms
+```
+
+Estáticos — dashboard e chat na mesma porta:
+
+```
+GET /           -> 200 text/html (dashboard, com o link 🎤 Severino)
+GET /severino/  -> 200 text/html (chat)
+GET /severino   -> 301 Location: /severino/   (assets relativos dependem da barra)
+GET /severino/chat.js · /severino/voz.js -> 200 text/javascript
+GET /../motor.js (path-as-is)            -> 404
+GET /severino/../../CLAUDE.md (path-as-is, sem conversão) -> 404
+```
+
+SSE — o motor fala com os coletores INTERNOS (a 7778 já estava morta; não
+existe outro processo que pudesse fornecer o dado):
+
+```
+23:39:44.234 event: inicio
+23:39:44.252 data: {"sessao":"3fc5e8f9-…","modelo":"claude-sonnet-5"}
+23:39:46.260 event: ferramenta
+23:39:46.278 data: {"nome":"estado_projetos"}
+23:39:46.738 event: ferramenta
+23:39:46.756 data: {"nome":"estado_producao"}
+23:39:50.218 event: token   "Oxente, vou te dar o retrato de agora m"
+23:39:50.759 event: token   "…tirado pelo próprio painel:\n\n**Git — tudo limpo…"
+23:39:51.850 event: token   "…SistemaLoreEngine | main | hoje 13:53 — lint do
+                             verificar-datas (Biome)…Mapa Khorvaire…hoje 13:20…"
+...tokens pingando a cada ~0,5 s...
+23:39:57.823 event: fim     custoUsd 0.3747
+```
+
+O commit "hoje 13:53" citado bate byte a byte com o `/api/projetos` colhido
+minutos antes — dado que não existe em conhecimento de treino.
+
+Voz — a chave migrou viva (primeira prova do caminho feliz da ElevenLabs,
+que no repo antigo ficara pendente por falta de chave):
+
+```
+GET  /api/tts -> 200 {"disponivel":true}
+POST /api/tts {"texto":"Oxente, agora moro no painel, visse?"}
+     -> 200 content-type=audio/mpeg · 41 422 bytes · começa em "ID3" (MP3 real)
+```
+
+Rede — localhost only, 7778 morta:
+
+```
+netstat: TCP 127.0.0.1:7777 LISTENING 52612   (único listener; nada na 7778)
+curl 127.0.0.1:7778/        -> conexão RECUSADA (exit 7)
+curl http://100.87.142.59:7777/ (IP de rede da máquina) -> conexão RECUSADA
+```
+
+### Pendências para o integrador da raiz (fora da fronteira desta execução)
+
+- Apagar a pasta local `severino/` após reverificação (o repo remoto está
+  arquivado; o código vive aqui).
+- Raiz: `CLAUDE.md` (tabela de projetos, relações, tabela de portas — a 7778
+  sai) e qualquer outro doc que cite o severino como projeto.
+- `.vscode/tasks.json` + `iniciar-assistentes.cmd` da raiz: parar de subir o
+  severino na 7778 (senão ele ressuscita ao abrir o workspace); o painel
+  fundido exige Node ≥ 22.9 (o load do `.env` continua defensivo no próprio
+  `servidor.js`, então `node servidor.js` seco segue funcionando).
+- Atalho "Severino" da área de trabalho → `http://127.0.0.1:7777/severino/`.
 
 ## Fase 1 — chat de texto grounded: ENTREGUE
 
@@ -371,20 +467,11 @@ O caminho feliz (áudio real) não tem como ser provado sem chave. Roteiro:
   (permitidas pelos contratos das fases 1 e 2). Se/quando entrar, o LLM é
   mock — nunca a API real.
 
-## Observações para a próxima sessão
+## Observações
 
-- O gatilho do workspace da raiz (`.vscode/iniciar-assistentes.cmd`) sobe o
-  severino com `node servidor.js` **sem** a flag de env — fora da fronteira
-  de escrita desta execução. Não é lacuna funcional: o `servidor.js` carrega
-  o `.env` sozinho (`process.loadEnvFile` defensivo, caminho absoluto), então
-  a chave funciona por qualquer caminho de subida. Se um dia o load defensivo
-  sair, o `.cmd` precisa ganhar a flag.
-
-- A nota da fase 1 sobre `00_PLANO.md` no `.gitignore` ficou obsoleta: o
-  `.gitignore` atual só tem `node_modules/`, `.env` e `*.log` — nada a fazer.
-- A raiz `Projetos Pessoais/CLAUDE.md` (tabela de projetos) ainda descreve o
-  severino como inexistente — propagação pendente que **não coube nesta
-  execução** (fronteira: só escrever dentro de `severino/`). O catálogo do
-  painel-admin (`projetos.js`) já lista o severino corretamente.
-- Custo observado por pergunta com ferramentas: US$ 0,19–0,36 (Sonnet 5,
-  preço introdutório) — dentro do risco assumido no plano.
+- As pendências abertas estão TODAS na seção da fusão, acima ("Pendências
+  para o integrador da raiz") — as observações antigas desta seção foram
+  resolvidas ou superadas pela fusão.
+- Custo observado por pergunta com ferramentas: US$ 0,19–0,37 (Sonnet 5,
+  preço introdutório; a prova da fusão custou 0,3747) — dentro do risco
+  assumido no plano.
