@@ -1,0 +1,13 @@
+{
+  "name": "painel-admin",
+  "version": "0.1.0",
+  "description": "Hub administrativo local dos projetos pessoais",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "start": "node servidor.js"
+  }
+}

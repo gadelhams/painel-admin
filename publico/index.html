@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel dos Projetos</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header>
+    <h1>🗂️ Painel dos Projetos</h1>
+    <div class="acoes">
+      <span id="atualizado-em" class="discreto"></span>
+      <button id="botao-atualizar" type="button">Atualizar</button>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Projetos locais</h2>
+      <div id="grade-projetos" class="grade">
+        <p class="discreto">Carregando…</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Produção — astargne.com</h2>
+      <div id="lista-producao" class="producao">
+        <p class="discreto">Sondando…</p>
+      </div>
+      <div class="ssh">
+        <button id="botao-ssh" type="button">Consultar servidor via SSH (somente leitura)</button>
+        <pre id="saida-ssh" hidden></pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# Dependências e segredos — nunca versionados
+node_modules/
+.env
+*.log
