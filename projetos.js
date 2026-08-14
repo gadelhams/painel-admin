@@ -81,15 +81,9 @@ export const PROJETOS = [
       { porta: 3306, servico: 'MariaDB' },
     ],
   },
-  {
-    pasta: 'severino',
-    titulo: 'Severino',
-    descricao: 'O "peão sabido" da raiz — assistente conversacional (texto e voz) que consome este painel.',
-    stack: 'Node + Claude Agent SDK · vanilla + Web Speech API',
-    entrada: 'docs/00_PLANO.md',
-    portas: [{ porta: 7778, servico: 'Severino' }],
-  },
 ];
+// O severino saiu do catálogo em 14/08/2026: foi fundido NESTE app (rota
+// /severino/, mesma porta 7777) — deixou de existir como projeto irmão.
 
 // Sondas de produção que não pertencem a um projeto específico.
 export const PRODUCAO_EXTRA = [

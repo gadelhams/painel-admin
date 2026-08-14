@@ -1,10 +1,21 @@
 # Severino — plano do projeto
 
+> **FUSÃO (14/08/2026, noite — decisão expressa do dono)**: o Severino deixou
+> de ser projeto irmão e foi **fundido no painel-admin** — um app, um
+> processo, porta **7777**, chat em `/severino/`. Esta decisão **revoga** a
+> outorga de nascimento "irmão, nunca evolução do painel" registrada abaixo:
+> o painel agora é o **corpo** do Severino, e o princípio 1 foi reescrito.
+> O repo `github.com/gadelhams/severino` está arquivado; código e história
+> continuam em `github.com/gadelhams/painel-admin`. As menções a "7778" e
+> "consumir endpoints por HTTP" no restante deste documento são o registro
+> histórico do desenho revogado.
+
 **O que é**: assistente conversacional local sobre os projetos da raiz — texto
 e voz, nos dois sentidos — movido pelo Claude Agent SDK. Nasce da outorga de
 14/08/2026, como projeto **irmão** do `painel-admin`, nunca como evolução dele:
 o painel é o painel de instrumentos (zero deps, só leitura); o Severino é a
-conversa por cima dos instrumentos.
+conversa por cima dos instrumentos. *(Desenho revogado na mesma data — ver a
+nota de fusão acima.)*
 
 **Estado**: fase 1 entregue e provada em 14/08/2026; fase 2 (voz) entregue
 em 14/08/2026; **upgrade de voz camada 3 (ElevenLabs) + fluidez entregue em
@@ -29,27 +40,31 @@ da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
 
 ## Princípios de nascimento (inegociáveis)
 
-1. **Consome o painel-admin, não o duplica.** Estado de git, portas e sondas de
-   produção vêm dos endpoints do painel (`http://127.0.0.1:7777/api/...`).
-   Painel desligado → o Severino **diz** que o painel está desligado; não o
-   sobe sozinho (acoplamento zero, cada um roda e morre por conta própria).
-   O painel segue dono do **estado vivo**; a *nuance* de cada projeto o
-   Severino busca nos **docs modeladores** (ferramenta própria de leitura,
-   abaixo) — capacidade nova, não duplicação.
+1. **É o painel-admin — e não duplica coletores.** *(Reescrito na fusão de
+   14/08/2026; antes dizia "consome o painel-admin, não o duplica", por HTTP.)*
+   O painel é o corpo: estado de git, portas e sondas de produção vem dos
+   **coletores compartilhados** (`coletores.js`), por chamada de função no
+   mesmo processo — uma única fonte para rota HTTP e ferramenta de IA, nunca
+   duas sondas para o mesmo fato. Coleta que falhar é fato **declarado** na
+   conversa; o Severino avisa o motivo, não inventa número. A *nuance* de
+   cada projeto continua vindo dos **docs modeladores** (`docs_projeto`) —
+   capacidade própria, não duplicação.
 2. **Voz não fura o canon.** Qualquer ação futura que mude estado no
    `astargne.com` continua exigindo o ciclo normal de agente: `validador-deploy`
    + `validar-premissas.sh`. Até a fase 3, o Severino **nem possui** ferramenta
    de escrita — a limitação é estrutural, não comportamental.
-3. **Localhost only.** Escuta em `127.0.0.1:7778`, sem autenticação — pelas
-   mesmas razões do painel, **nunca** expor fora da máquina nem publicar.
+3. **Localhost only.** Escuta em `127.0.0.1` (porta **7777** desde a fusão;
+   nasceu na 7778), sem autenticação — **nunca** expor fora da máquina nem
+   publicar.
 4. **Mínimo de dependências.** Backend: só `@anthropic-ai/claude-agent-sdk`
    (versão fixada). Frontend: zero deps — voz pela Web Speech API nativa
    (`SpeechRecognition` para ouvir, `speechSynthesis` para falar).
 
 ## Arquitetura
 
-- `servidor.js` — Node ≥ 20, HTTP em `127.0.0.1:7778`: estáticos de `publico/`
-  + endpoint de conversa com **SSE** (resposta pinga token a token; buffering
+- `servidor.js` — desde a fusão é o servidor único do painel-admin, HTTP em
+  `127.0.0.1:7777`: rotas do painel + estáticos (chat em `/severino/`) +
+  endpoint de conversa com **SSE** (resposta pinga token a token; buffering
   mata a sensação de assistente).
 - Motor: Claude Agent SDK com ferramentas próprias. **Modelo: Sonnet 5 em
   toda resposta** (decisão do dono, 14/08/2026 — qualidade constante, sem
@@ -57,8 +72,10 @@ da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
   (token de `claude setup-token`, local, fora do git; decisão do dono,
   14/08/2026) — segredo jamais no front, em log ou em commit.
 - Ferramentas da fase 1 (**só leitura**):
-  - `estado_projetos` → `GET 127.0.0.1:7777/api/projetos`
-  - `estado_producao` → `GET 127.0.0.1:7777/api/producao`
+  - `estado_projetos` → `estadoProjetos()` dos coletores compartilhados
+    (`coletores.js`; era `GET 127.0.0.1:7777/api/projetos` antes da fusão)
+  - `estado_producao` → `estadoProducao()` idem
+    (era `GET 127.0.0.1:7777/api/producao`)
   - `docs_projeto` → lê os arquivos **modeladores** de um projeto direto do
     disco da raiz (`CLAUDE.md`, `AGENTS.md`, `README.md`, `docs/*.md`) —
     é o que deixa a conversa com o Severino ter a nuance de cada projeto,
