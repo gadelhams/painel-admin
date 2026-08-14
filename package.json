@@ -1,13 +1,16 @@
 {
   "name": "painel-admin",
-  "version": "0.1.0",
-  "description": "Hub administrativo local dos projetos pessoais",
+  "version": "0.2.0",
+  "description": "Hub administrativo local dos projetos pessoais + Severino, o peão sabido (fundidos em 14/08/2026)",
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22.9"
   },
   "scripts": {
-    "start": "node servidor.js"
+    "start": "node --env-file-if-exists=.env servidor.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.232"
   }
 }

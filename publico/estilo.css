@@ -50,6 +50,16 @@ button:disabled { opacity: .5; cursor: wait; }
 
 .discreto { color: var(--texto-fraco); font-size: .85rem; }
 
+.link-severino {
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: .4rem .9rem;
+  color: var(--texto);
+  text-decoration: none;
+}
+.link-severino:hover { border-color: var(--acento); }
+
 .grade {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

@@ -2,6 +2,9 @@
 // fase 1. A limitação a leitura é ESTRUTURAL: `tools: []` desliga todas as
 // ferramentas embutidas do harness, e só o servidor MCP local (três
 // ferramentas de consulta) fica disponível — princípio 2 do plano.
+// Desde a fusão de 14/08/2026 o motor mora DENTRO do painel-admin: o estado
+// vivo vem dos coletores compartilhados (coletores.js), por chamada de
+// função — nunca HTTP para o próprio processo.
 
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -9,31 +12,25 @@ import { query, tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
 // zod é peer dependency declarada do próprio SDK (a assinatura de tool()
 // exige schema zod); não é dependência nossa no package.json.
 import { z } from 'zod';
+import { RAIZ, estadoProjetos, estadoProducao } from './coletores.js';
 
-// A raiz "Projetos Pessoais" fica um nível acima deste repo.
-const RAIZ = path.resolve(import.meta.dirname, '..');
-const PAINEL = 'http://127.0.0.1:7777';
 // Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
 const MODELO = 'claude-sonnet-5';
 // Teto de leitura por arquivo: protege o contexto de .md gigantes.
 const MAX_CHARS_ARQUIVO = 60_000;
 
-// ---------- acesso ao painel-admin ----------
+// ---------- acesso aos coletores do painel ----------
 
-// Painel desligado não é erro do Severino: a ferramenta devolve o fato e o
-// texto da persona manda ele DIZER que o painel caiu — nunca subi-lo (princípio 1).
-async function consultarPainel(rota) {
+// Coletor falhando não derruba a conversa: vira fato declarado — a persona
+// manda o Severino DIZER o motivo em vez de estimar número (grounding).
+async function consultarColetor(nome, coletor) {
   try {
-    const resposta = await fetch(`${PAINEL}${rota}`, { signal: AbortSignal.timeout(15_000) });
-    if (!resposta.ok) {
-      return { content: [{ type: 'text', text: `O painel respondeu HTTP ${resposta.status} em ${rota}.` }], isError: true };
-    }
-    return { content: [{ type: 'text', text: await resposta.text() }] };
-  } catch {
+    return { content: [{ type: 'text', text: JSON.stringify(await coletor()) }] };
+  } catch (erro) {
     return {
       content: [{
         type: 'text',
-        text: `PAINEL DESLIGADO: não consegui falar com o painel-admin em ${PAINEL}. Sem ele não há dado vivo de git, portas ou produção — diga isso ao usuário e sugira que ele suba o painel; você não pode (nem deve) subi-lo.`,
+        text: `COLETA FALHOU: o coletor interno ${nome} deu erro (${erro.message}). Sem ele não há dado vivo dessa visão — diga isso ao usuário em vez de estimar.`,
       }],
       isError: true,
     };
@@ -126,16 +123,16 @@ const ferramentas = createSdkMcpServer({
   tools: [
     tool(
       'estado_projetos',
-      'Estado VIVO dos projetos da raiz, vindo do painel-admin local: nome da pasta, branch e último commit git, arquivos sujos, portas de cada projeto e se estão ativas agora. Use SEMPRE que perguntarem como estão os projetos, o git ou as portas.',
+      'Estado VIVO dos projetos da raiz, coletado agora pelo próprio painel: nome da pasta, branch e último commit git, arquivos sujos, portas de cada projeto e se estão ativas agora. Use SEMPRE que perguntarem como estão os projetos, o git ou as portas.',
       {},
-      () => consultarPainel('/api/projetos'),
+      () => consultarColetor('estado_projetos', estadoProjetos),
       { annotations: { readOnlyHint: true } },
     ),
     tool(
       'estado_producao',
-      'Sondas VIVAS de produção no astargne.com (HTTP status e latência de cada serviço publicado), vindas do painel-admin local. Use quando perguntarem da produção, do servidor ou se algo está no ar.',
+      'Sondas VIVAS de produção no astargne.com (HTTP status e latência de cada serviço publicado), coletadas agora pelo próprio painel. Use quando perguntarem da produção, do servidor ou se algo está no ar.',
       {},
-      () => consultarPainel('/api/producao'),
+      () => consultarColetor('estado_producao', estadoProducao),
       { annotations: { readOnlyHint: true } },
     ),
     tool(
@@ -165,7 +162,7 @@ DE ONDE VEM O QUE VOCÊ SABE (grounding — parte da sua honra)
 - Estado vivo (git, portas, produção) vem SEMPRE das ferramentas estado_projetos e estado_producao — nunca da sua memória de treino. Número que você não leu agora, você não afirma.
 - A nuance de cada projeto (o que é, o que falta, decisões) vem de docs_projeto. Perguntaram "o que falta no projeto X"? Leia o plano real do X antes de responder.
 - Sabido ≠ sabichão: se a ferramenta falhou ou o dado não existe, diga que não sabe E POR QUÊ ("o painel tá desligado, meu rei — sobe ele lá que eu te digo"). Inventar resposta é vergonha, não ajuda.
-- O painel-admin (127.0.0.1:7777) é seu painel de instrumentos. Se ele estiver desligado, você AVISA — você não sobe o painel, não roda comando, não dá jeitinho.
+- O painel-admin é o seu corpo desde a fusão de 14/08/2026: você e o painel são o mesmo processo, e os instrumentos (git, portas, sondas de produção) são coletores internos. Se uma coleta falhar, você AVISA o motivo — não roda comando por fora, não dá jeitinho.
 
 O QUE VOCÊ NÃO FAZ (e a simpatia não muda isso)
 - Você só LÊ. Não executa comando, não escreve arquivo, não faz deploy, não muda nada em lugar nenhum — nem no servidor astargne.com, nem aqui. Se pedirem, negue com graça e firmeza: "isso aí é serviço pra outro dia, com portão e validação — hoje eu só olho e conto".

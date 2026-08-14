@@ -1,96 +1,50 @@
-// Servidor do painel administrativo local. Zero dependências: Node embutido.
-// Coleta git/portas ao vivo a cada requisição — sem cache, o painel é pessoal
-// e o custo é irrisório.
+// Servidor único do painel-admin desde a fusão de 14/08/2026: dashboard na
+// raiz (/), Severino em /severino/, e toda a API na mesma porta 7777.
+// Localhost only: escuta em 127.0.0.1 e NUNCA em 0.0.0.0 — sem autenticação
+// justamente porque a porta não sai da máquina.
 
 import http from 'node:http';
-import https from 'node:https';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PROJETOS, PRODUCAO_EXTRA } from './projetos.js';
+import { estadoProjetos, estadoProducao } from './coletores.js';
+import { conversar } from './motor.js';
 
 const execFileAsync = promisify(execFile);
 
+// Defesa em profundidade para o .env: o `npm start` já passa
+// --env-file-if-exists, mas o gatilho do workspace da raiz sobe o servidor
+// com `node servidor.js` seco — sem esta carga, a chave da ElevenLabs não
+// existiria nesse caminho. loadEnvFile não sobrescreve variável já definida;
+// caminho absoluto porque o cwd de quem nos inicia varia.
+try {
+  process.loadEnvFile(path.join(import.meta.dirname, '.env'));
+} catch {
+  // sem .env é estado normal (a camada ElevenLabs fica indisponível e avisa)
+}
+
 const PORTA = Number(process.env.PORTA ?? 7777);
-const RAIZ = path.resolve(import.meta.dirname, '..');
 const PUBLICO = path.join(import.meta.dirname, 'publico');
 const CHAVE_SSH = path.join(os.homedir(), '.ssh', 'paroquia-vultr');
+const MAX_CORPO = 64 * 1024;
+const MAX_MENSAGEM = 8_000;
+const MAX_TEXTO_TTS = 4_000;
 
-// ---------- coleta local ----------
+// Camada 3 da voz do Severino: a chave vive só no processo (.env local) e
+// JAMAIS aparece em log, erro ou resposta. Voice_id default é o do quickstart
+// público da ElevenLabs ("George", multilíngue, serve pt-BR) — troca por
+// ELEVENLABS_VOZ_ID no .env sem tocar código.
+const ELEVENLABS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
+const VOZ_ID_PADRAO = 'JBFqnCBsd6RMkjVDRZzb';
+// eleven_multilingual_v2 é o modelo de qualidade para pt-BR na doc pública
+// (flash_v2_5 é mais barato/rápido, mas o timbre era a queixa do dono).
+const MODELO_TTS = 'eleven_multilingual_v2';
 
-async function git(dir, ...args) {
-  const { stdout } = await execFileAsync('git', ['-C', dir, ...args]);
-  return stdout.trim();
-}
-
-async function infoGit(dir) {
-  try {
-    const branch = await git(dir, 'rev-parse', '--abbrev-ref', 'HEAD');
-    const [data, assunto] = (await git(dir, 'log', '-1', '--format=%cI%x09%s')).split('\t');
-    const sujos = (await git(dir, 'status', '--porcelain'))
-      .split('\n')
-      .filter(Boolean).length;
-    return { repositorio: true, branch, ultimoCommit: { data, assunto }, arquivosSujos: sujos };
-  } catch {
-    return { repositorio: false };
-  }
-}
-
-function portaAberta(porta) {
-  return new Promise((resolve) => {
-    const soquete = net.createConnection({ host: '127.0.0.1', port: porta, timeout: 600 });
-    soquete.once('connect', () => { soquete.destroy(); resolve(true); });
-    soquete.once('error', () => resolve(false));
-    soquete.once('timeout', () => { soquete.destroy(); resolve(false); });
-  });
-}
-
-async function coletarProjeto(projeto) {
-  const caminho = path.join(RAIZ, projeto.pasta);
-  let existe = true;
-  try {
-    await fs.access(caminho);
-  } catch {
-    existe = false;
-  }
-
-  const caminhoRepo = projeto.subRepo ? path.join(caminho, projeto.subRepo) : caminho;
-  const [gitInfo, portas] = await Promise.all([
-    existe ? infoGit(caminhoRepo) : { repositorio: false },
-    Promise.all(
-      projeto.portas.map(async (p) => ({ ...p, ativa: await portaAberta(p.porta) })),
-    ),
-  ]);
-
-  return {
-    pasta: projeto.pasta,
-    titulo: projeto.titulo,
-    descricao: projeto.descricao,
-    stack: projeto.stack,
-    entrada: projeto.entrada,
-    producao: projeto.producao ?? null,
-    existe,
-    git: gitInfo,
-    portas,
-  };
-}
-
-// ---------- sondas de produção ----------
-
-function sondar(url) {
-  return new Promise((resolve) => {
-    const inicio = Date.now();
-    const req = https.get(url, { timeout: 6000 }, (res) => {
-      res.resume();
-      resolve({ url, ok: res.statusCode < 500, status: res.statusCode, ms: Date.now() - inicio });
-    });
-    req.on('timeout', () => req.destroy(new Error('tempo esgotado')));
-    req.on('error', (erro) => resolve({ url, ok: false, erro: erro.message }));
-  });
-}
+// ---------- consulta SSH sob demanda (somente leitura) ----------
 
 // Consulta somente-leitura ao servidor. Roda apenas sob demanda (botão no
 // painel), nunca no refresh automático — SSH a cada 30 s seria abuso.
@@ -122,7 +76,7 @@ async function consultarServidorSsh() {
   }
 }
 
-// ---------- HTTP ----------
+// ---------- HTTP: utilitários ----------
 
 const TIPOS = {
   '.html': 'text/html; charset=utf-8',
@@ -138,10 +92,12 @@ function responderJson(res, corpo, status = 200) {
 }
 
 async function responderEstatico(res, urlPath) {
-  const nome = urlPath === '/' ? 'index.html' : urlPath.slice(1);
-  const alvo = path.join(PUBLICO, nome);
+  // Caminho terminado em "/" serve o index.html da pasta — é o que faz
+  // /severino/ abrir o chat com os assets relativos dele resolvendo certo.
+  const nome = (urlPath.endsWith('/') ? `${urlPath}index.html` : urlPath).slice(1);
+  const alvo = path.resolve(PUBLICO, nome);
   // Nunca servir fora de publico/ (path traversal).
-  if (!alvo.startsWith(PUBLICO + path.sep) && alvo !== path.join(PUBLICO, 'index.html')) {
+  if (!alvo.startsWith(PUBLICO + path.sep)) {
     responderJson(res, { erro: 'caminho inválido' }, 400);
     return;
   }
@@ -154,30 +110,189 @@ async function responderEstatico(res, urlPath) {
   }
 }
 
+function lerCorpo(req) {
+  return new Promise((resolve, reject) => {
+    const pedacos = [];
+    let tamanho = 0;
+    req.on('data', (pedaco) => {
+      tamanho += pedaco.length;
+      if (tamanho > MAX_CORPO) {
+        reject(new Error('corpo grande demais'));
+        req.destroy();
+        return;
+      }
+      pedacos.push(pedaco);
+    });
+    req.on('end', () => resolve(Buffer.concat(pedacos).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+// ---------- conversa com o Severino (SSE) ----------
+
+// A resposta pinga token a token: cada evento do motor vira um evento SSE
+// escrito na hora (chunked). Buffering aqui seria defeito, não detalhe.
+async function responderConversa(req, res) {
+  let corpo;
+  try {
+    corpo = JSON.parse(await lerCorpo(req));
+  } catch {
+    responderJson(res, { erro: 'corpo inválido: mande JSON {"mensagem": "...", "sessao": "..."}' }, 400);
+    return;
+  }
+  const mensagem = typeof corpo.mensagem === 'string' ? corpo.mensagem.trim() : '';
+  const sessao = typeof corpo.sessao === 'string' && corpo.sessao ? corpo.sessao : undefined;
+  if (!mensagem || mensagem.length > MAX_MENSAGEM) {
+    responderJson(res, { erro: `"mensagem" precisa ser texto de 1 a ${MAX_MENSAGEM} caracteres` }, 400);
+    return;
+  }
+
+  res.writeHead(200, {
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-cache',
+    connection: 'keep-alive',
+  });
+  res.flushHeaders?.();
+
+  let clienteVivo = true;
+  res.on('close', () => { clienteVivo = false; });
+
+  try {
+    for await (const evento of conversar(mensagem, sessao)) {
+      if (!clienteVivo) break; // o `finally` do motor interrompe a consulta
+      const { tipo, ...dados } = evento;
+      res.write(`event: ${tipo}\ndata: ${JSON.stringify(dados)}\n\n`);
+    }
+  } catch (erro) {
+    if (clienteVivo) {
+      // Mensagem genérica de propósito: erro de auth/SDK não vaza detalhe de credencial.
+      console.error('[conversa]', erro);
+      res.write(`event: erro\ndata: ${JSON.stringify({ mensagem: 'falha no motor do Severino — veja o log do servidor' })}\n\n`);
+    }
+  }
+  if (clienteVivo) res.end();
+}
+
+// ---------- voz do Severino (proxy ElevenLabs) ----------
+
+// Proxy de streaming do TTS (camada ElevenLabs): o front nunca vê a chave e o
+// áudio pinga para o cliente conforme chega. Sem chave → 503 com motivo
+// NOMEADO em JSON — é o que o front usa para cair DECLARADAMENTE para o
+// Antônio (nunca 500 genérico, contrato do upgrade).
+async function responderTts(req, res) {
+  const chave = process.env.ELEVENLABS_API_KEY;
+  if (!chave) {
+    responderJson(res, {
+      motivo: 'sem-chave-elevenlabs',
+      mensagem: 'ELEVENLABS_API_KEY ausente no ambiente — grave a chave em painel-admin/.env e reinicie o servidor',
+    }, 503);
+    return;
+  }
+
+  let corpo;
+  try {
+    corpo = JSON.parse(await lerCorpo(req));
+  } catch {
+    responderJson(res, { erro: 'corpo inválido: mande JSON {"texto": "..."}' }, 400);
+    return;
+  }
+  const texto = typeof corpo.texto === 'string' ? corpo.texto.trim() : '';
+  if (!texto || texto.length > MAX_TEXTO_TTS) {
+    responderJson(res, { erro: `"texto" precisa ser texto de 1 a ${MAX_TEXTO_TTS} caracteres` }, 400);
+    return;
+  }
+
+  // Cliente desistiu (calar, pergunta nova, aba fechada) → aborta o upstream:
+  // não adianta baixar áudio que ninguém vai ouvir.
+  const controlador = new AbortController();
+  res.on('close', () => controlador.abort());
+
+  const vozId = process.env.ELEVENLABS_VOZ_ID || VOZ_ID_PADRAO;
+  let upstream;
+  try {
+    upstream = await fetch(
+      `${ELEVENLABS_URL}/${encodeURIComponent(vozId)}/stream?output_format=mp3_44100_128`,
+      {
+        method: 'POST',
+        headers: { 'xi-api-key': chave, 'content-type': 'application/json' },
+        body: JSON.stringify({ text: texto, model_id: MODELO_TTS }),
+        signal: controlador.signal,
+      },
+    );
+  } catch (erro) {
+    if (controlador.signal.aborted) return;
+    console.error('[tts] ElevenLabs inalcançável:', erro?.cause?.code ?? erro.message);
+    responderJson(res, {
+      motivo: 'elevenlabs-inalcancavel',
+      mensagem: 'não alcancei a API da ElevenLabs — sem internet ou serviço fora',
+    }, 502);
+    return;
+  }
+
+  if (!upstream.ok) {
+    // Genérico de propósito (regra 5 dos padrões gerais): a resposta não diz
+    // SE a chave é inválida ou a conta está sem saldo — o detalhe fica no log
+    // do servidor, que nunca contém a chave.
+    const detalhe = await upstream.text().catch(() => '');
+    console.error(`[tts] ElevenLabs respondeu ${upstream.status}:`, detalhe.slice(0, 300));
+    responderJson(res, {
+      motivo: 'elevenlabs-recusou',
+      mensagem: `a ElevenLabs recusou a síntese (HTTP ${upstream.status}) — detalhe no log do servidor`,
+    }, 502);
+    return;
+  }
+
+  res.writeHead(200, { 'content-type': upstream.headers.get('content-type') ?? 'audio/mpeg' });
+  try {
+    await pipeline(Readable.fromWeb(upstream.body), res);
+  } catch {
+    res.destroy(); // cliente fechou no meio do áudio — normal, não é erro nosso
+  }
+}
+
+// ---------- roteamento ----------
+
 const servidor = http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, `http://127.0.0.1:${PORTA}`);
   try {
-    if (pathname === '/api/projetos') {
-      responderJson(res, { raiz: RAIZ, projetos: await Promise.all(PROJETOS.map(coletarProjeto)) });
+    if (pathname === '/api/conversa' && req.method === 'POST') {
+      await responderConversa(req, res);
+    } else if (pathname === '/api/conversa') {
+      responderJson(res, { erro: 'use POST' }, 405);
+    } else if (pathname === '/api/tts' && req.method === 'POST') {
+      await responderTts(req, res);
+    } else if (pathname === '/api/tts' && req.method === 'GET') {
+      // Sonda barata de disponibilidade (não sintetiza nada): o front usa
+      // para declarar a camada de voz ativa já na carga da página. Só diz SE
+      // há chave configurada — nunca a chave.
+      responderJson(res, process.env.ELEVENLABS_API_KEY
+        ? { disponivel: true }
+        : { disponivel: false, motivo: 'sem-chave-elevenlabs' });
+    } else if (pathname === '/api/tts') {
+      responderJson(res, { erro: 'use POST (sintetizar) ou GET (disponibilidade)' }, 405);
+    } else if (pathname === '/api/projetos') {
+      responderJson(res, await estadoProjetos());
     } else if (pathname === '/api/producao') {
-      const alvos = [
-        ...PROJETOS.filter((p) => p.producao).map((p) => ({ rotulo: p.titulo, url: p.producao })),
-        ...PRODUCAO_EXTRA,
-      ];
-      const sondas = await Promise.all(
-        alvos.map(async (a) => ({ rotulo: a.rotulo, ...(await sondar(a.url)) })),
-      );
-      responderJson(res, { sondas });
+      responderJson(res, await estadoProducao());
     } else if (pathname === '/api/producao/ssh') {
       responderJson(res, await consultarServidorSsh());
-    } else {
+    } else if (pathname === '/severino' && req.method === 'GET') {
+      // Sem a barra final os assets relativos do chat resolveriam na raiz
+      // (estilo do dashboard em vez do estilo do chat).
+      res.writeHead(301, { location: '/severino/' });
+      res.end();
+    } else if (req.method === 'GET') {
       await responderEstatico(res, pathname);
+    } else {
+      responderJson(res, { erro: 'método não suportado' }, 405);
     }
   } catch (erro) {
-    responderJson(res, { erro: erro.message }, 500);
+    console.error('[servidor]', erro);
+    if (!res.headersSent) responderJson(res, { erro: 'erro interno' }, 500);
+    else res.end();
   }
 });
 
 servidor.listen(PORTA, '127.0.0.1', () => {
-  console.log(`Painel administrativo em http://localhost:${PORTA}`);
+  console.log(`Painel administrativo (com o Severino a bordo) em http://localhost:${PORTA}`);
 });
