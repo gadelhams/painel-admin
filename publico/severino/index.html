@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Severino — o peão sabido</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <header>
+    <h1>Severino</h1>
+    <p class="lema">o peão sabido da oficina — pergunte dos projetos, visse?</p>
+  </header>
+
+  <main id="historico" aria-live="polite"></main>
+
+  <form id="formulario" autocomplete="off">
+    <!-- type=button: falar não é submeter o formulário -->
+    <button id="microfone" type="button" aria-label="Falar com o Severino" title="clique e fale (push-to-talk)">🎤</button>
+    <input id="entrada" type="text" placeholder="Ex.: como estão os projetos?" maxlength="8000" autofocus>
+    <button id="enviar" type="submit">Mandar</button>
+  </form>
+  <p id="status-voz">preparando a voz…</p>
+
+  <!-- voz.js antes: define o global Voz que chat.js consome -->
+  <script src="voz.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>
