@@ -125,3 +125,86 @@ button:disabled { opacity: .5; cursor: wait; }
   overflow-x: auto;
   white-space: pre-wrap;
 }
+
+/* ---------- abas ---------- */
+
+.abas { display: flex; gap: .4rem; }
+.aba.ativa { border-color: var(--acento); color: var(--acento); }
+
+/* ---------- aba Backlog ---------- */
+
+.filtro-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.filtro-tags .filtro { font-size: .8rem; padding: .25rem .7rem; border-radius: 999px; }
+.filtro-tags .filtro.ativa { border-color: var(--acento); color: var(--acento); }
+.filtro-tags .filtro-dono { color: var(--alerta); }
+.filtro-tags .filtro-dono.ativa { border-color: var(--alerta); color: var(--alerta); }
+
+.backlog-projeto { margin-bottom: 2rem; }
+.backlog-projeto-cab { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .75rem; }
+.backlog-projeto-cab h3 { margin: 0; font-size: 1.05rem; }
+
+/* Colunas por feature, com rolagem horizontal — o jeito kanban de olhar. */
+.quadro { display: flex; gap: 1rem; align-items: flex-start; overflow-x: auto; padding-bottom: .75rem; }
+
+.coluna {
+  flex: 0 0 340px;
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: .75rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.coluna-cab { display: flex; align-items: center; gap: .5rem; padding-bottom: .35rem; border-bottom: 1px solid var(--borda); }
+.coluna-cab h4 { margin: 0; font-size: .95rem; flex: 1; }
+
+.placar {
+  font-size: .72rem;
+  color: var(--texto-fraco);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: .05rem .5rem;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* Hierarquia épico → story → task visível pelo aninhamento dos próprios nós. */
+.item {
+  border-left: 2px solid var(--borda);
+  padding: .15rem 0 .15rem .6rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  font-size: .85rem;
+}
+.item .item { margin-left: .75rem; }
+.item.pronto > .item-linha { opacity: .55; }
+
+.item-linha { display: flex; align-items: baseline; gap: .4rem; flex-wrap: wrap; }
+.item-texto { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.marca { flex: none; }
+.marca.pronto { color: var(--ok); }
+.marca.aberto { color: var(--texto-fraco); }
+
+.item code, .cru code { background: #0d0f14; border-radius: 4px; padding: 0 .25rem; font-size: .92em; }
+
+.etiqueta.tag { text-transform: none; }
+.etiqueta.tag-dono {
+  color: var(--alerta);
+  border-color: color-mix(in srgb, var(--alerta) 55%, transparent);
+  background: color-mix(in srgb, var(--alerta) 12%, transparent);
+  font-weight: 600;
+}
+
+/* Linha crua: o que o parser não entendeu aparece como veio no arquivo. */
+.cru {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: .76rem;
+  color: var(--texto-fraco);
+  background: #0d0f14;
+  border: 1px dashed var(--borda);
+  border-radius: 8px;
+  padding: .4rem .6rem;
+  overflow-wrap: anywhere;
+}

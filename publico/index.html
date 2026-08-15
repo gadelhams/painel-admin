@@ -10,6 +10,10 @@
 <body>
   <header>
     <h1>🗂️ Painel dos Projetos</h1>
+    <nav class="abas">
+      <button class="aba ativa" data-aba="geral" type="button">Visão geral</button>
+      <button class="aba" data-aba="backlog" type="button">Backlog</button>
+    </nav>
     <div class="acoes">
       <span id="atualizado-em" class="discreto"></span>
       <!-- Desde a fusão de 14/08/2026 o Severino mora neste mesmo processo -->
@@ -19,23 +23,36 @@
   </header>
 
   <main>
-    <section>
-      <h2>Projetos locais</h2>
-      <div id="grade-projetos" class="grade">
-        <p class="discreto">Carregando…</p>
-      </div>
-    </section>
+    <div id="aba-geral">
+      <section>
+        <h2>Projetos locais</h2>
+        <div id="grade-projetos" class="grade">
+          <p class="discreto">Carregando…</p>
+        </div>
+      </section>
 
-    <section>
-      <h2>Produção — astargne.com</h2>
-      <div id="lista-producao" class="producao">
-        <p class="discreto">Sondando…</p>
-      </div>
-      <div class="ssh">
-        <button id="botao-ssh" type="button">Consultar servidor via SSH (somente leitura)</button>
-        <pre id="saida-ssh" hidden></pre>
-      </div>
-    </section>
+      <section>
+        <h2>Produção — astargne.com</h2>
+        <div id="lista-producao" class="producao">
+          <p class="discreto">Sondando…</p>
+        </div>
+        <div class="ssh">
+          <button id="botao-ssh" type="button">Consultar servidor via SSH (somente leitura)</button>
+          <pre id="saida-ssh" hidden></pre>
+        </div>
+      </section>
+    </div>
+
+    <!-- Aba Backlog (fase 1, só-leitura): o markdown é a verdade, isto é projeção -->
+    <div id="aba-backlog" hidden>
+      <section>
+        <h2>Backlog — o arquivo é a verdade, o quadro é projeção</h2>
+        <div id="filtro-tags" class="filtro-tags"></div>
+        <div id="quadro-backlog">
+          <p class="discreto">Carregando…</p>
+        </div>
+      </section>
+    </div>
   </main>
 
   <script src="app.js"></script>
