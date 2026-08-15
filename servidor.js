@@ -11,7 +11,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { estadoProjetos, estadoProducao } from './coletores.js';
+import { estadoProjetos, estadoProducao, lerBacklog } from './coletores.js';
 import { conversar } from './motor.js';
 
 const execFileAsync = promisify(execFile);
@@ -276,6 +276,8 @@ const servidor = http.createServer(async (req, res) => {
       responderJson(res, await estadoProducao());
     } else if (pathname === '/api/producao/ssh') {
       responderJson(res, await consultarServidorSsh());
+    } else if (pathname === '/api/backlog') {
+      responderJson(res, await lerBacklog());
     } else if (pathname === '/severino' && req.method === 'GET') {
       // Sem a barra final os assets relativos do chat resolveriam na raiz
       // (estilo do dashboard em vez do estilo do chat).

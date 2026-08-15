@@ -9,6 +9,9 @@ export const PROJETOS = [
     descricao: 'Motor de continuidade narrativa para campanhas de RPG — código decide, IA narra.',
     stack: 'pnpm · TypeScript · Fastify · React · Postgres',
     entrada: 'CLAUDE.md',
+    // Único com backlog por ora: a aba Backlog projeta este arquivo em
+    // leitura apenas — o markdown é a verdade (docs/02_ABA_BACKLOG.md).
+    backlog: 'docs/39_BACKLOG.md',
     portas: [
       { porta: 3333, servico: 'API' },
       { porta: 5173, servico: 'Web (Vite)' },

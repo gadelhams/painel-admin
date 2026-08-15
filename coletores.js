@@ -90,6 +90,137 @@ function sondar(url) {
   });
 }
 
+// ---------- backlog (aba Backlog: fase 1, só-leitura) ----------
+
+// O markdown de backlog é a VERDADE; isto aqui é só projeção (decisão de
+// desenho em docs/02_ABA_BACKLOG.md). Por isso: sem cache — cada chamada
+// relê o working tree, mais fresco que qualquer push — e nada é escrito.
+// A gramática é a da seção "Como este arquivo funciona" do
+// SistemaLoreEngine/docs/39_BACKLOG.md — mudou lá, muda aqui NA MESMA ENTREGA.
+
+// Os tokens de estado vêm entre CRASES no arquivo real (`[ ]`/`[x]`); as
+// crases são opcionais aqui para um deslize de formatação não sumir com item.
+const RE_FEATURE = /^##\s+(.*)$/;
+const RE_TOKEN = /`?\[([ x])\]`?/;
+const RE_ITEM = /^(\s*)-\s+`?\[([ x])\]`?\s*(.*)$/;
+const RE_LISTA = /^\s*-\s+/;
+const RE_LINK = /\[([^\]]*)\]\(([^)]*)\)/g;
+// (?![\p{L}]) impede "(DONOSA...)" de contar como DONO; o resto do parêntese
+// é aceito porque as variantes reais trazem texto extra ("(DONO, com dado)",
+// "(CONGELADA — doc 23 §5)").
+const RE_TAG = /\((DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA)(?![\p{L}])([^)]*)\)/gu;
+
+function extrairTags(texto) {
+  const tags = [];
+  for (const m of texto.matchAll(RE_TAG)) {
+    if (tags.some((t) => t.tag === m[1])) continue;
+    const detalhe = m[2].replace(/^[\s:—–-]+/, '').trim();
+    tags.push(detalhe ? { tag: m[1], detalhe } : { tag: m[1] });
+  }
+  return tags;
+}
+
+export function parsearBacklog(texto) {
+  const features = [];
+  let feature = null; // null = fora de feature (título, "Como este arquivo funciona")
+  let pilha = []; // itens abertos, para pendurar filho pelo nível de indentação
+  let ultimo = null; // receptor de linha de continuação (item ou entrada crua)
+
+  for (const linha of texto.split(/\r?\n/)) {
+    if (!linha.trim()) {
+      ultimo = null;
+      continue;
+    }
+
+    const cabecalho = linha.match(RE_FEATURE);
+    if (cabecalho) {
+      // Heading sem token não é feature (é prosa do próprio arquivo, como o
+      // manual da gramática); o que vem debaixo dele fica fora do quadro.
+      const token = cabecalho[1].match(RE_TOKEN);
+      feature = token
+        ? {
+            titulo: cabecalho[1].replace(RE_TOKEN, '').trim(),
+            estado: token[1] === 'x' ? 'pronto' : 'aberto',
+            itens: [],
+          }
+        : null;
+      if (feature) features.push(feature);
+      pilha = [];
+      ultimo = null;
+      continue;
+    }
+    if (!feature) continue;
+
+    const item = linha.match(RE_ITEM);
+    if (item) {
+      // 0/2/4 espaços = épico/story/task; os rótulos "Épico:/Story:/Task:"
+      // no texto são informativos — o nível estrutural vem SÓ da indentação.
+      const nivel = Math.min(Math.floor(item[1].length / 2), 2);
+      const nodo = {
+        tipo: 'item',
+        texto: item[3].trim(),
+        estado: item[2] === 'x' ? 'pronto' : 'aberto',
+        nivel,
+        filhos: [],
+      };
+      while (pilha.length && pilha[pilha.length - 1].nivel >= nivel) pilha.pop();
+      (pilha.length ? pilha[pilha.length - 1].filhos : feature.itens).push(nodo);
+      pilha.push(nodo);
+      ultimo = nodo;
+      continue;
+    }
+
+    // Linha de continuação (indentada, sem "- ") junta ao item anterior.
+    if (/^\s/.test(linha) && ultimo && !RE_LISTA.test(linha)) {
+      ultimo.texto += ` ${linha.trim()}`;
+      continue;
+    }
+
+    // O que não casa com a gramática vai CRU para o card da feature — o
+    // quadro não pode esconder o que não entendeu (item de lista sem token,
+    // parágrafo de contexto). Linhas contíguas de prosa viram um parágrafo.
+    if (ultimo?.tipo === 'cru' && !RE_LISTA.test(linha)) {
+      ultimo.texto += ` ${linha.trim()}`;
+    } else {
+      const nodo = { tipo: 'cru', texto: linha.trim() };
+      feature.itens.push(nodo);
+      ultimo = nodo;
+    }
+  }
+
+  // Links viram texto simples (fase 1 não navega) e as tags saem do texto
+  // FINAL — uma tag pode quebrar entre a linha e a continuação dela.
+  const finalizar = (nodo) => {
+    nodo.texto = nodo.texto.replace(RE_LINK, '$1');
+    nodo.tags = extrairTags(nodo.texto);
+    nodo.filhos?.forEach(finalizar);
+  };
+  for (const f of features) f.itens.forEach(finalizar);
+  return features;
+}
+
+// Só projetos com o campo opcional `backlog` entram — projeto sem o campo não
+// aparece, sem erro e sem inferência. Arquivo ausente vira o estado NOMEADO
+// "sem_arquivo": lista vazia silenciosa esconderia o defeito da tela.
+// O parâmetro existe para teste com catálogo falso; a rota usa o real.
+export async function lerBacklog(projetos = PROJETOS) {
+  return {
+    projetos: await Promise.all(
+      projetos
+        .filter((p) => p.backlog)
+        .map(async (p) => {
+          const base = { pasta: p.pasta, titulo: p.titulo, backlog: p.backlog };
+          try {
+            const bruto = await fs.readFile(path.join(RAIZ, p.pasta, p.backlog), 'utf8');
+            return { ...base, estado: 'ok', features: parsearBacklog(bruto) };
+          } catch {
+            return { ...base, estado: 'sem_arquivo' };
+          }
+        }),
+    ),
+  };
+}
+
 // ---------- as duas visões compartilhadas ----------
 
 export async function estadoProjetos() {
