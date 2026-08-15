@@ -1,5 +1,18 @@
 # Aba Backlog — o quadro kanban dos projetos (fase 1: só-leitura)
 
+> **Status: fase 1 IMPLEMENTADA em 16/08/2026.** `parsearBacklog()`/`lerBacklog()` em
+> `coletores.js` (compartilhadas por função, sem cache), `GET /api/backlog` no
+> `servidor.js`, campo `backlog` no catálogo (só o SistemaLoreEngine) e a aba no
+> dashboard vanilla. **Provado por sonda na entrega**: a rota devolve as 8 features
+> reais do doc 39 (52 itens, 7 prontos, 9 linhas cruas preservadas, 8 linhas `(DONO)`
+> — conferido por grep independente no arquivo); arquivo ausente devolve o estado
+> nomeado `sem_arquivo`; o mesmo caminho parseado 2× com conteúdos diferentes refletiu
+> cada versão (sem cache) — inclusive ao vivo: o doc 39 mudou DURANTE a entrega e o
+> parse seguiu o arquivo. Os aceites de olho humano (1–3, na tela) ficam com o dono.
+> Nota de gramática: `(PÓS-PLAYTEST)` apareceu no doc 39 sem estar declarada na seção
+> "Como este arquivo funciona" — o parser segue a gramática (5 tags); o texto da linha
+> continua visível no card, nada se perde.
+
 **Origem (15/08/2026, conversa no Lore Engine):** o dono se perdia no formato dos docs de
 planejamento; nasceu o `SistemaLoreEngine/docs/39_BACKLOG.md` — a vista única do que está
 aberto, em Feature → Épico → Story → Task, cada pedaço com estado. O dono quer o "jeito

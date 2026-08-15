@@ -35,12 +35,12 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
 ## Arquitetura
 
 - `servidor.js` — HTTP único em `127.0.0.1:7777`: `/api/projetos`,
-  `/api/producao`, `/api/producao/ssh`, `POST /api/conversa` (SSE, motor do
-  Severino), `GET/POST /api/tts` (proxy ElevenLabs) e estáticos de `publico/`
-  (dashboard na raiz, chat em `/severino/`).
-- `coletores.js` — coletores de estado (git, portas, sondas de produção),
-  **compartilhados**: as rotas da API e as ferramentas do motor chamam as
-  mesmas funções — o motor nunca faz HTTP para o próprio processo.
+  `/api/producao`, `/api/producao/ssh`, `/api/backlog`, `POST /api/conversa`
+  (SSE, motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs) e
+  estáticos de `publico/` (dashboard na raiz, chat em `/severino/`).
+- `coletores.js` — coletores de estado (git, portas, sondas de produção,
+  backlog), **compartilhados**: as rotas da API e as ferramentas do motor
+  chamam as mesmas funções — o motor nunca faz HTTP para o próprio processo.
 - `motor.js` — Claude Agent SDK (`claude-sonnet-5` fixo), persona do
   Severino, três ferramentas **só-leitura**: `estado_projetos`,
   `estado_producao` (coletores internos) e `docs_projeto` (só `.md` da raiz,
@@ -53,8 +53,9 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
 - `docs/00_PLANO.md` e `docs/01_ESTADO.md` — plano e estado real do Severino,
   trazidos do repo antigo; leia o plano antes de mexer no motor ou na voz.
 - `docs/02_ABA_BACKLOG.md` — a aba Backlog (quadro kanban só-leitura sobre o
-  `39_BACKLOG.md` dos projetos que o adotarem; especificada em 15/08/2026, a
-  implementar). O arquivo markdown é a verdade; a aba é projeção.
+  `39_BACKLOG.md` dos projetos que o adotarem; fase 1 implementada em
+  16/08/2026). O arquivo markdown é a verdade; a aba é projeção — e a
+  gramática mora no doc 39: mudou lá, muda o parser na mesma entrega.
 
 ## Severino por voz, fora de casa (Claude app + Remote Control)
 
