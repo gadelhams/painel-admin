@@ -10,8 +10,11 @@
 > cada versão (sem cache) — inclusive ao vivo: o doc 39 mudou DURANTE a entrega e o
 > parse seguiu o arquivo. Os aceites de olho humano (1–3, na tela) ficam com o dono.
 > Nota de gramática: `(PÓS-PLAYTEST)` apareceu no doc 39 sem estar declarada na seção
-> "Como este arquivo funciona" — o parser segue a gramática (5 tags); o texto da linha
-> continua visível no card, nada se perde.
+> "Como este arquivo funciona"; em 16/08/2026 ela foi DECLARADA no parser (6ª tag do
+> `RE_TAG`) — falta a seção de gramática do doc 39 declará-la também (escrita lá é do
+> Lore Engine; este painel só lê). A anotação `(NOT TO DO — doc 09)` na F7 segue fora
+> da gramática: o texto fica visível no card (cru), sem chip — decidir se ela vira tag
+> é conversa do dono, junto com qualquer revisão da PÓS-PLAYTEST.
 
 **Origem (15/08/2026, conversa no Lore Engine):** o dono se perdia no formato dos docs de
 planejamento; nasceu o `SistemaLoreEngine/docs/39_BACKLOG.md` — a vista única do que está
@@ -46,20 +49,39 @@ aqui NA MESMA ENTREGA** (regra do orquestrador da raiz; há nota espelhada no pr
 
 - `## ` = **feature**; o estado dela é o token `[ ]`/`[x]` no título.
 - Item de lista `- ` com `[ ]`/`[x]` = **épico / story / task**, nível pela indentação
-  (0 / 2 / 4 espaços). Os rótulos `Épico:`/`Story:`/`Task:` quando presentes são
-  informativos; o nível estrutural vem da indentação.
-- Tags entre parênteses no fim da linha: `(DONO)`, `(EMPÍRICA)`, `(BLOQUEADA: motivo)`,
-  `(SEM ESCOPO)`, `(CONGELADA)`.
+  (**exatamente** 0 / 2 / 4 espaços). Os rótulos `Épico:`/`Story:`/`Task:` quando
+  presentes são informativos; o nível estrutural vem da indentação. Indentação fora
+  da gramática (ímpar, 6+, tab) **não é reinterpretada**: a linha vai crua ao card —
+  hierarquia adivinhada em silêncio disfarçaria o que o parser não entendeu.
+- Leniência DELIBERADA, mais larga que a gramática escrita do doc 39: as crases em
+  volta do token são opcionais para o parser (`- [ ] foo` sem crases ainda é item),
+  para um deslize de formatação não sumir com item. Quem for mudar a gramática no
+  doc 39 precisa saber que o parser já aceita isso.
+- Tags entre parênteses — `(DONO)`, `(EMPÍRICA)`, `(BLOQUEADA: motivo)`,
+  `(SEM ESCOPO)`, `(CONGELADA)` e, desde 16/08/2026, `(PÓS-PLAYTEST)` (declarada no
+  parser à frente da seção de gramática do doc 39, que só o Lore Engine edita) —
+  reconhecidas em **qualquer posição** do texto do
+  item, após a junção das linhas de continuação (não só no fim da linha): o doc 39
+  real traz `(DONO)` no meio de texto e dentro de parêntese maior (3 dos 8 casos), e
+  uma tag pode quebrar entre a linha e a continuação. Custo declarado: prosa futura
+  com "(DONO …)" literal no meio de uma frase viraria chip — se doer, muda-se a
+  gramática no doc 39 e o parser NA MESMA ENTREGA.
 - Links markdown são renderizados como texto simples (fase 1 não navega para docs).
-- Linha que não casa com a gramática é **exibida crua no card da feature**, nunca
-  descartada em silêncio — o quadro não pode esconder o que não entendeu.
+- Linha que não casa com a gramática é **exibida crua**, nunca descartada em
+  silêncio — o quadro não pode esconder o que não entendeu. O cru preserva a
+  hierarquia do arquivo (linha indentada dentro de um épico aparece DENTRO dele,
+  pela mesma régua de indentação) e perde só o marcador `- ` de lista na projeção
+  (sintaxe markdown não vaza; o resto do texto vai verbatim, e tag declarada na
+  gramática ainda vira chip).
 
 ## Implementação (no padrão da casa)
 
 - **`coletores.js`**: `lerBacklog()` — `fs.readFile` + parse por projeto com campo
-  `backlog`; sem cache (arquivo pequeno, leitura sob demanda); arquivo ausente devolve
-  estado nomeado (`sem_arquivo`), nunca lista vazia silenciosa. Compartilhado por função,
-  como os demais (rota e, um dia, ferramenta do motor chamam a MESMA função).
+  `backlog`; sem cache (arquivo pequeno, leitura sob demanda); falha de leitura devolve
+  estado nomeado — `sem_arquivo` para arquivo ausente (ENOENT), `erro_leitura` (com o
+  código do erro) para qualquer outra falha — nunca lista vazia silenciosa nem o nome
+  errado para a causa. Compartilhado por função, como os demais (rota e, um dia,
+  ferramenta do motor chamam a MESMA função).
 - **`servidor.js`**: `GET /api/backlog` — devolve a árvore parseada de todos os projetos
   com backlog.
 - **`publico/`**: a aba no dashboard vanilla — colunas por feature; cards de épico/story

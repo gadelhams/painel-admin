@@ -197,7 +197,9 @@ button:disabled { opacity: .5; cursor: wait; }
   font-weight: 600;
 }
 
-/* Linha crua: o que o parser não entendeu aparece como veio no arquivo. */
+/* Linha crua: o que o parser não entendeu aparece verbatim (só o marcador
+   "- " de lista sai — sintaxe markdown não vaza), no lugar da hierarquia
+   a que a linha pertence. */
 .cru {
   font-family: ui-monospace, Consolas, monospace;
   font-size: .76rem;

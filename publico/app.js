@@ -132,10 +132,13 @@ function placar(nodos) {
   let total = 0;
   let prontos = 0;
   for (const nodo of nodos) {
-    if (nodo.tipo !== 'item') continue;
-    total += 1;
-    if (nodo.estado === 'pronto') prontos += 1;
-    const sub = placar(nodo.filhos);
+    if (nodo.tipo === 'item') {
+      total += 1;
+      if (nodo.estado === 'pronto') prontos += 1;
+    }
+    // Cru também carrega filhos (hierarquia do arquivo preservada): um item
+    // aninhado sob linha crua ainda conta no placar.
+    const sub = placar(nodo.filhos ?? []);
     total += sub.total;
     prontos += sub.prontos;
   }
@@ -151,9 +154,16 @@ function chipTag({ tag, detalhe }) {
 }
 
 // Linha que o parser não entendeu chega crua e é mostrada crua — o quadro
-// não esconde o que não entendeu.
-function nodoCru(nodo) {
-  return el('div', { class: 'cru' }, ...formatar(nodo.texto), ...nodo.tags.map(chipTag));
+// não esconde o que não entendeu. Ela vem no lugar do arquivo (dentro do
+// épico a que pertence) e pode ter filhos, que são desenhados como qualquer nó.
+function nodoCru(nodo, comFilhos = true) {
+  return el(
+    'div',
+    { class: 'cru' },
+    ...formatar(nodo.texto),
+    ...nodo.tags.map(chipTag),
+    ...(comFilhos ? (nodo.filhos ?? []).map(desenharNodo) : []),
+  );
 }
 
 function nodoItem(nodo, comFilhos = true) {
@@ -181,7 +191,7 @@ function desenharNodo(nodo) {
 function nosComTag(nodos, tag, achados = []) {
   for (const nodo of nodos) {
     if (nodo.tags.some((t) => t.tag === tag)) achados.push(nodo);
-    if (nodo.tipo === 'item') nosComTag(nodo.filhos, tag, achados);
+    nosComTag(nodo.filhos ?? [], tag, achados);
   }
   return achados;
 }
@@ -193,7 +203,7 @@ function colunaFeature(f) {
   if (tagAtiva) {
     const achados = nosComTag(f.itens, tagAtiva);
     if (!achados.length) return null;
-    corpo = achados.map((nodo) => (nodo.tipo === 'item' ? nodoItem(nodo, false) : nodoCru(nodo)));
+    corpo = achados.map((nodo) => (nodo.tipo === 'item' ? nodoItem(nodo, false) : nodoCru(nodo, false)));
   } else {
     corpo = f.itens.map(desenharNodo);
   }
@@ -219,8 +229,13 @@ function blocoProjeto(pr) {
     el('h3', {}, pr.titulo),
     el('span', { class: 'discreto' }, `${pr.pasta}/${pr.backlog}`),
   );
-  if (pr.estado === 'sem_arquivo') {
-    // Estado nomeado NA TELA (aceite 4): arquivo ausente nunca é quadro vazio mudo.
+  if (pr.estado !== 'ok') {
+    // Estado nomeado NA TELA (aceite 4), com o nome CERTO para a causa:
+    // sem_arquivo = não existe no disco; erro_leitura = existe (ou não deu
+    // para saber), mas a leitura falhou — a tela não mente a causa.
+    const mensagem = pr.estado === 'sem_arquivo'
+      ? `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`
+      : `falha ao ler ${pr.pasta}/${pr.backlog} — ${pr.erro ?? pr.estado}`;
     return el(
       'div',
       { class: 'backlog-projeto' },
@@ -229,7 +244,7 @@ function blocoProjeto(pr) {
         'div',
         { class: 'sonda' },
         el('span', { class: 'luz falha' }),
-        el('span', {}, `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`),
+        el('span', {}, mensagem),
       ),
     );
   }
@@ -241,7 +256,7 @@ function blocoProjeto(pr) {
 function contarTags(nodos, contagem) {
   for (const nodo of nodos) {
     for (const t of nodo.tags) contagem.set(t.tag, (contagem.get(t.tag) ?? 0) + 1);
-    if (nodo.tipo === 'item') contarTags(nodo.filhos, contagem);
+    contarTags(nodo.filhos ?? [], contagem);
   }
 }
 

@@ -108,13 +108,15 @@ const RE_LINK = /\[([^\]]*)\]\(([^)]*)\)/g;
 // (?![\p{L}]) impede "(DONOSA...)" de contar como DONO; o resto do parêntese
 // é aceito porque as variantes reais trazem texto extra ("(DONO, com dado)",
 // "(CONGELADA — doc 23 §5)").
-const RE_TAG = /\((DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA)(?![\p{L}])([^)]*)\)/gu;
+const RE_TAG = /\((DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]*)\)/gu;
 
 function extrairTags(texto) {
   const tags = [];
   for (const m of texto.matchAll(RE_TAG)) {
     if (tags.some((t) => t.tag === m[1])) continue;
-    const detalhe = m[2].replace(/^[\s:—–-]+/, '').trim();
+    // A classe cobre TODOS os separadores vistos no doc 39 (": ", " — ", ", ")
+    // — sem a vírgula, "(DONO, com dado)" gerava detalhe ", com dado".
+    const detalhe = m[2].replace(/^[\s:;,—–-]+/, '').trim();
     tags.push(detalhe ? { tag: m[1], detalhe } : { tag: m[1] });
   }
   return tags;
@@ -152,10 +154,13 @@ export function parsearBacklog(texto) {
     if (!feature) continue;
 
     const item = linha.match(RE_ITEM);
-    if (item) {
-      // 0/2/4 espaços = épico/story/task; os rótulos "Épico:/Story:/Task:"
-      // no texto são informativos — o nível estrutural vem SÓ da indentação.
-      const nivel = Math.min(Math.floor(item[1].length / 2), 2);
+    // 0/2/4 espaços = épico/story/task; os rótulos "Épico:/Story:/Task:"
+    // no texto são informativos — o nível estrutural vem SÓ da indentação.
+    // A indentação só é estrutura quando é EXATAMENTE a da gramática:
+    // fora de 0/2/4 (ímpar, 6+, tab) a linha cai no caminho CRU abaixo —
+    // reinterpretar em silêncio disfarçaria hierarquia que não entendemos.
+    if (item && ['', '  ', '    '].includes(item[1])) {
+      const nivel = item[1].length / 2;
       const nodo = {
         tipo: 'item',
         texto: item[3].trim(),
@@ -178,12 +183,21 @@ export function parsearBacklog(texto) {
 
     // O que não casa com a gramática vai CRU para o card da feature — o
     // quadro não pode esconder o que não entendeu (item de lista sem token,
-    // parágrafo de contexto). Linhas contíguas de prosa viram um parágrafo.
+    // indentação fora da gramática, parágrafo de contexto). Linhas contíguas
+    // de prosa viram um parágrafo.
     if (ultimo?.tipo === 'cru' && !RE_LISTA.test(linha)) {
       ultimo.texto += ` ${linha.trim()}`;
     } else {
-      const nodo = { tipo: 'cru', texto: linha.trim() };
-      feature.itens.push(nodo);
+      // O cru respeita a hierarquia do arquivo: linha indentada dentro de um
+      // épico aparece DENTRO dele, pela mesma régua de indentação dos itens.
+      // O marcador "- " de lista sai do texto — sintaxe markdown não vaza
+      // para a projeção (o token de item tokenizado também é removido).
+      const [, recuo, resto] = linha.match(/^(\s*)(?:-\s+)?(.*)$/);
+      const nivel = Math.min(Math.floor(recuo.length / 2), 2);
+      const nodo = { tipo: 'cru', texto: resto.trim(), nivel, filhos: [] };
+      while (pilha.length && pilha[pilha.length - 1].nivel >= nivel) pilha.pop();
+      (pilha.length ? pilha[pilha.length - 1].filhos : feature.itens).push(nodo);
+      pilha.push(nodo);
       ultimo = nodo;
     }
   }
@@ -200,8 +214,9 @@ export function parsearBacklog(texto) {
 }
 
 // Só projetos com o campo opcional `backlog` entram — projeto sem o campo não
-// aparece, sem erro e sem inferência. Arquivo ausente vira o estado NOMEADO
-// "sem_arquivo": lista vazia silenciosa esconderia o defeito da tela.
+// aparece, sem erro e sem inferência. Falha de leitura vira estado NOMEADO
+// ("sem_arquivo" para ausente, "erro_leitura" para o resto): lista vazia
+// silenciosa esconderia o defeito da tela.
 // O parâmetro existe para teste com catálogo falso; a rota usa o real.
 export async function lerBacklog(projetos = PROJETOS) {
   return {
@@ -213,8 +228,12 @@ export async function lerBacklog(projetos = PROJETOS) {
           try {
             const bruto = await fs.readFile(path.join(RAIZ, p.pasta, p.backlog), 'utf8');
             return { ...base, estado: 'ok', features: parsearBacklog(bruto) };
-          } catch {
-            return { ...base, estado: 'sem_arquivo' };
+          } catch (erro) {
+            // Só ENOENT significa "não existe". Qualquer outra falha (EACCES,
+            // EISDIR…) ganha o nome VERDADEIRO — chamar de sem_arquivo um
+            // arquivo ilegível mentiria a causa na tela.
+            if (erro?.code === 'ENOENT') return { ...base, estado: 'sem_arquivo' };
+            return { ...base, estado: 'erro_leitura', erro: erro?.code ?? String(erro?.message ?? erro) };
           }
         }),
     ),
