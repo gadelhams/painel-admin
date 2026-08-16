@@ -9,8 +9,8 @@ export const PROJETOS = [
     descricao: 'Motor de continuidade narrativa para campanhas de RPG — código decide, IA narra.',
     stack: 'pnpm · TypeScript · Fastify · React · Postgres',
     entrada: 'CLAUDE.md',
-    // Único com backlog por ora: a aba Backlog projeta este arquivo em
-    // leitura apenas — o markdown é a verdade (docs/02_ABA_BACKLOG.md).
+    // A aba Backlog projeta o arquivo `backlog` em leitura apenas — o
+    // markdown é a verdade (docs/02_ABA_BACKLOG.md).
     backlog: 'docs/39_BACKLOG.md',
     portas: [
       { porta: 3333, servico: 'API' },
@@ -24,6 +24,7 @@ export const PROJETOS = [
     descricao: 'Subsistema geoespacial auditável de Khorvaire — rotas, distâncias, evidências.',
     stack: 'Postgres + PostGIS + pgRouting · SQL cru · PowerShell',
     entrada: 'README.md',
+    backlog: 'docs/BACKLOG.md',
     portas: [{ porta: 54329, servico: 'Postgres' }],
   },
   {
@@ -32,6 +33,7 @@ export const PROJETOS = [
     descricao: 'Bot que grava e transcreve canais de voz; modo campanha alimenta o Lore Engine.',
     stack: 'pnpm · TypeScript · LLM local',
     entrada: 'docs/00_PLANO.md',
+    backlog: 'docs/BACKLOG.md',
     portas: [{ porta: 11434, servico: 'Ollama' }],
   },
   {
@@ -41,6 +43,9 @@ export const PROJETOS = [
     stack: 'Python/FastAPI · SQLite · Next.js · Anthropic',
     entrada: 'filosofia/CLAUDE.md',
     subRepo: 'filosofia',
+    // Com o prefixo do sub-repo: lerBacklog junta RAIZ + pasta + backlog e
+    // NÃO consulta `subRepo` — sem o `filosofia/` aqui, seria sem_arquivo.
+    backlog: 'filosofia/docs/BACKLOG.md',
     portas: [
       { porta: 8000, servico: 'API (FastAPI)' },
       { porta: 3000, servico: 'Web (Next)' },
@@ -52,6 +57,7 @@ export const PROJETOS = [
     descricao: 'Remake web do mapa de Warcraft 3 — perseguição single e multiplayer para 12.',
     stack: 'JS vanilla + canvas · Node + ws',
     entrada: 'jogo-web/README.md',
+    backlog: 'docs/BACKLOG.md',
     producao: 'https://tarado.astargne.com',
     portas: [{ porta: 8323, servico: 'Servidor' }],
   },
@@ -61,6 +67,7 @@ export const PROJETOS = [
     descricao: 'Skill Alexa que toca a conta pessoal do YouTube Music; Lambda + proxy de áudio em casa.',
     stack: 'Node CommonJS · AWS Lambda + DynamoDB · Docker',
     entrada: 'README.md',
+    backlog: 'docs/BACKLOG.md',
     portas: [{ porta: 3000, servico: 'Proxy de áudio' }],
   },
   {
@@ -69,6 +76,7 @@ export const PROJETOS = [
     descricao: 'Player de listas M3U — PWA, TV Samsung Tizen e iOS futuro.',
     stack: 'React 19 + Vite · hls.js · Capacitor',
     entrada: 'README.md',
+    backlog: 'docs/BACKLOG.md',
     portas: [{ porta: 5173, servico: 'Dev (Vite)' }],
   },
   {
@@ -77,12 +85,25 @@ export const PROJETOS = [
     descricao: 'Servidor privado de Ragnarok Online (rAthena pré-renewal) empacotado em Docker.',
     stack: 'rAthena (C/C++) · Docker · MariaDB 11',
     entrada: 'README.md',
+    backlog: 'docs/BACKLOG.md',
     portas: [
       { porta: 6900, servico: 'login-server' },
       { porta: 6121, servico: 'char-server' },
       { porta: 5121, servico: 'map-server' },
       { porta: 3306, servico: 'MariaDB' },
     ],
+  },
+  {
+    // O próprio painel: entrou no catálogo em 16/08/2026, na adoção do padrão
+    // de backlog — sem entrada aqui, o campo `backlog` não teria onde morar e
+    // o docs/BACKLOG.md ficaria invisível para a aba.
+    pasta: 'painel-admin',
+    titulo: 'Painel Admin + Severino',
+    descricao: 'Este hub administrativo local — git, portas, sondas de produção e o Severino a bordo.',
+    stack: 'Node + Claude Agent SDK · vanilla + Web Speech/ElevenLabs',
+    entrada: 'CLAUDE.md',
+    backlog: 'docs/BACKLOG.md',
+    portas: [{ porta: 7777, servico: 'Dashboard + Severino' }],
   },
 ];
 // O severino saiu do catálogo em 14/08/2026: foi fundido NESTE app (rota

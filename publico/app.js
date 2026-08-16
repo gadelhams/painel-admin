@@ -99,6 +99,7 @@ async function carregarProducao() {
 
 const quadroBacklog = document.getElementById('quadro-backlog');
 const filtroTags = document.getElementById('filtro-tags');
+const filtroProjetos = document.getElementById('filtro-projetos');
 const paineisAbas = {
   geral: document.getElementById('aba-geral'),
   backlog: document.getElementById('aba-backlog'),
@@ -106,6 +107,9 @@ const paineisAbas = {
 
 let dadosBacklog = null;
 let tagAtiva = null;
+// Filtro de projeto (pedido do dono, 16/08/2026): client-side como o de tag;
+// null = todos. Guarda a PASTA (chave estável do catálogo), não o título.
+let projetoAtivo = null;
 
 for (const botao of document.querySelectorAll('.aba')) {
   botao.addEventListener('click', () => {
@@ -196,7 +200,7 @@ function nosComTag(nodos, tag, achados = []) {
   return achados;
 }
 
-function colunaFeature(f) {
+function colunaFeature(f, projeto) {
   // Com filtro ativo a coluna mostra SÓ as linhas com a tag (aceite 3 da
   // spec) — a linha é a unidade, filho não vem de carona.
   let corpo;
@@ -211,6 +215,10 @@ function colunaFeature(f) {
   return el(
     'div',
     { class: 'coluna' },
+    // Subtítulo discreto com o projeto dono (pedido do dono, 16/08/2026):
+    // com vários projetos no quadro, a coluna rolada para longe do cabeçalho
+    // do bloco precisa se identificar sozinha.
+    el('div', { class: 'coluna-projeto' }, projeto.titulo),
     el(
       'div',
       { class: 'coluna-cab' },
@@ -248,9 +256,15 @@ function blocoProjeto(pr) {
       ),
     );
   }
-  const colunas = pr.features.map(colunaFeature).filter(Boolean);
+  const colunas = pr.features.map((f) => colunaFeature(f, pr)).filter(Boolean);
   if (tagAtiva && !colunas.length) return null;
   return el('div', { class: 'backlog-projeto' }, cabecalho, el('div', { class: 'quadro' }, ...colunas));
+}
+
+// Os dois filtros compõem: o de projeto decide QUAIS blocos entram, o de tag
+// decide quais linhas dentro deles. Tudo derivado do JSON na hora de desenhar.
+function projetosVisiveis() {
+  return dadosBacklog.projetos.filter((pr) => !projetoAtivo || pr.pasta === projetoAtivo);
 }
 
 function contarTags(nodos, contagem) {
@@ -260,9 +274,34 @@ function contarTags(nodos, contagem) {
   }
 }
 
+// Chips de projeto no mesmo padrão visual do filtro de tag; "todos" por
+// padrão. Um chip por projeto COM backlog no catálogo — inclusive os em
+// sem_arquivo/erro_leitura, para o filtro nunca esconder um estado de falha.
+function desenharFiltroProjetos() {
+  const botoes = [
+    el('button', { class: `filtro${projetoAtivo ? '' : ' ativa'}`, type: 'button', 'data-pasta': '' }, 'todos'),
+    ...dadosBacklog.projetos.map((pr) =>
+      el(
+        'button',
+        { class: `filtro${projetoAtivo === pr.pasta ? ' ativa' : ''}`, type: 'button', 'data-pasta': pr.pasta },
+        pr.titulo,
+      ),
+    ),
+  ];
+  for (const b of botoes) {
+    b.addEventListener('click', () => {
+      projetoAtivo = b.dataset.pasta || null;
+      desenharBacklog();
+    });
+  }
+  filtroProjetos.replaceChildren(...botoes);
+}
+
 function desenharFiltro() {
   const contagem = new Map();
-  for (const pr of dadosBacklog.projetos) {
+  // As contagens de tag seguem o filtro de projeto: com um projeto ativo, o
+  // chip diz quantas linhas a tag tem NAQUELE recorte, não no total.
+  for (const pr of projetosVisiveis()) {
     if (pr.estado === 'ok') for (const f of pr.features) contarTags(f.itens, contagem);
   }
   // DONO primeiro: a fila pessoal do dono é o motivo desta aba existir.
@@ -294,13 +333,14 @@ function desenharFiltro() {
 
 function desenharBacklog() {
   if (!dadosBacklog) return;
+  desenharFiltroProjetos();
   desenharFiltro();
-  const blocos = dadosBacklog.projetos.map(blocoProjeto).filter(Boolean);
+  const blocos = projetosVisiveis().map(blocoProjeto).filter(Boolean);
   quadroBacklog.replaceChildren(
     ...(blocos.length
       ? blocos
       : [el('p', { class: 'discreto' }, tagAtiva
-          ? `nenhuma linha com (${tagAtiva})`
+          ? `nenhuma linha com (${tagAtiva})${projetoAtivo ? ` em ${projetoAtivo}` : ''}`
           : 'nenhum projeto do catálogo tem o campo backlog')]),
   );
 }

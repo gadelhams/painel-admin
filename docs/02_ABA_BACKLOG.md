@@ -1,5 +1,18 @@
 # Aba Backlog — o quadro kanban dos projetos (fase 1: só-leitura)
 
+> **Incremento: MULTI-PROJETO + FILTRO DE PROJETO, 16/08/2026 (pedido do
+> dono no mesmo dia).** Os 8 projetos restantes da raiz adotaram o padrão
+> (`PADROES-BACKLOG.md`, tabela de praticantes) e todos os 9 estão
+> registrados no campo `backlog` do catálogo — inclusive o próprio
+> painel-admin, que entrou no catálogo para isso. A aba ganhou **filtro de
+> projeto**: chips no mesmo padrão visual do filtro de tag, "todos" por
+> padrão, client-side como o de tag; os dois filtros compõem (projeto decide
+> quais blocos entram, tag decide quais linhas dentro deles) e as contagens
+> dos chips de tag seguem o recorte de projeto. Cada coluna de feature ganhou
+> subtítulo discreto com o projeto dono — com vários projetos no quadro, a
+> coluna rolada para longe do cabeçalho do bloco se identifica sozinha.
+> Nada disso mudou parser, rota ou contrato: só catálogo e projeção.
+
 > **Status: fase 1 IMPLEMENTADA em 16/08/2026.** `parsearBacklog()`/`lerBacklog()` em
 > `coletores.js` (compartilhadas por função, sem cache), `GET /api/backlog` no
 > `servidor.js`, campo `backlog` no catálogo (só o SistemaLoreEngine) e a aba no
@@ -35,11 +48,14 @@ Corolário bom do local-only: a aba lê o **working tree** — mais fresco que q
 
 ## Fonte de dados e multi-projeto
 
-- `projetos.js` ganha campo **opcional** `backlog` (caminho relativo à pasta do projeto).
-  Primeiro e único por ora: `SistemaLoreEngine` → `docs/39_BACKLOG.md`. Projeto sem o
-  campo simplesmente não aparece na aba — nenhum erro, nenhuma inferência.
-- Outros projetos entram quando adotarem um arquivo no mesmo formato (decisão por projeto,
-  do dono).
+- `projetos.js` tem o campo **opcional** `backlog` (caminho relativo à pasta do projeto —
+  para projeto com sub-repo, o caminho leva o prefixo do sub-repo, como o
+  `filosofia/docs/BACKLOG.md` do ConversaComDeus: `lerBacklog` junta RAIZ + pasta +
+  backlog e não consulta `subRepo`). Projeto sem o campo simplesmente não aparece na
+  aba — nenhum erro, nenhuma inferência.
+- Primeiro praticante: `SistemaLoreEngine` → `docs/39_BACKLOG.md`. Desde 16/08/2026 os
+  **9 projetos** do catálogo têm o campo — a lista viva de praticantes mora na tabela do
+  `PADROES-BACKLOG.md` da raiz, não aqui.
 
 ## O contrato de parsing (gramática do doc 39)
 
@@ -84,9 +100,11 @@ aqui NA MESMA ENTREGA** (regra do orquestrador da raiz; há nota espelhada no pr
   ferramenta do motor chamam a MESMA função).
 - **`servidor.js`**: `GET /api/backlog` — devolve a árvore parseada de todos os projetos
   com backlog.
-- **`publico/`**: a aba no dashboard vanilla — colunas por feature; cards de épico/story
+- **`publico/`**: a aba no dashboard vanilla — colunas por feature, cada uma com
+  subtítulo discreto do projeto dono; cards de épico/story
   com placar **derivado na hora** das tasks (`n/m` marcadas — contagem nunca armazenada);
-  filtro por tag, com destaque para `(DONO)` (a fila pessoal do dono é o motivo da aba).
+  filtro por tag, com destaque para `(DONO)` (a fila pessoal do dono é o motivo da aba);
+  filtro por projeto (16/08/2026), client-side como o de tag, "todos" por padrão.
 
 ## Aceite observável
 

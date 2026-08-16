@@ -58,8 +58,9 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
   mora em `../PADROES-BACKLOG.md` (padrão da raiz desde 16/08/2026)** —
   contrato de três pontas: padrão + espelho no doc 39 do LoreEngine + o
   parser em `coletores.js` mudam JUNTOS, na mesma entrega. Este projeto
-  também adota na retomada: `docs/BACKLOG.md` derivado do `00_PLANO.md`
-  (fase 3 do Severino + backlog de voz).
+  adotou em 16/08/2026: `docs/BACKLOG.md` derivado do `00_PLANO.md`
+  (fase 3 do Severino + backlog de voz), registrado no campo `backlog`
+  da própria entrada em `projetos.js`.
 
 ## Severino por voz, fora de casa (Claude app + Remote Control)
 

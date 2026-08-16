@@ -134,6 +134,8 @@ button:disabled { opacity: .5; cursor: wait; }
 /* ---------- aba Backlog ---------- */
 
 .filtro-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+/* As duas fileiras de filtro (projeto em cima, tag embaixo) ficam coladas. */
+#filtro-projetos { margin-bottom: .4rem; }
 .filtro-tags .filtro { font-size: .8rem; padding: .25rem .7rem; border-radius: 999px; }
 .filtro-tags .filtro.ativa { border-color: var(--acento); color: var(--acento); }
 .filtro-tags .filtro-dono { color: var(--alerta); }
@@ -156,6 +158,8 @@ button:disabled { opacity: .5; cursor: wait; }
   flex-direction: column;
   gap: .5rem;
 }
+/* Subtítulo discreto: com vários projetos no quadro, cada coluna diz de quem é. */
+.coluna-projeto { font-size: .68rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: .06em; }
 .coluna-cab { display: flex; align-items: center; gap: .5rem; padding-bottom: .35rem; border-bottom: 1px solid var(--borda); }
 .coluna-cab h4 { margin: 0; font-size: .95rem; flex: 1; }
 
