@@ -1,7 +1,11 @@
 // Voz do Severino — Web Speech API + camada ElevenLabs, zero dependências.
 // Cadeia de degradação DECLARADA (upgrade de 14/08/2026): ElevenLabs (via
-// POST /api/tts, áudio em fila sequencial) → speechSynthesis (Antônio) → só
-// texto — cada queda avisada na linha de status com o motivo. Carrega ANTES
+// POST /api/tts, áudio em fila sequencial, com 1 retry por bloco antes de
+// declarar queda — 20/08/2026) → speechSynthesis (Antônio) → só texto — cada
+// queda avisada na linha de status com o motivo. Reconhecimento (fala do
+// dono) passa por correção de nomes próprios contra o catálogo de projetos
+// antes de sair (20/08/2026) — rec.lang fixo em pt-BR não entende nome de
+// projeto em inglês, então corrige depois, declarando a troca. Carrega ANTES
 // de chat.js: define o global `Voz` que o chat consome. Nunca quebra o texto.
 
 const Voz = (() => {
@@ -37,9 +41,10 @@ const Voz = (() => {
       atualizarStatus();
     });
 
-  // Queda em runtime: desliga a camada para o resto da sessão (cada bloco
-  // re-tentando seria pausa longa em toda sentença) e declara o motivo.
-  // Devolve true só na PRIMEIRA queda — quem chamou avisa uma vez na conversa.
+  // Queda em runtime (depois do retry único de `sintetizarEleven` já ter
+  // falhado 2x): desliga a camada para o resto da sessão — insistir bloco
+  // após bloco além do retry seria pausa longa em toda sentença — e declara
+  // o motivo. Devolve true só na PRIMEIRA queda — quem chamou avisa uma vez.
   function cairParaAntonio(motivo) {
     const primeira = elevenDisponivel !== false;
     elevenDisponivel = false;
@@ -148,7 +153,7 @@ const Voz = (() => {
       aoFalha?.(motivo);
     }
 
-    async function sintetizarEleven(texto) {
+    async function tentarSintese(texto) {
       const resposta = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -164,6 +169,20 @@ const Voz = (() => {
         throw new Error(motivo);
       }
       return resposta.blob();
+    }
+
+    // Falha isolada (rede com solavanco, 5xx passageiro) não deve trocar de
+    // motor no meio da fala: UMA retentativa antes de declarar queda de
+    // verdade — decisão do dono (20/08/2026), preferindo um pouco mais de
+    // latência num bloco raro a perder a voz boa pro resto da conversa por
+    // um blip. Só a segunda falha desce para `cairParaAntonio`.
+    async function sintetizarEleven(texto) {
+      try {
+        return await tentarSintese(texto);
+      } catch (erro) {
+        if (abortador.signal.aborted) throw erro; // calar(): não insiste
+        return await tentarSintese(texto);
+      }
     }
 
     function tocar(blob) {
@@ -285,6 +304,88 @@ const Voz = (() => {
     if (temSintese) speechSynthesis.cancel();
   }
 
+  // ---------- Correção de nomes próprios (catálogo de projetos.js) ----------
+
+  // A Web Speech API não faz reconhecimento bilíngue: com `rec.lang` fixo em
+  // pt-BR (abaixo), nome de projeto em inglês (SistemaLoreEngine,
+  // DiscordTranscriber…) sai com encaixe fonético torto ("sistema lory
+  // endine"). Corrige DEPOIS do reconhecimento, por distância de edição
+  // contra o catálogo real (`GET /api/projetos` — mesma fonte da aba
+  // Projetos, sem lista de nomes duplicada aqui) — nunca silenciosa: quem
+  // ouve o resultado final recebe o texto corrigido E a lista do que mudou.
+  let catalogoNomes = [];
+
+  fetch('/api/projetos')
+    .then((r) => r.json())
+    .then((corpo) => {
+      const vistos = new Set();
+      catalogoNomes = (corpo.projetos ?? [])
+        .flatMap((p) => [p.pasta, p.titulo])
+        .filter((nome) => nome && !vistos.has(nome) && vistos.add(nome))
+        .map((nome) => ({ exibicao: nome, falado: separarPalavras(nome) }))
+        .filter((alvo) => alvo.falado.length >= 2); // 1 palavra: risco alto de falso positivo
+    })
+    .catch(() => { /* sem catálogo: correção fica desligada, reconhecimento cru segue */ });
+
+  // "SistemaLoreEngine" -> ['sistema','lore','engine']; "Mapa Khorvaire" ->
+  // mesma coisa a partir do espaço — cobre tanto `pasta` quanto `titulo`.
+  function separarPalavras(nome) {
+    return normalizar(nome)
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .split(/[^a-z0-9]+/i)
+      .filter(Boolean)
+      .map((p) => p.toLowerCase());
+  }
+
+  function distanciaEdicao(a, b) {
+    const linha = new Array(b.length + 1);
+    for (let j = 0; j <= b.length; j++) linha[j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      let anterior = linha[0];
+      linha[0] = i;
+      for (let j = 1; j <= b.length; j++) {
+        const temp = linha[j];
+        linha[j] = a[i - 1] === b[j - 1]
+          ? anterior
+          : 1 + Math.min(anterior, linha[j], linha[j - 1]);
+        anterior = temp;
+      }
+    }
+    return linha[b.length];
+  }
+
+  // Troca janelas de N palavras do texto reconhecido pelo nome oficial quando
+  // a distância de edição (normalizada pelo tamanho) indica que é o mesmo
+  // nome dito torto pelo reconhecedor.
+  const SIMILARIDADE_MINIMA = 0.72;
+
+  function corrigirNomesProprios(texto) {
+    if (!catalogoNomes.length) return { texto, trocas: [] };
+    const palavras = texto.split(/(\s+)/); // mantém os espaços pra remontar depois
+    const indices = palavras.map((p, i) => (/\S/.test(p) ? i : -1)).filter((i) => i !== -1);
+    const trocas = [];
+
+    for (const alvo of catalogoNomes) {
+      for (let ini = 0; ini + alvo.falado.length <= indices.length; ini++) {
+        const fim = ini + alvo.falado.length;
+        const janelaTexto = indices.slice(ini, fim).map((i) => palavras[i]).join(' ');
+        const juntoJanela = normalizar(janelaTexto).replace(/[^a-z0-9]/gi, '');
+        const juntoAlvo = alvo.falado.join('');
+        if (!juntoJanela) continue;
+        const distancia = distanciaEdicao(juntoJanela, juntoAlvo);
+        const similaridade = 1 - distancia / Math.max(juntoJanela.length, juntoAlvo.length);
+        if (similaridade >= SIMILARIDADE_MINIMA && janelaTexto.toLowerCase() !== alvo.exibicao.toLowerCase()) {
+          palavras[indices[ini]] = alvo.exibicao;
+          for (let k = ini + 1; k < fim; k++) palavras[indices[k]] = '';
+          trocas.push(`"${janelaTexto}" → "${alvo.exibicao}"`);
+          break; // já casou essa janela com um alvo; não tenta outro nela
+        }
+      }
+    }
+
+    return { texto: palavras.join('').replace(/\s{2,}/g, ' ').trim(), trocas };
+  }
+
   // ---------- Reconhecimento (Severino ouvindo) ----------
 
   const ClasseReconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -303,7 +404,7 @@ const Voz = (() => {
 
   // Push-to-talk do contrato: UMA captura por clique (continuous: false),
   // encerra sozinha no silêncio — nunca sempre-ouvindo, sem hotword.
-  function ouvir({ aoParcial, aoFinal, aoErro, aoFim } = {}) {
+  function ouvir({ aoParcial, aoFinal, aoCorrecao, aoErro, aoFim } = {}) {
     const rec = new ClasseReconhecimento();
     rec.lang = 'pt-BR';
     rec.interimResults = true;
@@ -320,7 +421,9 @@ const Voz = (() => {
       }
       if (definitivo.trim() && !mandouFinal) {
         mandouFinal = true;
-        aoFinal?.(definitivo.trim());
+        const { texto: corrigido, trocas } = corrigirNomesProprios(definitivo.trim());
+        if (trocas.length) aoCorrecao?.(trocas);
+        aoFinal?.(corrigido);
       } else if (parcial) {
         aoParcial?.(parcial);
       }

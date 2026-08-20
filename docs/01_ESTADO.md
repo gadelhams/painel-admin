@@ -390,6 +390,32 @@ Decisões de implementação (da doc pública da ElevenLabs, consultada na hora)
    `abortador.abort()` + `pause()`); no servidor, cliente que some aborta o
    upstream (`res.on('close')` → `AbortController`).
 
+**CORREÇÃO ao item 2 (20/08/2026)**: falha isolada não derruba mais a camada
+na primeira tentativa — `sintetizarEleven` faz UMA retentativa (`tentarSintese`
+chamado 2x, sem retentar se foi `calar()` que abortou) antes de chamar
+`cairParaAntonio`. A queixa era blip passageiro na ElevenLabs trocando de voz
+no meio de uma conversa inteira sem necessidade; só a segunda falha do mesmo
+bloco desce pro Antônio de verdade.
+
+### Reconhecimento — correção de nomes próprios (20/08/2026)
+
+A queixa: `rec.lang` fixo em `pt-BR` (Web Speech API não faz bilíngue) força
+nome de projeto em inglês a um encaixe fonético torto ("sistema lory endine"
+em vez de "SistemaLoreEngine"). Correção **pós-reconhecimento**, não no
+reconhecedor: `voz.js` busca `GET /api/projetos` uma vez na carga (mesma
+fonte da aba Projetos — catálogo NÃO duplicado aqui), monta o catálogo a
+partir de `pasta`+`titulo`, e no resultado final do reconhecimento
+(`corrigirNomesProprios`) compara janelas de N palavras do texto ouvido
+contra a forma "falada" de cada nome (camelCase/espaço separado) por
+distância de edição normalizada (limiar `SIMILARIDADE_MINIMA = 0.72`). Troca
+nunca é silenciosa: `aoCorrecao` avisa a lista de trocas na conversa
+(`chat.js`, nota `.aviso-voz`, "corrigi o que ouvi: …"). Nomes de 1 palavra
+ficam de fora (risco de falso positivo alto demais). Prova isolada (sem DOM,
+funções coladas num script à parte): "sistema lory endine" → "Sistema Lore
+Engine", "discord transcraiber" → "Discord Transcriber", "mapa corvaire" →
+"Mapa Khorvaire", zero falso positivo nos casos comuns testados ("corre do
+tarado", "entra tranquilo aí no painel").
+
 ### Fluidez (a queixa "leitura esquisita, não fluida")
 
 - `limparParaFala` (`voz.js`): fala é texto corrido — remove asterisco,

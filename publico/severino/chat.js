@@ -154,6 +154,7 @@ if (!Voz.temReconhecimento) {
         if (enviar.disabled) entrada.value = texto;
         else mandarMensagem(texto);
       },
+      aoCorrecao: (trocas) => adicionarNota('aviso-voz', `corrigi o que ouvi: ${trocas.join(', ')}`),
       aoErro: (motivo) => adicionarNota('aviso-voz', motivo),
       aoFim: () => {
         escuta = null;
