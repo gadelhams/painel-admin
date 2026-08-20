@@ -6,18 +6,17 @@
 // vivo vem dos coletores compartilhados (coletores.js), por chamada de
 // função — nunca HTTP para o próprio processo.
 
-import path from 'node:path';
-import fs from 'node:fs/promises';
 import { query, tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 // zod é peer dependency declarada do próprio SDK (a assinatura de tool()
 // exige schema zod); não é dependência nossa no package.json.
 import { z } from 'zod';
-import { RAIZ, estadoProjetos, estadoProducao } from './coletores.js';
+import {
+  estadoProjetos, estadoProducao,
+  resolverDentroDaRaiz, listarModeladores, lerArquivoMd,
+} from './coletores.js';
 
 // Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
 const MODELO = 'claude-sonnet-5';
-// Teto de leitura por arquivo: protege o contexto de .md gigantes.
-const MAX_CHARS_ARQUIVO = 60_000;
 
 // ---------- acesso aos coletores do painel ----------
 
@@ -38,59 +37,21 @@ async function consultarColetor(nome, coletor) {
 }
 
 // ---------- leitura de documentos modeladores ----------
-
-const MODELADORES_DE_PASTA = ['CLAUDE.md', 'claude.md', 'AGENTS.md', 'README.md', 'readme.md'];
-const PASTAS_IGNORADAS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'rathena']);
-
-function temEscapeDeCaminho(trecho) {
-  return trecho.split(/[\\/]/).some((parte) => parte === '..');
-}
-
-// Só .md, resolvido dentro da raiz, sem `..` — allowlist do plano. Extensão
-// é o portão contra .env, código e segredo: nada fora de .md sai daqui.
-function resolverDentroDaRaiz(...trechos) {
-  if (trechos.some(temEscapeDeCaminho)) return null;
-  const alvo = path.resolve(RAIZ, ...trechos);
-  if (!alvo.startsWith(RAIZ + path.sep)) return null;
-  return alvo;
-}
-
-async function listarModeladores(dirProjeto) {
-  const achados = [];
-  const entradas = await fs.readdir(dirProjeto, { withFileTypes: true });
-  for (const entrada of entradas) {
-    if (entrada.isFile() && entrada.name.toLowerCase().endsWith('.md')) {
-      achados.push(entrada.name);
-    } else if (entrada.isDirectory() && !PASTAS_IGNORADAS.has(entrada.name)) {
-      if (entrada.name === 'docs') {
-        const docs = await fs.readdir(path.join(dirProjeto, 'docs')).catch(() => []);
-        for (const doc of docs) {
-          if (doc.toLowerCase().endsWith('.md')) achados.push(`docs/${doc}`);
-        }
-      } else {
-        // Sub-repo (ex.: ProjetoConversaComDeus/filosofia): só os modeladores clássicos.
-        for (const nome of MODELADORES_DE_PASTA) {
-          const existe = await fs.access(path.join(dirProjeto, entrada.name, nome)).then(() => true, () => false);
-          if (existe) achados.push(`${entrada.name}/${nome}`);
-        }
-      }
-    }
-  }
-  return achados;
-}
+// A mecânica (resolução segura de caminho, listagem, leitura com teto) mora
+// em coletores.js desde 20/08/2026 — compartilhada com a rota HTTP da
+// página de projeto. Aqui só formata a resposta no formato MCP.
 
 async function lerDocProjeto({ projeto, arquivo }) {
   const dirProjeto = resolverDentroDaRaiz(projeto);
   if (!dirProjeto) {
     return { content: [{ type: 'text', text: 'Caminho de projeto inválido: precisa ser uma pasta direta da raiz, sem "..".' }], isError: true };
   }
-  const ehPasta = await fs.stat(dirProjeto).then((s) => s.isDirectory(), () => false);
-  if (!ehPasta) {
-    return { content: [{ type: 'text', text: `Não achei a pasta "${projeto}" na raiz. Use estado_projetos para ver os nomes exatos das pastas.` }], isError: true };
-  }
 
   if (!arquivo) {
-    const modeladores = await listarModeladores(dirProjeto);
+    const modeladores = await listarModeladores(dirProjeto).catch(() => null);
+    if (modeladores === null) {
+      return { content: [{ type: 'text', text: `Não achei a pasta "${projeto}" na raiz. Use estado_projetos para ver os nomes exatos das pastas.` }], isError: true };
+    }
     if (modeladores.length === 0) {
       return { content: [{ type: 'text', text: `A pasta "${projeto}" não tem documento modelador (.md) visível.` }] };
     }
@@ -101,15 +62,11 @@ async function lerDocProjeto({ projeto, arquivo }) {
     return { content: [{ type: 'text', text: 'Só leio arquivos .md (documentos modeladores). Nada de código, .env ou segredo.' }], isError: true };
   }
   const alvo = resolverDentroDaRaiz(projeto, arquivo);
-  if (!alvo || !alvo.startsWith(dirProjeto + path.sep)) {
+  if (!alvo) {
     return { content: [{ type: 'text', text: 'Caminho de arquivo inválido: precisa ficar dentro da pasta do projeto, sem "..".' }], isError: true };
   }
   try {
-    let texto = await fs.readFile(alvo, 'utf8');
-    if (texto.length > MAX_CHARS_ARQUIVO) {
-      texto = `${texto.slice(0, MAX_CHARS_ARQUIVO)}\n\n[... truncado em ${MAX_CHARS_ARQUIVO} caracteres — o arquivo continua no disco]`;
-    }
-    return { content: [{ type: 'text', text: texto }] };
+    return { content: [{ type: 'text', text: await lerArquivoMd(alvo) }] };
   } catch {
     return { content: [{ type: 'text', text: `Não achei "${arquivo}" dentro de "${projeto}".` }], isError: true };
   }

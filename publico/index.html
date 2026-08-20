@@ -6,6 +6,7 @@
   <title>Painel dos Projetos</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
   <link rel="stylesheet" href="estilo.css">
+  <script src="vendor/mermaid.min.js"></script>
 </head>
 <body>
   <header>
@@ -55,8 +56,19 @@
         </div>
       </section>
     </div>
+
+    <!-- Página de projeto (20/08/2026): aberta pelo clique num card, endereço
+         próprio via hash (#/projeto/<pasta>) -->
+    <div id="vista-projeto" hidden>
+      <p><a href="#/geral" class="voltar">← Visão geral</a></p>
+      <div id="projeto-conteudo">
+        <p class="discreto">Carregando…</p>
+      </div>
+    </div>
   </main>
 
   <script src="app.js"></script>
+  <script src="backlog.js"></script>
+  <script src="projeto.js"></script>
 </body>
 </html>

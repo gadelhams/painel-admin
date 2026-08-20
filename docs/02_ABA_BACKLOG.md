@@ -1,5 +1,17 @@
 # Aba Backlog — o quadro kanban dos projetos (fase 1: só-leitura)
 
+> **Incremento: CARDS EXPANSÍVEIS + CORES POR TAG, 20/08/2026 (pedido do
+> dono, junto com a página de projeto — `01_ESTADO.md`).** Item/cru com
+> filhos virou `<details>`/`<summary>` nativo (sem JS de estado; o navegador
+> cuida do abrir/fechar) — "card por story" sem depender do `nivel` bater
+> com épico/story/task, que já vimos não bater sempre nos arquivos reais
+> (alguns rotulam "Task"/"Story" no mesmo nível 0). Nó folha (sem filhos)
+> continua linha simples. As 6 tags canônicas ganharam cor distinta (token
+> novo `--ideia`, roxo, só para `SEM ESCOPO` — as outras reaproveitam
+> `--alerta`/`--falha`/`--texto-fraco`/`--acento` já existentes). Zero
+> mudança de parser/gramática/rota — só projeção (`publico/backlog.js`,
+> extraído de `publico/app.js` na mesma entrega) e `publico/estilo.css`.
+
 > **Incremento: MULTI-PROJETO + FILTRO DE PROJETO, 16/08/2026 (pedido do
 > dono no mesmo dia).** Os 8 projetos restantes da raiz adotaram o padrão
 > (`PADROES-BACKLOG.md`, tabela de praticantes) e todos os 9 estão
@@ -100,10 +112,12 @@ aqui NA MESMA ENTREGA** (regra do orquestrador da raiz; há nota espelhada no pr
   ferramenta do motor chamam a MESMA função).
 - **`servidor.js`**: `GET /api/backlog` — devolve a árvore parseada de todos os projetos
   com backlog.
-- **`publico/`**: a aba no dashboard vanilla — colunas por feature, cada uma com
-  subtítulo discreto do projeto dono; cards de épico/story
-  com placar **derivado na hora** das tasks (`n/m` marcadas — contagem nunca armazenada);
-  filtro por tag, com destaque para `(DONO)` (a fila pessoal do dono é o motivo da aba);
+- **`publico/backlog.js`** (extraído de `app.js` em 20/08/2026, mesmo padrão de scripts
+  globais de `publico/severino/`): a aba no dashboard vanilla — colunas por feature, cada
+  uma com subtítulo discreto do projeto dono; nó com filhos vira card `<details>`
+  expansível, folha vira linha simples, placar **derivado na hora** das tasks (`n/m`
+  marcadas — contagem nunca armazenada); filtro por tag (chip colorido por tag desde
+  20/08/2026), com destaque para `(DONO)` (a fila pessoal do dono é o motivo da aba);
   filtro por projeto (16/08/2026), client-side como o de tag, "todos" por padrão.
 
 ## Aceite observável

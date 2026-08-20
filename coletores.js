@@ -37,6 +37,61 @@ async function infoGit(dir) {
   }
 }
 
+// Linha de `git diff --stat`: " caminho/arquivo.md | 12 +++++-----" — o
+// resumo (contagem + barras) fica como está, só separa do caminho. A última
+// linha ("N files changed, ...") não tem "|", já sai filtrada.
+function parsearDiffStat(texto) {
+  return texto
+    .split('\n')
+    .map((l) => l.match(/^\s*(.+?)\s*\|\s*(.+)$/))
+    .filter(Boolean)
+    .map(([, caminho, resumo]) => ({ caminho, resumo }));
+}
+
+// Arquivos com mudança (staged + não staged, contra HEAD) e novos (não
+// rastreados, que `git diff` não mostra) — "o que está feito" no sentido de
+// já escrito, ainda não commitado (página de projeto, 20/08/2026).
+async function diffTrabalho(dir) {
+  const [porcelain, stat] = await Promise.all([
+    git(dir, 'status', '--porcelain'),
+    git(dir, 'diff', '--stat', 'HEAD').catch(() => ''),
+  ]);
+  const novos = porcelain
+    .split('\n')
+    .filter((l) => l.startsWith('??'))
+    .map((l) => l.slice(3).trim());
+  return { modificados: parsearDiffStat(stat), novos };
+}
+
+// Commits já feitos localmente mas nunca enviados ao remoto — fato
+// DIFERENTE de "não commitado" (SistemaLoreEngine tinha 21 disso sem o dono
+// saber). Sem branch upstream configurado, `rastreado: false` — não é erro,
+// é um projeto que nunca teve remote-tracking (ou está solto de propósito).
+async function commitsNaoEnviados(dir) {
+  const upstream = await git(dir, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}').catch(() => null);
+  if (!upstream) return { rastreado: false, commits: [] };
+  const bruto = await git(dir, 'log', `${upstream}..HEAD`, '--format=%s').catch(() => '');
+  return { rastreado: true, upstream, commits: bruto.split('\n').filter(Boolean) };
+}
+
+// Só chamada sob demanda (ao abrir a página de projeto), nunca no refresh de
+// 60s da grade — mais pesada que o resumo de `infoGit` que os cards usam.
+export async function gitDetalhado(pasta) {
+  const projeto = PROJETOS.find((p) => p.pasta === pasta);
+  if (!projeto) return { erro: 'projeto não encontrado' };
+
+  const caminhoRepo = projeto.subRepo ? path.join(RAIZ, pasta, projeto.subRepo) : path.join(RAIZ, pasta);
+  const existe = await fs.access(caminhoRepo).then(() => true, () => false);
+  if (!existe) return { erro: 'pasta não sincronizada nesta máquina' };
+
+  try {
+    const [diff, naoEnviados] = await Promise.all([diffTrabalho(caminhoRepo), commitsNaoEnviados(caminhoRepo)]);
+    return { ...diff, naoEnviados };
+  } catch {
+    return { erro: 'não é um repositório git' };
+  }
+}
+
 function portaAberta(porta) {
   return new Promise((resolve) => {
     const soquete = net.createConnection({ host: '127.0.0.1', port: porta, timeout: 600 });
@@ -74,6 +129,128 @@ async function coletarProjeto(projeto) {
     git: gitInfo,
     portas,
   };
+}
+
+// ---------- documentos modeladores (leitura segura de .md por projeto) ----------
+// Movido de motor.js pra cá em 20/08/2026: a ferramenta docs_projeto do
+// motor e a rota HTTP /api/projetos/:pasta/docs (página de projeto) usam
+// exatamente as mesmas funções — regra do CLAUDE.md do painel-admin, coletor
+// compartilhado nunca duplicado entre rota e ferramenta.
+
+const MODELADORES_DE_PASTA = ['CLAUDE.md', 'claude.md', 'AGENTS.md', 'README.md', 'readme.md'];
+const PASTAS_IGNORADAS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'rathena']);
+export const MAX_CHARS_ARQUIVO = 60_000;
+
+function temEscapeDeCaminho(trecho) {
+  return trecho.split(/[\\/]/).some((parte) => parte === '..');
+}
+
+// Só .md, resolvido dentro da raiz, sem ".." — portão contra escapar de
+// "Projetos Pessoais" por caminho relativo malicioso ou mal formado.
+export function resolverDentroDaRaiz(...trechos) {
+  if (trechos.some(temEscapeDeCaminho)) return null;
+  const alvo = path.resolve(RAIZ, ...trechos);
+  if (!alvo.startsWith(RAIZ + path.sep)) return null;
+  return alvo;
+}
+
+export async function listarModeladores(dirProjeto) {
+  const achados = [];
+  const entradas = await fs.readdir(dirProjeto, { withFileTypes: true });
+  for (const entrada of entradas) {
+    if (entrada.isFile() && entrada.name.toLowerCase().endsWith('.md')) {
+      achados.push(entrada.name);
+    } else if (entrada.isDirectory() && !PASTAS_IGNORADAS.has(entrada.name)) {
+      if (entrada.name === 'docs') {
+        const docs = await fs.readdir(path.join(dirProjeto, 'docs')).catch(() => []);
+        for (const doc of docs) {
+          if (doc.toLowerCase().endsWith('.md')) achados.push(`docs/${doc}`);
+        }
+      } else {
+        // Sub-repo (ex.: ProjetoConversaComDeus/filosofia): só os modeladores clássicos.
+        for (const nome of MODELADORES_DE_PASTA) {
+          const existeSub = await fs.access(path.join(dirProjeto, entrada.name, nome)).then(() => true, () => false);
+          if (existeSub) achados.push(`${entrada.name}/${nome}`);
+        }
+      }
+    }
+  }
+  return achados;
+}
+
+// Leitura com teto de caracteres — usada tanto pela ferramenta do motor (um
+// arquivo por pedido explícito) quanto pela rota de docs curados (vários de
+// uma vez). Espera receber um caminho já resolvido por resolverDentroDaRaiz.
+export async function lerArquivoMd(caminhoAbsoluto) {
+  let texto = await fs.readFile(caminhoAbsoluto, 'utf8');
+  if (texto.length > MAX_CHARS_ARQUIVO) {
+    texto = `${texto.slice(0, MAX_CHARS_ARQUIVO)}\n\n[... truncado em ${MAX_CHARS_ARQUIVO} caracteres — o arquivo continua no disco]`;
+  }
+  return texto;
+}
+
+// Docs curados (campo opcional `docs` em projetos.js: arquitetura/objetos/
+// dataFlow) vêm do próprio catálogo — trecho confiável, não entrada externa
+// — por isso lidos direto por path.join, sem passar de novo por
+// resolverDentroDaRaiz (que é o portão pra caminho digitado por fora).
+async function lerDocsCurados(dirProjeto, docsDeclarados) {
+  const grupos = {};
+  for (const grupo of ['arquitetura', 'objetos', 'dataFlow']) {
+    grupos[grupo] = await Promise.all(
+      (docsDeclarados[grupo] ?? []).map(async (caminho) => {
+        try {
+          const conteudo = await lerArquivoMd(path.join(dirProjeto, caminho));
+          return { caminho, conteudo };
+        } catch (erro) {
+          return { caminho, erro: erro?.code ?? String(erro?.message ?? erro) };
+        }
+      }),
+    );
+  }
+  return grupos;
+}
+
+// Alimenta a página de projeto: lista os modeladores (links) e o conteúdo
+// dos docs curados (renderizados inline, com diagrama). Projeto sem `docs`
+// no catálogo volta com os três grupos vazios — nunca um erro, a página
+// declara "sem diagrama catalogado ainda" em vez de fingir que existe.
+function trechosProjeto(projeto, ...resto) {
+  return projeto.subRepo ? [projeto.pasta, projeto.subRepo, ...resto] : [projeto.pasta, ...resto];
+}
+
+export async function docsProjeto(pasta) {
+  const projeto = PROJETOS.find((p) => p.pasta === pasta);
+  if (!projeto) return { erro: 'projeto não encontrado' };
+
+  const caminho = path.join(RAIZ, pasta);
+  const existe = await fs.access(caminho).then(() => true, () => false);
+  if (!existe) return { erro: 'pasta não sincronizada nesta máquina' };
+
+  const dirProjeto = resolverDentroDaRaiz(...trechosProjeto(projeto));
+  if (!dirProjeto) return { erro: 'projeto não encontrado' };
+
+  const [modeladores, curados] = await Promise.all([
+    listarModeladores(dirProjeto).catch(() => []),
+    lerDocsCurados(dirProjeto, projeto.docs ?? {}),
+  ]);
+  return { modeladores, curados };
+}
+
+// Leitura sob demanda de UM modelador da lista (clique na página de projeto)
+// — mesmo portão de segurança (resolverDentroDaRaiz + só .md) que a
+// ferramenta docs_projeto do motor usa pro mesmo tipo de arquivo.
+export async function lerModeladorProjeto(pasta, arquivo) {
+  const projeto = PROJETOS.find((p) => p.pasta === pasta);
+  if (!projeto) return { erro: 'projeto não encontrado' };
+  if (!arquivo || !arquivo.toLowerCase().endsWith('.md')) return { erro: 'arquivo precisa ser um .md' };
+
+  const alvo = resolverDentroDaRaiz(...trechosProjeto(projeto, arquivo));
+  if (!alvo) return { erro: 'caminho de arquivo inválido' };
+  try {
+    return { caminho: arquivo, conteudo: await lerArquivoMd(alvo) };
+  } catch (erro) {
+    return { erro: erro?.code === 'ENOENT' ? 'arquivo não encontrado' : String(erro?.message ?? erro) };
+  }
 }
 
 // ---------- sondas de produção ----------

@@ -12,6 +12,14 @@ export const PROJETOS = [
     // A aba Backlog projeta o arquivo `backlog` em leitura apenas — o
     // markdown é a verdade (docs/02_ABA_BACKLOG.md).
     backlog: 'docs/39_BACKLOG.md',
+    // Curadoria pra página de projeto (20/08/2026): só os 3 projetos com
+    // diagrama Mermaid vivo em algum .md ganham este campo — os outros 6
+    // ficam sem ele, e a página mostra "sem diagrama ainda" honestamente.
+    docs: {
+      arquitetura: ['docs/07_ARCHITECTURE.md', 'docs/14_ARCHITECTURE_GUIDE.md', 'docs/46_MAPA_TECNICO_DO_SISTEMA.md'],
+      objetos: ['docs/47_MODELO_DE_OBJETOS.md'],
+      dataFlow: ['docs/15_FUNCTIONAL_FLOWS.md', 'docs/48_FLUXOS_DE_DADOS.md'],
+    },
     portas: [
       { porta: 3333, servico: 'API' },
       { porta: 5173, servico: 'Web (Vite)' },
@@ -25,6 +33,10 @@ export const PROJETOS = [
     stack: 'Postgres + PostGIS + pgRouting · SQL cru · PowerShell',
     entrada: 'README.md',
     backlog: 'docs/BACKLOG.md',
+    docs: {
+      arquitetura: ['docs/integration-with-lore-engine.md'],
+      dataFlow: ['docs/roadmap.md'],
+    },
     portas: [{ porta: 54329, servico: 'Postgres' }],
   },
   {
@@ -34,6 +46,7 @@ export const PROJETOS = [
     stack: 'pnpm · TypeScript · LLM local',
     entrada: 'docs/00_PLANO.md',
     backlog: 'docs/BACKLOG.md',
+    docs: { arquitetura: ['docs/02_PLANO_EXECUCAO_ONDAS.md'] },
     portas: [{ porta: 11434, servico: 'Ollama' }],
   },
   {

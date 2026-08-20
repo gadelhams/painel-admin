@@ -35,32 +35,46 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
 ## Arquitetura
 
 - `servidor.js` — HTTP único em `127.0.0.1:7777`: `/api/projetos`,
-  `/api/producao`, `/api/producao/ssh`, `/api/backlog`, `POST /api/conversa`
-  (SSE, motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs) e
-  estáticos de `publico/` (dashboard na raiz, chat em `/severino/`).
+  `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
+  `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
+  `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
+  enviados ao remoto de UM projeto — só sob demanda, mais pesado que o
+  resumo que os cards já usam; 20/08/2026), `/api/producao`,
+  `/api/producao/ssh`, `/api/backlog`, `POST /api/conversa` (SSE, motor do
+  Severino), `GET/POST /api/tts` (proxy ElevenLabs) e estáticos de
+  `publico/` (dashboard na raiz, chat em `/severino/`).
 - `coletores.js` — coletores de estado (git, portas, sondas de produção,
-  backlog), **compartilhados**: as rotas da API e as ferramentas do motor
-  chamam as mesmas funções — o motor nunca faz HTTP para o próprio processo.
+  backlog, **leitura segura de docs modeladores por projeto**),
+  **compartilhados**: as rotas da API e as ferramentas do motor chamam as
+  mesmas funções — o motor nunca faz HTTP para o próprio processo.
 - `motor.js` — Claude Agent SDK (`claude-sonnet-5` fixo), persona do
   Severino, três ferramentas **só-leitura**: `estado_projetos`,
   `estado_producao` (coletores internos) e `docs_projeto` (só `.md` da raiz,
-  allowlist estrita).
+  allowlist estrita — mecânica de resolução de caminho mora em
+  `coletores.js`, compartilhada com a rota HTTP acima).
 - `projetos.js` — catálogo dos projetos: metadados que não dão para derivar
-  do disco. **Mantenha em sincronia com o `CLAUDE.md` da raiz** quando um
-  projeto nascer, morrer ou mudar de porta.
-- `publico/` — dashboard vanilla; `publico/severino/` — chat + voz (vanilla,
-  Web Speech API + camada ElevenLabs).
+  do disco, incluindo o campo opcional `docs` (arquitetura/objetos/dataFlow
+  — só nos projetos que já têm diagrama Mermaid vivo: `SistemaLoreEngine`,
+  `Mapa Khorvaire`, `DiscordTranscriber`). **Mantenha em sincronia com o
+  `CLAUDE.md` da raiz** quando um projeto nascer, morrer ou mudar de porta.
+- `publico/` — dashboard vanilla, dividido em três scripts globais (mesmo
+  padrão de `publico/severino/`): `app.js` (núcleo compartilhado — grade de
+  projetos, produção/SSH, markdown→DOM, roteador `#/geral`·`#/backlog`·
+  `#/projeto/<pasta>`), `backlog.js` (aba Backlog — cards `<details>`
+  expansíveis por tag, cores por tag) e `projeto.js` (página de projeto —
+  docs/diagramas, stats de dev, backlog filtrado; 20/08/2026).
+  `publico/vendor/mermaid.min.js` — Mermaid vendorizado localmente (sem CDN,
+  sem chamada de rede em runtime) pra renderizar os diagramas dos docs.
+  `publico/severino/` — chat + voz (vanilla, Web Speech API + camada
+  ElevenLabs).
 - `docs/00_PLANO.md` e `docs/01_ESTADO.md` — plano e estado real do Severino,
   trazidos do repo antigo; leia o plano antes de mexer no motor ou na voz.
-- `docs/02_ABA_BACKLOG.md` — a aba Backlog (quadro kanban só-leitura sobre o
-  backlog dos projetos que o adotarem; fase 1 implementada em 16/08/2026).
-  O arquivo markdown é a verdade; a aba é projeção. **A gramática canônica
-  mora em `../PADROES-BACKLOG.md` (padrão da raiz desde 16/08/2026)** —
-  contrato de três pontas: padrão + espelho no doc 39 do LoreEngine + o
-  parser em `coletores.js` mudam JUNTOS, na mesma entrega. Este projeto
-  adotou em 16/08/2026: `docs/BACKLOG.md` derivado do `00_PLANO.md`
-  (fase 3 do Severino + backlog de voz), registrado no campo `backlog`
-  da própria entrada em `projetos.js`.
+- `docs/02_ABA_BACKLOG.md` — a aba Backlog (quadro kanban só-leitura). O
+  arquivo markdown é a verdade; a aba é projeção. Gramática canônica em
+  `../PADROES-BACKLOG.md` — **contrato de três pontas**: padrão + espelho no
+  doc 39 do LoreEngine + o parser em `coletores.js` mudam JUNTOS, na mesma
+  entrega. Backlog próprio: `docs/BACKLOG.md` — todo selo o atualiza NA
+  MESMA ENTREGA.
 
 ## Severino por voz, fora de casa (Claude app + Remote Control)
 

@@ -11,7 +11,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { estadoProjetos, estadoProducao, lerBacklog } from './coletores.js';
+import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado } from './coletores.js';
 import { conversar } from './motor.js';
 
 const execFileAsync = promisify(execFile);
@@ -253,7 +253,8 @@ async function responderTts(req, res) {
 // ---------- roteamento ----------
 
 const servidor = http.createServer(async (req, res) => {
-  const { pathname } = new URL(req.url, `http://127.0.0.1:${PORTA}`);
+  const url = new URL(req.url, `http://127.0.0.1:${PORTA}`);
+  const { pathname } = url;
   try {
     if (pathname === '/api/conversa' && req.method === 'POST') {
       await responderConversa(req, res);
@@ -272,6 +273,20 @@ const servidor = http.createServer(async (req, res) => {
       responderJson(res, { erro: 'use POST (sintetizar) ou GET (disponibilidade)' }, 405);
     } else if (pathname === '/api/projetos') {
       responderJson(res, await estadoProjetos());
+    } else if (pathname.startsWith('/api/projetos/') && pathname.endsWith('/docs')) {
+      // Página de projeto (20/08/2026): docs modeladores + curados
+      // (arquitetura/objetos/data-flow) de UM projeto — mesma mecânica de
+      // leitura segura que a ferramenta docs_projeto do Severino usa.
+      // Com ?arquivo=, devolve o conteúdo de UM modelador específico (clique
+      // na lista) em vez do pacote completo.
+      const pasta = decodeURIComponent(pathname.slice('/api/projetos/'.length, -'/docs'.length));
+      const arquivo = url.searchParams.get('arquivo');
+      responderJson(res, arquivo ? await lerModeladorProjeto(pasta, arquivo) : await docsProjeto(pasta));
+    } else if (pathname.startsWith('/api/projetos/') && pathname.endsWith('/git')) {
+      // Página de projeto (20/08/2026): diff --stat + commits não enviados
+      // ao remoto — só sob demanda, nunca no refresh de 60s da grade.
+      const pasta = decodeURIComponent(pathname.slice('/api/projetos/'.length, -'/git'.length));
+      responderJson(res, await gitDetalhado(pasta));
     } else if (pathname === '/api/producao') {
       responderJson(res, await estadoProducao());
     } else if (pathname === '/api/producao/ssh') {

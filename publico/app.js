@@ -1,3 +1,11 @@
+// Núcleo compartilhado do dashboard: helpers de DOM, a grade "Visão geral",
+// produção/SSH, e o roteador (views + hash). Backlog vive em backlog.js,
+// página de projeto em projeto.js — carregados depois deste, mesmo padrão
+// de scripts globais já usado em publico/severino/ (voz.js + chat.js).
+// O bootstrap inicial (atualizarTudo + rotear a primeira vez) fica no fim de
+// projeto.js, o ÚLTIMO script carregado — só ali as funções dos três
+// arquivos já existem todas em escopo global.
+
 const grade = document.getElementById('grade-projetos');
 const listaProducao = document.getElementById('lista-producao');
 const botaoAtualizar = document.getElementById('botao-atualizar');
@@ -23,6 +31,132 @@ function tempoRelativo(iso) {
   const meses = Math.floor(dias / 30);
   return meses === 1 ? 'há 1 mês' : `há ${meses} meses`;
 }
+
+// Negrito e `código` do markdown viram elementos de verdade — nunca innerHTML,
+// mesmo vindo de arquivo local: texto de dado não ganha poder de marcação.
+// Usado pelo backlog (texto já sem link, o parser tira antes — coletores.js).
+function formatar(texto) {
+  const nos = [];
+  texto.split('**').forEach((pedaco, i) => {
+    const filhos = pedaco.split('`').map((s, j) => (j % 2 ? el('code', {}, s) : s));
+    if (i % 2) nos.push(el('strong', {}, ...filhos));
+    else nos.push(...filhos);
+  });
+  return nos;
+}
+
+// ---------- markdown → DOM (docs de projeto, página de projeto) ----------
+// Mesma disciplina de segurança de `formatar` (nunca innerHTML), estendida
+// pra cobrir o que os docs modeladores realmente usam: heading, parágrafo,
+// lista, link, bloco de código cercado. Sem lib de terceiro — decisão
+// consciente, mesmo estilo hand-rolled do parser do backlog (coletores.js).
+
+const RE_INLINE_MD = /\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]*)\]\(([^)]*)\)/g;
+
+function formatarInlineMd(texto) {
+  const nos = [];
+  let ultimo = 0;
+  for (const m of texto.matchAll(RE_INLINE_MD)) {
+    if (m.index > ultimo) nos.push(texto.slice(ultimo, m.index));
+    if (m[1] !== undefined) nos.push(el('strong', {}, m[1]));
+    else if (m[2] !== undefined) nos.push(el('code', {}, m[2]));
+    else nos.push(el('a', { href: m[4], target: '_blank', rel: 'noopener' }, m[3]));
+    ultimo = m.index + m[0].length;
+  }
+  if (ultimo < texto.length) nos.push(texto.slice(ultimo));
+  return nos;
+}
+
+// Bloco ```mermaid``` vira <pre class="mermaid"> com o código cru (sem
+// formatarInlineMd dentro — é sintaxe de diagrama, não texto) pro
+// mermaid.run() processar depois de inserido no DOM; qualquer outra
+// linguagem cercada vira <pre><code> normal.
+function renderizarMarkdown(texto) {
+  const blocos = [];
+  const linhas = texto.split(/\r?\n/);
+  let i = 0;
+  let paragrafo = [];
+  let listaAtual = null;
+
+  function fecharParagrafo() {
+    if (paragrafo.length) {
+      blocos.push(el('p', {}, ...formatarInlineMd(paragrafo.join(' '))));
+      paragrafo = [];
+    }
+  }
+  function fecharLista() {
+    if (listaAtual) {
+      blocos.push(listaAtual.elemento);
+      listaAtual = null;
+    }
+  }
+
+  while (i < linhas.length) {
+    const linha = linhas[i];
+
+    const cerca = linha.match(/^```\s*(\S*)\s*$/);
+    if (cerca) {
+      fecharParagrafo();
+      fecharLista();
+      const linguagem = cerca[1] || '';
+      const codigo = [];
+      i++;
+      while (i < linhas.length && !/^```\s*$/.test(linhas[i])) {
+        codigo.push(linhas[i]);
+        i++;
+      }
+      i++; // pula a cerca de fechamento (ou o fim do texto, se truncado)
+      const conteudo = codigo.join('\n');
+      blocos.push(
+        linguagem === 'mermaid' ? el('pre', { class: 'mermaid' }, conteudo) : el('pre', {}, el('code', {}, conteudo)),
+      );
+      continue;
+    }
+
+    const heading = linha.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      fecharParagrafo();
+      fecharLista();
+      const tag = `h${Math.min(heading[1].length + 2, 6)}`;
+      blocos.push(el(tag, {}, ...formatarInlineMd(heading[2].trim())));
+      i++;
+      continue;
+    }
+
+    const itemLista = linha.match(/^\s*([-*]|\d+\.)\s+(.*)$/);
+    if (itemLista) {
+      fecharParagrafo();
+      const ordenada = /\d+\./.test(itemLista[1]);
+      const tag = ordenada ? 'ol' : 'ul';
+      if (!listaAtual || listaAtual.tag !== tag) {
+        fecharLista();
+        listaAtual = { tag, elemento: el(tag, {}) };
+      }
+      listaAtual.elemento.append(el('li', {}, ...formatarInlineMd(itemLista[2])));
+      i++;
+      continue;
+    }
+
+    if (!linha.trim()) {
+      fecharParagrafo();
+      fecharLista();
+      i++;
+      continue;
+    }
+
+    paragrafo.push(linha.trim());
+    i++;
+  }
+  fecharParagrafo();
+  fecharLista();
+  return blocos;
+}
+
+// ---------- Visão geral: grade de projetos ----------
+
+// Cache do último /api/projetos — a página de projeto reaproveita em vez de
+// buscar de novo (mesmos dados, só filtrados pela pasta).
+let dadosProjetos = [];
 
 function cartaoProjeto(p) {
   const etiquetas = [];
@@ -66,14 +200,26 @@ function cartaoProjeto(p) {
   if (!p.existe) linhas.push(el('div', { class: 'git-linha' }, 'pasta não sincronizada nesta máquina'));
 
   linhas.push(el('div', { class: 'etiquetas' }, ...etiquetas));
-  return el('div', { class: `cartao${p.existe ? '' : ' inexistente'}` }, ...linhas);
+
+  // Clicável: abre a página de projeto (§9 do plano) — a URL é quem decide
+  // a view, o clique só muda o hash (rotear cuida do resto).
+  const cartao = el('div', { class: `cartao${p.existe ? '' : ' inexistente'}`, tabindex: '0', role: 'button' }, ...linhas);
+  const abrir = () => { location.hash = `#/projeto/${encodeURIComponent(p.pasta)}`; };
+  cartao.addEventListener('click', abrir);
+  cartao.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); }
+  });
+  return cartao;
 }
 
 async function carregarProjetos() {
   const resposta = await fetch('/api/projetos');
   const { projetos } = await resposta.json();
+  dadosProjetos = projetos;
   grade.replaceChildren(...projetos.map(cartaoProjeto));
 }
+
+// ---------- Produção — astargne.com ----------
 
 function linhaSonda(s) {
   const detalhe = s.ok ? `HTTP ${s.status} · ${s.ms} ms` : (s.erro ?? `HTTP ${s.status}`);
@@ -93,269 +239,48 @@ async function carregarProducao() {
   listaProducao.replaceChildren(...sondas.map(linhaSonda));
 }
 
-// ---------- aba Backlog (fase 1, só-leitura) ----------
-// O markdown de cada projeto é a VERDADE; este quadro é projeção. Nada aqui
-// guarda estado: todo número na tela é derivado do JSON no momento de desenhar.
+// ---------- Roteador: views + hash leve ----------
+// #/geral (padrão) · #/backlog · #/projeto/<pasta>. A URL é a única fonte de
+// verdade de qual view está ativa — clique em card/aba só muda o hash.
 
-const quadroBacklog = document.getElementById('quadro-backlog');
-const filtroTags = document.getElementById('filtro-tags');
-const filtroProjetos = document.getElementById('filtro-projetos');
-const paineisAbas = {
+const paineis = {
   geral: document.getElementById('aba-geral'),
   backlog: document.getElementById('aba-backlog'),
+  projeto: document.getElementById('vista-projeto'),
 };
 
-let dadosBacklog = null;
-let tagAtiva = null;
-// Filtro de projeto (pedido do dono, 16/08/2026): client-side como o de tag;
-// null = todos. Guarda a PASTA (chave estável do catálogo), não o título.
-let projetoAtivo = null;
+function mostrarView(nome) {
+  for (const [chave, painel] of Object.entries(paineis)) painel.hidden = chave !== nome;
+  for (const botao of document.querySelectorAll('.aba')) botao.classList.toggle('ativa', botao.dataset.aba === nome);
+}
 
 for (const botao of document.querySelectorAll('.aba')) {
-  botao.addEventListener('click', () => {
-    for (const b of document.querySelectorAll('.aba')) b.classList.toggle('ativa', b === botao);
-    for (const [nome, painel] of Object.entries(paineisAbas)) painel.hidden = nome !== botao.dataset.aba;
-  });
+  botao.addEventListener('click', () => { location.hash = `#/${botao.dataset.aba}`; });
 }
 
-// Negrito e `código` do markdown viram elementos de verdade — nunca innerHTML,
-// mesmo vindo de arquivo local: texto de dado não ganha poder de marcação.
-function formatar(texto) {
-  const nos = [];
-  texto.split('**').forEach((pedaco, i) => {
-    const filhos = pedaco.split('`').map((s, j) => (j % 2 ? el('code', {}, s) : s));
-    if (i % 2) nos.push(el('strong', {}, ...filhos));
-    else nos.push(...filhos);
-  });
-  return nos;
-}
-
-// Placar n/m SEMPRE derivado aqui, na hora de desenhar — contagem armazenada
-// viraria segunda fonte de verdade (regra do docs/02_ABA_BACKLOG.md).
-function placar(nodos) {
-  let total = 0;
-  let prontos = 0;
-  for (const nodo of nodos) {
-    if (nodo.tipo === 'item') {
-      total += 1;
-      if (nodo.estado === 'pronto') prontos += 1;
-    }
-    // Cru também carrega filhos (hierarquia do arquivo preservada): um item
-    // aninhado sob linha crua ainda conta no placar.
-    const sub = placar(nodo.filhos ?? []);
-    total += sub.total;
-    prontos += sub.prontos;
-  }
-  return { total, prontos };
-}
-
-function chipTag({ tag, detalhe }) {
-  return el(
-    'span',
-    { class: `etiqueta tag${tag === 'DONO' ? ' tag-dono' : ''}`, ...(detalhe ? { title: detalhe } : {}) },
-    tag,
-  );
-}
-
-// Linha que o parser não entendeu chega crua e é mostrada crua — o quadro
-// não esconde o que não entendeu. Ela vem no lugar do arquivo (dentro do
-// épico a que pertence) e pode ter filhos, que são desenhados como qualquer nó.
-function nodoCru(nodo, comFilhos = true) {
-  return el(
-    'div',
-    { class: 'cru' },
-    ...formatar(nodo.texto),
-    ...nodo.tags.map(chipTag),
-    ...(comFilhos ? (nodo.filhos ?? []).map(desenharNodo) : []),
-  );
-}
-
-function nodoItem(nodo, comFilhos = true) {
-  const linha = el(
-    'div',
-    { class: 'item-linha' },
-    el('span', { class: `marca ${nodo.estado}` }, nodo.estado === 'pronto' ? '☑' : '☐'),
-    el('span', { class: 'item-texto' }, ...formatar(nodo.texto)),
-  );
-  const p = placar(nodo.filhos);
-  if (p.total) linha.append(el('span', { class: 'placar' }, `${p.prontos}/${p.total}`));
-  linha.append(...nodo.tags.map(chipTag));
-  return el(
-    'div',
-    { class: `item ${nodo.estado}` },
-    linha,
-    ...(comFilhos ? nodo.filhos.map(desenharNodo) : []),
-  );
-}
-
-function desenharNodo(nodo) {
-  return nodo.tipo === 'item' ? nodoItem(nodo) : nodoCru(nodo);
-}
-
-function nosComTag(nodos, tag, achados = []) {
-  for (const nodo of nodos) {
-    if (nodo.tags.some((t) => t.tag === tag)) achados.push(nodo);
-    nosComTag(nodo.filhos ?? [], tag, achados);
-  }
-  return achados;
-}
-
-function colunaFeature(f, projeto) {
-  // Com filtro ativo a coluna mostra SÓ as linhas com a tag (aceite 3 da
-  // spec) — a linha é a unidade, filho não vem de carona.
-  let corpo;
-  if (tagAtiva) {
-    const achados = nosComTag(f.itens, tagAtiva);
-    if (!achados.length) return null;
-    corpo = achados.map((nodo) => (nodo.tipo === 'item' ? nodoItem(nodo, false) : nodoCru(nodo, false)));
+// `abrirProjeto` mora em projeto.js, mas já existe em escopo global quando
+// `rotear` de fato roda (bootstrap no fim de projeto.js, o último script).
+function rotear() {
+  const [, view, param] = location.hash.slice(1).split('/');
+  if (view === 'projeto' && param) {
+    mostrarView('projeto');
+    abrirProjeto(decodeURIComponent(param));
   } else {
-    corpo = f.itens.map(desenharNodo);
-  }
-  const p = placar(f.itens);
-  return el(
-    'div',
-    { class: 'coluna' },
-    // Subtítulo discreto com o projeto dono (pedido do dono, 16/08/2026):
-    // com vários projetos no quadro, a coluna rolada para longe do cabeçalho
-    // do bloco precisa se identificar sozinha.
-    el('div', { class: 'coluna-projeto' }, projeto.titulo),
-    el(
-      'div',
-      { class: 'coluna-cab' },
-      el('h4', {}, ...formatar(f.titulo)),
-      el('span', { class: `etiqueta ${f.estado === 'pronto' ? 'ok' : ''}` }, f.estado === 'pronto' ? 'pronta' : 'aberta'),
-      el('span', { class: 'placar' }, `${p.prontos}/${p.total}`),
-    ),
-    ...corpo,
-  );
-}
-
-function blocoProjeto(pr) {
-  const cabecalho = el(
-    'div',
-    { class: 'backlog-projeto-cab' },
-    el('h3', {}, pr.titulo),
-    el('span', { class: 'discreto' }, `${pr.pasta}/${pr.backlog}`),
-  );
-  if (pr.estado !== 'ok') {
-    // Estado nomeado NA TELA (aceite 4), com o nome CERTO para a causa:
-    // sem_arquivo = não existe no disco; erro_leitura = existe (ou não deu
-    // para saber), mas a leitura falhou — a tela não mente a causa.
-    const mensagem = pr.estado === 'sem_arquivo'
-      ? `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`
-      : `falha ao ler ${pr.pasta}/${pr.backlog} — ${pr.erro ?? pr.estado}`;
-    return el(
-      'div',
-      { class: 'backlog-projeto' },
-      cabecalho,
-      el(
-        'div',
-        { class: 'sonda' },
-        el('span', { class: 'luz falha' }),
-        el('span', {}, mensagem),
-      ),
-    );
-  }
-  const colunas = pr.features.map((f) => colunaFeature(f, pr)).filter(Boolean);
-  if (tagAtiva && !colunas.length) return null;
-  return el('div', { class: 'backlog-projeto' }, cabecalho, el('div', { class: 'quadro' }, ...colunas));
-}
-
-// Os dois filtros compõem: o de projeto decide QUAIS blocos entram, o de tag
-// decide quais linhas dentro deles. Tudo derivado do JSON na hora de desenhar.
-function projetosVisiveis() {
-  return dadosBacklog.projetos.filter((pr) => !projetoAtivo || pr.pasta === projetoAtivo);
-}
-
-function contarTags(nodos, contagem) {
-  for (const nodo of nodos) {
-    for (const t of nodo.tags) contagem.set(t.tag, (contagem.get(t.tag) ?? 0) + 1);
-    contarTags(nodo.filhos ?? [], contagem);
+    mostrarView(view === 'backlog' ? 'backlog' : 'geral');
   }
 }
+window.addEventListener('hashchange', rotear);
 
-// Chips de projeto no mesmo padrão visual do filtro de tag; "todos" por
-// padrão. Um chip por projeto COM backlog no catálogo — inclusive os em
-// sem_arquivo/erro_leitura, para o filtro nunca esconder um estado de falha.
-function desenharFiltroProjetos() {
-  const botoes = [
-    el('button', { class: `filtro${projetoAtivo ? '' : ' ativa'}`, type: 'button', 'data-pasta': '' }, 'todos'),
-    ...dadosBacklog.projetos.map((pr) =>
-      el(
-        'button',
-        { class: `filtro${projetoAtivo === pr.pasta ? ' ativa' : ''}`, type: 'button', 'data-pasta': pr.pasta },
-        pr.titulo,
-      ),
-    ),
-  ];
-  for (const b of botoes) {
-    b.addEventListener('click', () => {
-      projetoAtivo = b.dataset.pasta || null;
-      desenharBacklog();
-    });
-  }
-  filtroProjetos.replaceChildren(...botoes);
-}
-
-function desenharFiltro() {
-  const contagem = new Map();
-  // As contagens de tag seguem o filtro de projeto: com um projeto ativo, o
-  // chip diz quantas linhas a tag tem NAQUELE recorte, não no total.
-  for (const pr of projetosVisiveis()) {
-    if (pr.estado === 'ok') for (const f of pr.features) contarTags(f.itens, contagem);
-  }
-  // DONO primeiro: a fila pessoal do dono é o motivo desta aba existir.
-  const ordem = [...contagem.keys()].sort((a, b) =>
-    a === 'DONO' ? -1 : b === 'DONO' ? 1 : a.localeCompare(b),
-  );
-  const botoes = [
-    el('button', { class: `filtro${tagAtiva ? '' : ' ativa'}`, type: 'button', 'data-tag': '' }, 'todas'),
-    ...ordem.map((tag) =>
-      el(
-        'button',
-        {
-          class: `filtro${tag === 'DONO' ? ' filtro-dono' : ''}${tagAtiva === tag ? ' ativa' : ''}`,
-          type: 'button',
-          'data-tag': tag,
-        },
-        `${tag} · ${contagem.get(tag)}`,
-      ),
-    ),
-  ];
-  for (const b of botoes) {
-    b.addEventListener('click', () => {
-      tagAtiva = b.dataset.tag || null;
-      desenharBacklog();
-    });
-  }
-  filtroTags.replaceChildren(...botoes);
-}
-
-function desenharBacklog() {
-  if (!dadosBacklog) return;
-  desenharFiltroProjetos();
-  desenharFiltro();
-  const blocos = projetosVisiveis().map(blocoProjeto).filter(Boolean);
-  quadroBacklog.replaceChildren(
-    ...(blocos.length
-      ? blocos
-      : [el('p', { class: 'discreto' }, tagAtiva
-          ? `nenhuma linha com (${tagAtiva})${projetoAtivo ? ` em ${projetoAtivo}` : ''}`
-          : 'nenhum projeto do catálogo tem o campo backlog')]),
-  );
-}
-
-async function carregarBacklog() {
-  const resposta = await fetch('/api/backlog');
-  dadosBacklog = await resposta.json();
-  desenharBacklog();
-}
+// ---------- Atualização geral ----------
+// `carregarBacklog` mora em backlog.js — mesma lógica de escopo global do
+// roteador acima: só é chamada depois que todos os scripts já carregaram.
 
 async function atualizarTudo() {
   botaoAtualizar.disabled = true;
   try {
     await Promise.all([carregarProjetos(), carregarProducao(), carregarBacklog()]);
     atualizadoEm.textContent = `atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+    rotear(); // reflete o dado fresco na view atual (inclusive projeto aberto)
   } finally {
     botaoAtualizar.disabled = false;
   }
@@ -378,5 +303,4 @@ botaoSsh.addEventListener('click', async () => {
   }
 });
 
-atualizarTudo();
-setInterval(atualizarTudo, 60_000);
+if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'dark' });
