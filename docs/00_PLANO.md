@@ -19,7 +19,8 @@ nota de fusão acima.)*
 
 **Estado**: fase 1 entregue e provada em 14/08/2026; fase 2 (voz) entregue
 em 14/08/2026; **upgrade de voz camada 3 (ElevenLabs) + fluidez entregue em
-14/08/2026, noite** — falta o dono criar a chave (roteiro e evidências em
+14/08/2026, noite** — chave viva e caminho feliz provado na fusão
+(`GET /api/tts` → disponível; `POST` devolve MP3 real — evidências em
 [`01_ESTADO.md`](01_ESTADO.md)). Nasceu plan-first, conforme o padrão geral
 da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
 
