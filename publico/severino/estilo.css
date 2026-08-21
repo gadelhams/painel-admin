@@ -57,3 +57,10 @@ h1 { font-size: 1.4rem; color: var(--destaque); }
 /* Estado da voz sempre declarado: qual voz está em uso, ou por que não há. */
 #status-voz { color: var(--apagado); font-size: .75rem; padding: .25rem 0 .75rem; }
 #status-voz.atencao { color: #d9834a; }
+
+.copiloto { display: flex; align-items: center; gap: .4rem; color: var(--apagado); font-size: .8rem; padding: .35rem 0 0; cursor: pointer; }
+.copiloto input { cursor: pointer; }
+
+/* Dormente (cinza, esperando o gatilho) vs ativa (âmbar, ouvindo de verdade) — mesma cor de destaque do resto da UI, não uma nova. */
+#status-copiloto { font-size: .75rem; padding: .25rem 0 .75rem; color: var(--apagado); }
+#status-copiloto.ativa { color: var(--destaque); }

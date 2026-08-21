@@ -3,24 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Severino — o peão sabido</title>
+  <title>C-3PO — droid de protocolo</title>
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
   <header>
-    <h1>Severino</h1>
-    <p class="lema">o peão sabido da oficina — pergunte dos projetos, visse?</p>
+    <h1>C-3PO</h1>
+    <p class="lema">droid de protocolo desta oficina — pergunte dos projetos, Mestre</p>
   </header>
 
   <main id="historico" aria-live="polite"></main>
 
   <form id="formulario" autocomplete="off">
     <!-- type=button: falar não é submeter o formulário -->
-    <button id="microfone" type="button" aria-label="Falar com o Severino" title="clique e fale (push-to-talk)">🎤</button>
+    <button id="microfone" type="button" aria-label="Falar com o C-3PO" title="clique e fale (push-to-talk)">🎤</button>
     <input id="entrada" type="text" placeholder="Ex.: como estão os projetos?" maxlength="8000" autofocus>
     <button id="enviar" type="submit">Mandar</button>
   </form>
+  <label id="rotulo-copiloto" class="copiloto">
+    <input id="modo-copiloto" type="checkbox">
+    modo copiloto — fica ouvindo, sem clicar; diga "C3PO" pra retomar depois de um hiato
+  </label>
   <p id="status-voz">preparando a voz…</p>
+  <p id="status-copiloto" hidden></p>
 
   <!-- voz.js antes: define o global Voz que chat.js consome -->
   <script src="voz.js"></script>

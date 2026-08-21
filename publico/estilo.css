@@ -1,108 +1,322 @@
+/* ---------- Fontes vendorizadas (design system "Industry", handoff
+   design_handoff_painel_hud/) — self-host, mesmo princípio zero-CDN já
+   aplicado ao Mermaid (CLAUDE.md: "sem CDN, sem chamada de rede em
+   runtime"). Só o subset latin (cobre acentuação do português). ---------- */
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 400; font-display: swap; src: url('vendor/fonts/barlow-400.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 500; font-display: swap; src: url('vendor/fonts/barlow-500.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 600; font-display: swap; src: url('vendor/fonts/barlow-600.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap; src: url('vendor/fonts/barlow-condensed-600.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url('vendor/fonts/barlow-condensed-700.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('vendor/fonts/ibm-plex-mono-400.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('vendor/fonts/ibm-plex-mono-500.woff2') format('woff2'); }
+
 :root {
-  --fundo: #12141a;
-  --cartao: #1b1e27;
-  --borda: #2a2e3b;
-  --texto: #e6e8ee;
-  --texto-fraco: #9aa0b0;
+  /* Base do sistema Industry — design tokens do handoff, "não invente hex
+     fora desta lista" (README). */
+  --color-bg: #f2f2f3;
+  --color-surface: #e9e9ea;
+  --color-text: #1d1f20;
+  --color-accent: #5980a6;
+  --color-neutral-100: #f5f5f8;
+  --color-neutral-200: #e7e7ea;
+  --color-neutral-300: #d4d4d7;
+  --color-neutral-400: #b7b7ba;
+  --color-neutral-500: #98989b;
+  --color-neutral-600: #7a7a7d;
+  --color-neutral-700: #5d5d60;
+  --color-neutral-800: #424244;
+  --color-neutral-900: #2b2b2d;
+  --color-accent-100: #eef6ff;
+  --color-accent-200: #d6ebff;
+  --color-accent-300: #b5d9fd;
+  --color-accent-400: #94bce3;
+  --color-accent-500: #749dc4;
+  --color-accent-600: #597ea3;
+  --color-accent-700: #416180;
+  --color-accent-800: #2c455d;
+  --color-accent-900: #1d2d3d;
+
+  --font-heading: 'Barlow Condensed', system-ui, sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+
+  --space-1: 3.4px;
+  --space-2: 6.8px;
+  --space-3: 10.2px;
+  --space-4: 13.6px;
+  --space-5: 20.4px;
+  --space-6: 27.2px;
+
+  /* Camada de tema — escuro é o padrão (sem atributo); claro entra por
+     [data-tema="light"] na raiz, escrito/lido de localStorage (app.js). */
+  --ui-bg: #16232f;
+  --ui-panel: #1d2d3d;
+  --ui-line: #2c455d;
+  --ui-hover: #2c455d;
+  --ui-hatch: #2c455d;
+  --ui-text: #f5f5f8;
+  --ui-dim: #b5d9fd;
+  --ui-faint: #749dc4;
+  --ui-hot: #94bce3;
+  --ui-onhot: #1d2d3d;
+  --ui-scrim: rgba(11, 21, 32, .92);
+
+  /* Fora do handoff: estados que telas ainda não redesenhadas usam (git
+     sujo, sonda de produção fora do ar) e o mock não cobre pra tela
+     nenhuma — mantidos à parte, nunca misturados aos --ui-*. Reavaliar
+     quando a Fase 5 (aba Projetos) redesenhar esses estados de verdade. */
   --ok: #4ade80;
   --alerta: #fbbf24;
   --falha: #f87171;
-  --acento: #7aa2f7;
-  /* Brainstorm/ideia registrada (tag SEM ESCOPO) — cor própria porque é
-     conceitualmente diferente de estado operacional: mesma cor no chip da
-     aba Backlog e na seção "Brainstorm" da página de projeto (20/08/2026). */
   --ideia: #c084fc;
+}
+
+:root[data-tema="light"] {
+  --ui-bg: #f2f2f3;
+  --ui-panel: #f5f5f8;
+  --ui-line: #d4d4d7;
+  --ui-hover: #e7e7ea;
+  --ui-hatch: #e7e7ea;
+  --ui-text: #1d1f20;
+  --ui-dim: #5d5d60;
+  --ui-faint: #7a7a7d;
+  --ui-hot: #416180;
+  --ui-onhot: #f5f5f8;
+  --ui-scrim: rgba(29, 45, 61, .82);
 }
 
 * { box-sizing: border-box; }
 
+::selection { background: #416180; color: #f5f5f8; }
+
 body {
   margin: 0;
-  background: var(--fundo);
-  color: var(--texto);
-  font: 15px/1.5 system-ui, "Segoe UI", sans-serif;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font: 15px/1.5 var(--font-body), system-ui, sans-serif;
 }
 
-header {
+:focus-visible { outline: 2px solid var(--ui-hot); outline-offset: 2px; }
+
+/* Marcas de registro (obrigatórias em todo elemento emoldurado, README —
+   "elemento emoldurado sem as marcas está errado"). Quatro <i> absolutos,
+   7×7px, deslocados -3px, duas bordas de 1px em --ui-hot cada. */
+.moldura { position: relative; }
+.moldura .canto { position: absolute; width: 7px; height: 7px; pointer-events: none; }
+.moldura .canto.tl { top: -3px; left: -3px; border-top: 1px solid var(--ui-hot); border-left: 1px solid var(--ui-hot); }
+.moldura .canto.tr { top: -3px; right: -3px; border-top: 1px solid var(--ui-hot); border-right: 1px solid var(--ui-hot); }
+.moldura .canto.bl { bottom: -3px; left: -3px; border-bottom: 1px solid var(--ui-hot); border-left: 1px solid var(--ui-hot); }
+.moldura .canto.br { bottom: -3px; right: -3px; border-bottom: 1px solid var(--ui-hot); border-right: 1px solid var(--ui-hot); }
+
+/* ================================================================
+   Tela 6 — console do Severino (overlay por ⌘K, 21/08/2026)
+   Substitui a faixa lateral fixa desta manhã. #historico/#formulario/
+   #entrada/#enviar/#microfone/.copiloto/#status-voz/#status-copiloto
+   continuam os MESMOS IDs que severino/chat.js e severino/voz.js já usam —
+   só o container ao redor mudou, então nenhum dos dois arquivos precisou
+   de alteração de lógica (só uma linha de export em chat.js). */
+
+.console-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-scrim);
+  z-index: 50;
+  display: grid;
+  place-items: start center;
+  padding: 68px 34px;
+  overflow: auto;
+}
+/* `display: grid` acima vence o `display: none` padrão do atributo hidden
+   (mesma especificidade, e regra de autor bate estilo de user-agent) — sem
+   isto, o scrim continua clicável/visível mesmo "escondido". */
+.console-scrim[hidden] { display: none; }
+.console-painel {
+  width: min(1080px, 100%);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  padding: 34px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: .5rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--borda);
+  flex-direction: column;
+  max-height: calc(100vh - 136px);
 }
+.console-painel .canto { border-color: var(--ui-hot); }
 
-h1 { font-size: 1.25rem; margin: 0; }
-h2 { font-size: 1rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: .05em; }
+.console-cabecalho { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--ui-line); padding-bottom: 20.4px; flex: none; }
+.console-titulo { font-family: var(--font-heading); font-weight: 700; font-size: 22px; letter-spacing: .12em; color: var(--ui-text); margin-right: 13.6px; }
+.console-cabecalho .kicker { margin: 0; }
+.console-esc { font-family: var(--font-mono); font-size: 11px; background: none; border: 1px solid var(--ui-line); border-radius: 0; padding: 3.4px 10.2px; }
 
-main { padding: 1rem 1.5rem 3rem; max-width: 1400px; margin: 0 auto; }
+#historico { flex: 1; overflow-y: auto; padding: 20.4px 0; display: flex; flex-direction: column; gap: .75rem; min-height: 120px; }
 
-.acoes { display: flex; align-items: center; gap: .75rem; }
+.fala { padding: .6rem .9rem; border-radius: .75rem; max-width: 85%; white-space: pre-wrap; overflow-wrap: break-word; font-size: .92rem; }
+.fala.usuario { align-self: flex-end; background: var(--ui-hot); color: var(--ui-onhot); }
+.fala.severino { align-self: flex-start; background: var(--ui-panel); border: 1px solid var(--ui-line); }
+.fala.erro { align-self: center; background: #7f1d1d; font-size: .85rem; }
+
+.pensando { align-self: flex-start; color: var(--ui-faint); font-size: .85rem; font-style: italic; }
+.pensando .pontos::after { content: ''; animation: severino-pontos 1.2s steps(4) infinite; }
+@keyframes severino-pontos { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+.ferramenta { align-self: flex-start; color: var(--ui-faint); font-size: .75rem; }
+.ferramenta::before { content: '🔧 '; }
+
+.aviso-voz { align-self: flex-start; color: var(--alerta); font-size: .75rem; }
+.aviso-voz::before { content: '🔇 '; }
+
+.console-rodape { border-top: 1px solid var(--ui-line); padding-top: 20.4px; flex: none; }
+#formulario { display: flex; gap: 10.2px; align-items: center; }
+.console-chevron { color: var(--ui-hot); font-size: 1.1rem; font-family: var(--font-body); }
+#entrada { flex: 1; background: none; color: var(--ui-text); border: none; padding: .3rem 0; font-family: var(--font-mono); font-size: 14px; }
+#entrada::placeholder { color: var(--ui-faint); }
+#entrada:focus { outline: none; }
+#enviar { background: var(--ui-hot); color: var(--ui-onhot); border: 0; border-radius: 0; padding: .4rem 1rem; font-family: var(--font-mono); font-size: 11px; font-weight: 600; cursor: pointer; }
+#enviar:disabled { opacity: .5; cursor: wait; }
+
+.selo-voz, #microfone { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; border: 1px solid var(--ui-line); border-radius: 0; background: none; color: var(--ui-faint); cursor: pointer; }
+#microfone:disabled { opacity: .4; cursor: not-allowed; }
+#microfone.ouvindo { background: #7f1d1d; border-color: #dc2626; color: var(--ui-text); animation: severino-pulso 1.2s ease-in-out infinite; }
+@keyframes severino-pulso { 50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, .25); } }
+
+.console-chips { display: flex; flex-wrap: wrap; gap: 6.8px; margin-top: 13.6px; }
+.chip-sugestao { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 0; color: var(--ui-dim); cursor: pointer; }
+.chip-sugestao:hover { border-color: var(--ui-hot); }
+
+/* Estado da voz sempre declarado: qual voz está em uso, ou por que não há. */
+#status-voz { margin: 0; color: var(--ui-faint); font-size: .72rem; padding-top: .6rem; }
+#status-voz.atencao { color: var(--alerta); }
+
+.copiloto { display: flex; align-items: center; gap: .4rem; color: var(--ui-faint); font-size: .75rem; padding-top: .35rem; cursor: pointer; }
+.copiloto input { cursor: pointer; }
+
+/* Dormente (cinza, esperando o gatilho) vs ativa (mesmo azul de "em foco"
+   que .aba.ativa já usa no resto do painel) */
+#status-copiloto { margin: 0; font-size: .72rem; padding-top: .35rem; color: var(--ui-faint); }
+#status-copiloto.ativa { color: var(--ui-hot); }
+
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 700; }
+h2 { font-size: 1rem; color: var(--ui-faint); text-transform: uppercase; letter-spacing: .05em; }
+
+main { padding: var(--space-5) var(--space-6) calc(var(--space-6) * 2); }
 
 button {
-  background: var(--cartao);
-  color: var(--texto);
-  border: 1px solid var(--borda);
+  background: var(--ui-panel);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-line);
   border-radius: 8px;
   padding: .4rem .9rem;
   font: inherit;
   cursor: pointer;
 }
-button:hover { border-color: var(--acento); }
+button:hover { border-color: var(--ui-hot); }
 button:disabled { opacity: .5; cursor: wait; }
 
-.discreto { color: var(--texto-fraco); font-size: .85rem; }
-
-.link-severino {
-  background: var(--cartao);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  padding: .4rem .9rem;
-  color: var(--texto);
-  text-decoration: none;
-}
-.link-severino:hover { border-color: var(--acento); }
-
-.grade {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1rem;
-}
-
-.cartao {
-  background: var(--cartao);
-  border: 1px solid var(--borda);
-  border-radius: 12px;
-  padding: 1rem;
+/* ---------- Tela 1 — cabeçalho (Industry HUD, 21/08/2026) ----------
+   Três células com borda vertical entre elas — não flex+justify-between
+   como a versão anterior; cada `.celula` tem seu próprio padding/borda. */
+.cabecalho {
   display: flex;
-  flex-direction: column;
-  gap: .5rem;
-  cursor: pointer;
+  align-items: stretch;
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
 }
-.cartao:hover, .cartao:focus-visible { border-color: var(--acento); }
-.cartao:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-.cartao.inexistente { opacity: .55; }
+.cabecalho .celula { display: flex; align-items: center; padding: 13.6px 20.4px; }
 
-.cartao h3 { margin: 0; font-size: 1.05rem; }
-.cartao .descricao { color: var(--texto-fraco); font-size: .88rem; margin: 0; }
-.cartao .stack { font-size: .78rem; color: var(--acento); }
+.marca {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ui-text);
+  border-right: 1px solid var(--ui-line);
+  white-space: nowrap;
+}
 
-.etiquetas { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: auto; }
+.barra-comando {
+  flex: 1;
+  gap: 10.2px;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--ui-line);
+  border-radius: 0;
+  color: var(--ui-faint);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.barra-comando:hover { background: var(--ui-hover); color: var(--ui-text); border-color: var(--ui-line); }
+.barra-comando .chevron { color: var(--ui-hot); font-family: var(--font-body); }
+.barra-comando .comando-texto { flex: 1; }
+.barra-comando .selo-severino {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--ui-line);
+  border-radius: 0;
+  color: var(--ui-faint);
+}
 
+.placar-tema { gap: 20.4px; }
+.placar { display: flex; flex-direction: column; gap: 2px; line-height: 1.1; }
+.placar-rotulo { font-family: var(--font-mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ui-faint); }
+.placar-valor { font-family: var(--font-heading); font-weight: 700; font-size: 20px; color: var(--ui-text); }
+
+.sincronia { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--ui-dim); white-space: nowrap; }
+.ponto-sync { width: 6px; height: 6px; background: var(--ui-hot); flex: none; }
+
+#toggle-tema {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 10.2px;
+  border-radius: 0;
+  border-color: var(--ui-line);
+  background: none;
+}
+
+/* ---------- Tela 2 — barra de abas ---------- */
+.barra-abas {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
+  padding: 0 20.4px;
+}
+.barra-abas .aba {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 10.2px 20.4px;
+  color: var(--ui-faint);
+  display: flex;
+  align-items: center;
+  gap: 6.8px;
+}
+.barra-abas .aba.ativa { border-bottom-color: var(--ui-hot); color: var(--ui-text); }
+.barra-abas .aba:hover { color: var(--ui-text); }
+.selo-contagem { font-family: var(--font-mono); font-size: 11px; padding: 1px 5px; background: var(--ui-hot); color: var(--ui-onhot); font-weight: 400; letter-spacing: normal; text-transform: none; }
+.contrato-backlog { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); white-space: nowrap; }
+
+.discreto { color: var(--ui-faint); font-size: .85rem; }
+
+/* .etiqueta base — a grade de cards que usava as variantes .ok/.alerta/
+   .falha saiu no reskin (vira a tira de telemetria, app.js); os chips de
+   tag do backlog (.etiqueta.tag-*, backlog.js) continuam usando a base. */
 .etiqueta {
   font-size: .75rem;
   padding: .1rem .55rem;
   border-radius: 999px;
-  border: 1px solid var(--borda);
-  color: var(--texto-fraco);
+  border: 1px solid var(--ui-line);
+  color: var(--ui-faint);
   white-space: nowrap;
 }
-.etiqueta.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
-.etiqueta.alerta { color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 40%, transparent); }
-.etiqueta.falha { color: var(--falha); border-color: color-mix(in srgb, var(--falha) 40%, transparent); }
-
-.git-linha { font-size: .82rem; color: var(--texto-fraco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .producao { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
 
@@ -110,21 +324,21 @@ button:disabled { opacity: .5; cursor: wait; }
   display: flex;
   align-items: center;
   gap: .75rem;
-  background: var(--cartao);
-  border: 1px solid var(--borda);
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
   border-radius: 10px;
   padding: .6rem 1rem;
 }
 .sonda .luz { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .luz.ok { background: var(--ok); }
 .luz.falha { background: var(--falha); }
-.sonda a { color: var(--acento); text-decoration: none; }
+.sonda a { color: var(--ui-hot); text-decoration: none; }
 .sonda a:hover { text-decoration: underline; }
-.sonda .detalhe { margin-left: auto; color: var(--texto-fraco); font-size: .82rem; }
+.sonda .detalhe { margin-left: auto; color: var(--ui-faint); font-size: .82rem; }
 
 #saida-ssh {
-  background: #0d0f14;
-  border: 1px solid var(--borda);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
   border-radius: 10px;
   padding: 1rem;
   margin-top: .75rem;
@@ -133,18 +347,13 @@ button:disabled { opacity: .5; cursor: wait; }
   white-space: pre-wrap;
 }
 
-/* ---------- abas ---------- */
-
-.abas { display: flex; gap: .4rem; }
-.aba.ativa { border-color: var(--acento); color: var(--acento); }
-
 /* ---------- aba Backlog ---------- */
 
 .filtro-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
 /* As duas fileiras de filtro (projeto em cima, tag embaixo) ficam coladas. */
 #filtro-projetos { margin-bottom: .4rem; }
 .filtro-tags .filtro { font-size: .8rem; padding: .25rem .7rem; border-radius: 999px; }
-.filtro-tags .filtro.ativa { border-color: var(--acento); color: var(--acento); }
+.filtro-tags .filtro.ativa { border-color: var(--ui-hot); color: var(--ui-hot); }
 .filtro-tags .filtro-dono { color: var(--alerta); }
 .filtro-tags .filtro-dono.ativa { border-color: var(--alerta); color: var(--alerta); }
 
@@ -157,8 +366,8 @@ button:disabled { opacity: .5; cursor: wait; }
 
 .coluna {
   flex: 0 0 340px;
-  background: var(--cartao);
-  border: 1px solid var(--borda);
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
   border-radius: 12px;
   padding: .75rem;
   display: flex;
@@ -166,14 +375,14 @@ button:disabled { opacity: .5; cursor: wait; }
   gap: .5rem;
 }
 /* Subtítulo discreto: com vários projetos no quadro, cada coluna diz de quem é. */
-.coluna-projeto { font-size: .68rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: .06em; }
-.coluna-cab { display: flex; align-items: center; gap: .5rem; padding-bottom: .35rem; border-bottom: 1px solid var(--borda); }
+.coluna-projeto { font-size: .68rem; color: var(--ui-faint); text-transform: uppercase; letter-spacing: .06em; }
+.coluna-cab { display: flex; align-items: center; gap: .5rem; padding-bottom: .35rem; border-bottom: 1px solid var(--ui-line); }
 .coluna-cab h4 { margin: 0; font-size: .95rem; flex: 1; }
 
 .placar {
   font-size: .72rem;
-  color: var(--texto-fraco);
-  border: 1px solid var(--borda);
+  color: var(--ui-faint);
+  border: 1px solid var(--ui-line);
   border-radius: 999px;
   padding: .05rem .5rem;
   white-space: nowrap;
@@ -186,9 +395,9 @@ button:disabled { opacity: .5; cursor: wait; }
    `nivel` bater com épico/story/task — o critério é estrutural (tem
    filho?), não o rótulo do texto. */
 .item {
-  border: 1px solid var(--borda);
+  border: 1px solid var(--ui-line);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--cartao) 60%, var(--fundo));
+  background: color-mix(in srgb, var(--ui-panel) 60%, var(--ui-bg));
   font-size: .85rem;
   margin: .3rem 0;
 }
@@ -203,11 +412,11 @@ button:disabled { opacity: .5; cursor: wait; }
   content: '▸';
   display: inline-block;
   width: 1em;
-  color: var(--texto-fraco);
+  color: var(--ui-faint);
   transition: transform .1s ease;
 }
 .item[open] > summary::before { transform: rotate(90deg); }
-.item > summary:hover { background: color-mix(in srgb, var(--acento) 10%, transparent); }
+.item > summary:hover { background: color-mix(in srgb, var(--ui-hot) 10%, transparent); }
 .item.pronto > summary { opacity: .55; }
 .item-filhos { padding: 0 .5rem .4rem 1.4rem; display: flex; flex-direction: column; gap: .15rem; }
 
@@ -222,9 +431,9 @@ button:disabled { opacity: .5; cursor: wait; }
 .item-texto { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
 .marca { flex: none; }
 .marca.pronto { color: var(--ok); }
-.marca.aberto { color: var(--texto-fraco); }
+.marca.aberto { color: var(--ui-faint); }
 
-.item code, .cru code { background: #0d0f14; border-radius: 4px; padding: 0 .25rem; font-size: .92em; }
+.item code, .cru code { background: var(--ui-bg); border-radius: 4px; padding: 0 .25rem; font-size: .92em; }
 
 /* Esquema de cores por tag (redesenho 20/08/2026) — mesmo idioma
    color-mix() já usado pelas etiquetas de estado (.ok/.alerta/.falha). */
@@ -241,14 +450,14 @@ button:disabled { opacity: .5; cursor: wait; }
   background: color-mix(in srgb, var(--falha) 12%, transparent);
 }
 .etiqueta.tag-congelada {
-  color: var(--texto-fraco);
-  border-color: color-mix(in srgb, var(--texto-fraco) 45%, transparent);
-  background: color-mix(in srgb, var(--texto-fraco) 10%, transparent);
+  color: var(--ui-faint);
+  border-color: color-mix(in srgb, var(--ui-faint) 45%, transparent);
+  background: color-mix(in srgb, var(--ui-faint) 10%, transparent);
 }
 .etiqueta.tag-empirica {
-  color: var(--acento);
-  border-color: color-mix(in srgb, var(--acento) 50%, transparent);
-  background: color-mix(in srgb, var(--acento) 12%, transparent);
+  color: var(--ui-hot);
+  border-color: color-mix(in srgb, var(--ui-hot) 50%, transparent);
+  background: color-mix(in srgb, var(--ui-hot) 12%, transparent);
 }
 .etiqueta.tag-sem-escopo {
   color: var(--ideia);
@@ -262,45 +471,45 @@ button:disabled { opacity: .5; cursor: wait; }
 .cru {
   font-family: ui-monospace, Consolas, monospace;
   font-size: .76rem;
-  color: var(--texto-fraco);
+  color: var(--ui-faint);
 }
 .item-linha.folha.cru {
-  background: #0d0f14;
-  border: 1px dashed var(--borda);
+  background: var(--ui-bg);
+  border: 1px dashed var(--ui-line);
   padding: .4rem .6rem;
   overflow-wrap: anywhere;
 }
-details.item.cru > summary { background: #0d0f14; }
+details.item.cru > summary { background: var(--ui-bg); }
 
 /* ---------- página de projeto ---------- */
 
-.voltar { color: var(--acento); text-decoration: none; font-size: .9rem; }
+.voltar { color: var(--ui-hot); text-decoration: none; font-size: .9rem; }
 .voltar:hover { text-decoration: underline; }
 
 #vista-projeto section { margin-bottom: 1.75rem; }
 #vista-projeto h2 { margin: 0 0 .6rem; }
 
-.stat-linha { font-size: .85rem; color: var(--texto-fraco); padding: .1rem 0; }
+.stat-linha { font-size: .85rem; color: var(--ui-faint); padding: .1rem 0; }
 
 .doc-grupos { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
 .doc-grupo {
-  background: var(--cartao);
-  border: 1px solid var(--borda);
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
   border-radius: 10px;
   padding: .25rem .9rem;
 }
 .doc-grupo > summary { cursor: pointer; padding: .5rem 0; font-weight: 600; }
-.doc-caminho { color: var(--texto-fraco); font-size: .8rem; font-weight: 400; margin: 1rem 0 .2rem; }
+.doc-caminho { color: var(--ui-faint); font-size: .8rem; font-weight: 400; margin: 1rem 0 .2rem; }
 
 .doc-lista { display: flex; flex-direction: column; gap: .2rem; }
-.doc-item { border-bottom: 1px solid var(--borda); }
+.doc-item { border-bottom: 1px solid var(--ui-line); }
 .link-doc {
   display: block;
   width: 100%;
   text-align: left;
   background: none;
   border: none;
-  color: var(--acento);
+  color: var(--ui-hot);
   font: inherit;
   font-size: .85rem;
   padding: .4rem .1rem;
@@ -313,23 +522,23 @@ details.item.cru > summary { background: #0d0f14; }
 .tag-sem-escopo-titulo { color: var(--ideia); }
 
 .trabalho-grupo { margin-bottom: 1rem; }
-.trabalho-grupo h3 { margin: 0 0 .35rem; font-size: .9rem; color: var(--texto-fraco); font-weight: 600; }
+.trabalho-grupo h3 { margin: 0 0 .35rem; font-size: .9rem; color: var(--ui-faint); font-weight: 600; }
 .diff-lista, .trabalho-grupo ul { list-style: none; margin: 0; padding: 0; font-size: .82rem; display: flex; flex-direction: column; gap: .2rem; }
-.diff-lista code { background: #0d0f14; border-radius: 4px; padding: 0 .3rem; font-size: .85em; }
+.diff-lista code { background: var(--ui-bg); border-radius: 4px; padding: 0 .3rem; font-size: .85em; }
 .trabalho-grupo ul li { padding: .1rem 0; }
 
 /* Markdown renderizado dos docs de projeto (renderizarMarkdown em app.js) */
 #vista-projeto .doc-grupo h3, #vista-projeto .doc-grupo h4, #vista-projeto .doc-grupo h5, #vista-projeto .doc-grupo h6,
 #vista-projeto .doc-conteudo h3, #vista-projeto .doc-conteudo h4, #vista-projeto .doc-conteudo h5, #vista-projeto .doc-conteudo h6 {
   margin: 1rem 0 .4rem;
-  color: var(--texto);
+  color: var(--ui-text);
 }
 #vista-projeto .doc-grupo p, #vista-projeto .doc-conteudo p { font-size: .88rem; line-height: 1.6; margin: .4rem 0; }
 #vista-projeto .doc-grupo ul, #vista-projeto .doc-grupo ol,
 #vista-projeto .doc-conteudo ul, #vista-projeto .doc-conteudo ol { font-size: .88rem; padding-left: 1.4rem; }
 #vista-projeto .doc-grupo pre, #vista-projeto .doc-conteudo pre {
-  background: #0d0f14;
-  border: 1px solid var(--borda);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
   border-radius: 8px;
   padding: .7rem .9rem;
   overflow-x: auto;
@@ -337,11 +546,182 @@ details.item.cru > summary { background: #0d0f14; }
 }
 /* mermaid.initialize usa theme: 'dark' (app.js) — o SVG já sai com cores
    pensadas pra fundo escuro, por isso o container não força branco. */
-#vista-projeto pre.mermaid {
-  background: #0d0f14;
-  border: 1px solid var(--borda);
+.doc-conteudo pre.mermaid, .moldura-arquitetura pre.mermaid {
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
   border-radius: 8px;
   padding: 1rem;
   overflow-x: auto;
   text-align: center;
 }
+
+/* ================================================================
+   Tela 3 — aba Projetos: tira de telemetria + painel focado
+   ================================================================ */
+
+.tira-telemetria {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
+  margin: calc(var(--space-5) * -1) calc(var(--space-6) * -1) var(--space-5);
+}
+.celula-telemetria {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--ui-line);
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  padding: 13.6px 13.6px 10.2px;
+  display: grid;
+  gap: 6.8px;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-heading);
+}
+.celula-telemetria:last-child { border-right: none; }
+.celula-telemetria:hover { background: var(--ui-hover); }
+.tt-nome { font-size: 15px; line-height: 1.1; color: var(--ui-dim); font-weight: 500; }
+.celula-telemetria.com-decisao .tt-nome { color: var(--ui-text); font-weight: 600; }
+.celula-telemetria.limpa .tt-nome { color: var(--ui-faint); font-weight: 500; }
+.tt-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+.celula-telemetria.selecionada { background: var(--ui-bg); border-bottom-color: var(--ui-hot); }
+.celula-telemetria.selecionada .tt-meta { color: var(--ui-hot); }
+
+.grid-projeto { display: grid; grid-template-columns: minmax(0, 1fr) 420px; align-items: start; }
+.painel-projeto-principal { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-6) var(--space-6) calc(var(--space-6) * 2.5); min-width: 0; }
+.painel-projeto-contexto {
+  border-left: 1px solid var(--ui-line);
+  background: var(--ui-panel);
+  padding: var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  align-self: stretch;
+}
+
+.kicker { font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ui-faint); margin: 0 0 4px; }
+.cabecalho-projeto { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }
+.titulo-projeto { font-size: 38px; line-height: 1; margin: 0; color: var(--ui-text); }
+.sub-projeto { font-family: var(--font-mono); font-size: 12px; color: var(--ui-faint); margin: 6px 0 0; }
+.chips-resumo { display: flex; flex-wrap: wrap; gap: 6.8px; }
+.chip-resumo { font-family: var(--font-mono); font-size: 10px; padding: 3.4px 6.8px; border: 1px solid var(--ui-line); color: var(--ui-dim); cursor: pointer; }
+.chip-resumo:hover { border-color: var(--ui-hot); }
+.chip-resumo.hot { background: var(--ui-hot); color: var(--ui-onhot); border-color: var(--ui-hot); font-weight: 600; }
+/* Filtro ativo (21/08/2026): mesmo contorno que .filtro.ativa já usa na aba
+   Backlog — inclusive quando é a tag DONO (some o fundo hot, some o anel). */
+.chip-resumo.ativa { outline: 2px solid var(--ui-hot); outline-offset: 1px; }
+
+/* Outline do backlog no painel de projeto — <details> por feature */
+.outline-backlog { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; background: var(--ui-line); border: 1px solid var(--ui-line); }
+.feature-outline { background: var(--ui-bg); }
+.feature-outline-cab { list-style: none; cursor: pointer; padding: 13.6px 20.4px; display: flex; align-items: baseline; gap: 13.6px; }
+.feature-outline-cab::-webkit-details-marker { display: none; }
+.feature-outline-cab .chev { color: var(--ui-faint); display: inline-block; transition: transform .12s ease; }
+.feature-outline[open] > .feature-outline-cab .chev { transform: rotate(90deg); }
+.feature-outline-cab .feature-token { font-family: var(--font-mono); font-size: 12px; color: var(--ui-faint); }
+.feature-outline-titulo { font-family: var(--font-heading); font-weight: 600; font-size: 19px; color: var(--ui-text); flex: 1; }
+.feature-outline-cab .placar { margin-left: auto; }
+.feature-outline-corpo { padding: 0 20.4px 20.4px 47px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+
+/* Blocos da coluna de contexto — border-top em todos menos o primeiro */
+.bloco-contexto + .bloco-contexto { border-top: 1px solid var(--ui-line); padding-top: 20.4px; }
+.rotulo-bloco { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ui-faint); margin: 0 0 10.2px; }
+.rotulo-bloco-linha { display: flex; align-items: baseline; justify-content: space-between; }
+.rotulo-bloco-linha .rotulo-bloco { margin: 0 0 10.2px; }
+.contagem-bloco { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+
+.moldura-arquitetura {
+  aspect-ratio: 16 / 11;
+  border: 1px solid var(--ui-line);
+  background: repeating-linear-gradient(135deg, transparent 0 7px, var(--ui-hatch) 7px 8px);
+  display: grid;
+  place-items: center;
+  margin-bottom: 10.2px;
+}
+.selo-arquitetura { font-family: var(--font-mono); font-size: 11px; padding: 4px 10px; background: var(--ui-panel); border: 1px solid var(--ui-line); color: var(--ui-dim); }
+.link-prosa { font-family: var(--font-mono); font-size: 11px; color: var(--ui-hot); text-decoration: none; }
+.link-prosa:hover { text-decoration: underline; }
+.lista-modeladores { margin-top: 10.2px; }
+
+.lista-decisoes { display: flex; flex-direction: column; gap: 6.8px; }
+.linha-decisao { display: flex; gap: 13.6px; padding: 10.2px; border: 1px solid var(--ui-line); cursor: pointer; }
+.linha-decisao:hover { border-color: var(--ui-hot); }
+.idade-decisao { font-family: var(--font-mono); font-size: 11px; flex: 0 0 32px; color: inherit; }
+.texto-decisao { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linha-decisao.hot { color: var(--ui-hot); }
+.linha-decisao.dim { color: var(--ui-dim); }
+.linha-decisao.faint { color: var(--ui-faint); }
+
+.linha-sonda-ctx { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: var(--ui-dim); }
+.linha-sonda-ctx .hot { color: var(--ui-hot); font-family: var(--font-mono); font-size: 11px; }
+.linha-sonda-ctx .faint { color: var(--ui-faint); font-family: var(--font-mono); font-size: 11px; }
+.botao-ssh-ctx { margin-top: 6.8px; font-family: var(--font-mono); font-size: 11px; background: none; }
+.saida-ssh-ctx { background: var(--ui-bg); border: 1px solid var(--ui-line); padding: 10.2px; margin-top: 10.2px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+
+/* ================================================================
+   Tela 4 — aba Backlog: outline sempre expandido, duas colunas
+   ================================================================ */
+
+.backlog-cabecalho { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; margin-bottom: var(--space-6); }
+.titulo-secao { font-size: 34px; margin: 0; color: var(--ui-text); }
+.grid-backlog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20.4px; align-items: start; }
+.feature-bloco { border: 1px solid var(--ui-line); background: var(--ui-panel); }
+.feature-cab { display: flex; align-items: baseline; gap: 10.2px; padding: 13.6px 20.4px; border-bottom: 1px solid var(--ui-line); }
+.feature-cab .feature-token { font-family: var(--font-mono); font-size: 12px; color: var(--ui-faint); }
+.feature-titulo { font-size: 19px; margin: 0; flex: 1; color: var(--ui-text); }
+.feature-cab .placar { margin-left: auto; }
+.feature-itens { padding: 13.6px 20.4px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+.nota-cru { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); border: 1px dashed var(--ui-line); padding: 10.2px 13.6px; margin-top: 20.4px; }
+
+/* ================================================================
+   Tela 5 — aba Decisões
+   ================================================================ */
+
+#aba-decisoes { max-width: 1180px; }
+.decisoes-cabecalho { margin-bottom: var(--space-6); }
+.decisoes-cabecalho .titulo-secao { margin-bottom: 4px; }
+.decisoes-cabecalho .kicker { text-transform: none; letter-spacing: normal; }
+
+.grupo-projeto-decisoes { border: 1px solid var(--ui-line); margin-bottom: 13.6px; }
+.grupo-projeto-cab {
+  list-style: none;
+  cursor: pointer;
+  background: var(--ui-panel);
+  padding: 13.6px 20.4px;
+  display: flex;
+  align-items: baseline;
+  gap: 13.6px;
+}
+.grupo-projeto-cab::-webkit-details-marker { display: none; }
+.grupo-projeto-cab .chev { color: var(--ui-faint); display: inline-block; transition: transform .12s ease; }
+.grupo-projeto-decisoes[open] > .grupo-projeto-cab .chev { transform: rotate(90deg); }
+.grupo-projeto-titulo { font-family: var(--font-heading); font-weight: 600; font-size: 19px; color: var(--ui-text); }
+.grupo-projeto-arquivo { margin: 0; }
+.grupo-projeto-cab .selo-contagem { margin-left: auto; }
+
+.lista-decisoes-tab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; background: var(--ui-line); }
+.linha-decisoes-tab { background: var(--ui-bg); padding: 13.6px 20.4px; display: flex; gap: 20.4px; cursor: pointer; align-items: baseline; }
+.linha-decisoes-tab:hover { background: var(--ui-hover); }
+.idade-decisoes-tab { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); flex: 0 0 68px; }
+.texto-decisoes-tab { flex: 1; min-width: 0; }
+.texto-decisao-principal { color: var(--ui-text); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contexto-decisao { font-size: 12px; color: var(--ui-dim); margin-top: 2px; }
+
+/* ---------- toggle "todas / abertas" (21/08/2026) ---------- */
+.par-toggle-filtro { display: flex; border: 1px solid var(--ui-line); flex: none; }
+.toggle-filtro {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3.4px 10.2px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--ui-faint);
+}
+.toggle-filtro:first-child { border-right: 1px solid var(--ui-line); }
+.toggle-filtro.ativa { background: var(--ui-hot); color: var(--ui-onhot); }
+
+.linha-filtro-tags { display: flex; align-items: flex-start; gap: 13.6px; flex-wrap: wrap; }
+.linha-chips-resumo { display: flex; align-items: center; gap: 13.6px; flex-wrap: wrap; }
+.decisoes-cabecalho { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }

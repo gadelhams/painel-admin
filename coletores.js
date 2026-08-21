@@ -11,6 +11,7 @@ import fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { PROJETOS, PRODUCAO_EXTRA } from './projetos.js';
+import { RELACOES, NOS_EXTRA } from './relacoes.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -304,8 +305,10 @@ export function parsearBacklog(texto) {
   let feature = null; // null = fora de feature (título, "Como este arquivo funciona")
   let pilha = []; // itens abertos, para pendurar filho pelo nível de indentação
   let ultimo = null; // receptor de linha de continuação (item ou entrada crua)
+  let numeroLinha = 0; // 1-indexed — carimbado em item/cru pra decisoesDoBacklog() achar a linha real no arquivo (git log -L)
 
   for (const linha of texto.split(/\r?\n/)) {
+    numeroLinha++;
     if (!linha.trim()) {
       ultimo = null;
       continue;
@@ -344,6 +347,7 @@ export function parsearBacklog(texto) {
         estado: item[2] === 'x' ? 'pronto' : 'aberto',
         nivel,
         filhos: [],
+        linha: numeroLinha,
       };
       while (pilha.length && pilha[pilha.length - 1].nivel >= nivel) pilha.pop();
       (pilha.length ? pilha[pilha.length - 1].filhos : feature.itens).push(nodo);
@@ -371,7 +375,7 @@ export function parsearBacklog(texto) {
       // para a projeção (o token de item tokenizado também é removido).
       const [, recuo, resto] = linha.match(/^(\s*)(?:-\s+)?(.*)$/);
       const nivel = Math.min(Math.floor(recuo.length / 2), 2);
-      const nodo = { tipo: 'cru', texto: resto.trim(), nivel, filhos: [] };
+      const nodo = { tipo: 'cru', texto: resto.trim(), nivel, filhos: [], linha: numeroLinha };
       while (pilha.length && pilha[pilha.length - 1].nivel >= nivel) pilha.pop();
       (pilha.length ? pilha[pilha.length - 1].filhos : feature.itens).push(nodo);
       pilha.push(nodo);
@@ -417,6 +421,94 @@ export async function lerBacklog(projetos = PROJETOS) {
   };
 }
 
+// ---------- decisões (derivadas do backlog, reskin "Industry HUD" 21/08/2026) ----------
+// Uma decisão = um nó do backlog com uma das 6 tags canônicas — reaproveita
+// a árvore que parsearBacklog()/lerBacklog() já produzem, não duplica o
+// parser. Idade só por `git log -L`: investigado nesta entrega e confirmado
+// que não existe NENHUMA data por item/tag no próprio markdown (só uma data
+// de proveniência do arquivo inteiro). Pesado (um processo git por decisão,
+// sem cache) — por isso NUNCA entra no polling de 60s do front (app.js), só
+// quando a aba Decisões/Projetos pede, ou no refresh manual.
+
+function nodosComTag(nodos) {
+  const achados = [];
+  for (const nodo of nodos ?? []) {
+    if (nodo.tags?.length) achados.push(nodo);
+    achados.push(...nodosComTag(nodo.filhos));
+  }
+  return achados;
+}
+
+// `git()` (acima) não tem timeout — correto pros usos leves de hoje, errado
+// pra `-L` (percorre todo o histórico da linha). Timeout próprio aqui, sem
+// mudar o helper compartilhado. Pega a ÚLTIMA data do stdout (git log lista
+// do commit mais novo pro mais velho) como aproximação de "parada desde":
+// se a linha só mudou de POSIÇÃO por edição alheia acima dela, isso pode
+// subestimar a idade real — não tem como saber sem comparar o texto em si.
+// Qualquer falha (não é repo, arquivo renomeado, linha não encontrada) volta
+// `null` — o front mostra "—", nunca inventa uma data.
+async function idadeDaDecisao(caminhoRepo, caminhoRelativo, linha) {
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['-C', caminhoRepo, 'log', '-L', `${linha},${linha}:${caminhoRelativo}`, '--format=%cI'],
+      { timeout: 5000 },
+    );
+    const datas = stdout.match(/^\d{4}-\d{2}-\d{2}T[\d:+-]+/gm);
+    return datas?.length ? datas[datas.length - 1] : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function decisoesDoBacklog() {
+  const { projetos } = await lerBacklog();
+  const pendentes = [];
+
+  for (const pr of projetos) {
+    if (pr.estado !== 'ok') continue;
+    const projeto = PROJETOS.find((p) => p.pasta === pr.pasta);
+    if (!projeto) continue;
+
+    const caminhoRepo = projeto.subRepo ? path.join(RAIZ, pr.pasta, projeto.subRepo) : path.join(RAIZ, pr.pasta);
+    // O `backlog` do catálogo é relativo a RAIZ/pasta (inclui o prefixo do
+    // subRepo quando há um — comentário de projetos.js); `git -C caminhoRepo`
+    // já está DENTRO do subRepo, então o prefixo precisa sair daqui.
+    const caminhoRelativo = projeto.subRepo && pr.backlog.startsWith(`${projeto.subRepo}/`)
+      ? pr.backlog.slice(projeto.subRepo.length + 1)
+      : pr.backlog;
+
+    for (const feature of pr.features) {
+      for (const nodo of nodosComTag(feature.itens)) {
+        for (const tag of nodo.tags) {
+          pendentes.push({
+            id: `${pr.pasta}:${nodo.linha}:${tag.tag}`,
+            projeto: pr.pasta,
+            tituloProjeto: pr.titulo,
+            arquivo: pr.backlog,
+            feature: feature.titulo,
+            texto: nodo.texto,
+            tag: tag.tag,
+            detalhe: tag.detalhe ?? null,
+            // Linha crua (fora da gramática) não tem checkbox — trata como
+            // "aberta" por padrão: nunca foi marcada pronta, então não é.
+            estado: nodo.estado ?? 'aberto',
+            linha: nodo.linha,
+            caminhoRepo,
+            caminhoRelativo,
+          });
+        }
+      }
+    }
+  }
+
+  const decisoes = await Promise.all(pendentes.map(async ({ caminhoRepo, caminhoRelativo, ...decisao }) => ({
+    ...decisao,
+    desde: await idadeDaDecisao(caminhoRepo, caminhoRelativo, decisao.linha),
+  })));
+  return { decisoes };
+}
+
 // ---------- as duas visões compartilhadas ----------
 
 export async function estadoProjetos() {
@@ -432,4 +524,11 @@ export async function estadoProducao() {
     alvos.map(async (a) => ({ rotulo: a.rotulo, ...(await sondar(a.url)) })),
   );
   return { sondas };
+}
+
+// Dado 100% estático (sem I/O) — só existe como coletor pra seguir o mesmo
+// contrato das outras visões compartilhadas (rota HTTP e futura ferramenta
+// do motor lêem daqui, nunca importam relacoes.js direto).
+export async function catalogoRelacoes() {
+  return { relacoes: RELACOES, nosExtra: NOS_EXTRA };
 }

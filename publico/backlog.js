@@ -1,19 +1,17 @@
-// Aba Backlog (fase 1, só-leitura). O markdown de cada projeto é a VERDADE;
-// este quadro é projeção. Nada aqui guarda estado: todo número na tela é
-// derivado do JSON no momento de desenhar. Redesenho de 20/08/2026: item com
-// filhos vira card expansível (<details>/<summary> nativo, sem JS de
-// estado); folha continua linha simples. "Card por story" sem depender do
-// `nivel` bater com épico/story/task — nem sempre bate nos arquivos reais.
+// Backlog — o markdown de cada projeto é a VERDADE; toda tela aqui é
+// projeção. Nada guarda estado: todo número é derivado do JSON no momento
+// de desenhar (docs/02_ABA_BACKLOG.md). Reskin "Industry HUD" (21/08/2026):
+// a aba Backlog e o painel de projeto (projeto.js) agora mostram o backlog
+// de UM projeto por vez — o mesmo `projetoSelecionado` de app.js — em vez do
+// quadro multi-projeto/kanban de antes. `desenharNodo`/`placar`/`nosComTag`
+// abaixo são as primitivas recursivas que sobrevivem à troca de layout: já
+// eram independentes de apresentação, só a casca ao redor delas mudou.
 
-const quadroBacklog = document.getElementById('quadro-backlog');
-const filtroTags = document.getElementById('filtro-tags');
-const filtroProjetos = document.getElementById('filtro-projetos');
+const abaBacklogEl = document.getElementById('aba-backlog');
 
 let dadosBacklog = null;
-let tagAtiva = null;
-// Filtro de projeto (pedido do dono, 16/08/2026): client-side como o de tag;
-// null = todos. Guarda a PASTA (chave estável do catálogo), não o título.
-let projetoAtivo = null;
+let tagAtivaBacklog = null; // filtro local à aba Backlog; reseta ao trocar de projeto (nunca esconde o novo projeto em silêncio)
+let ultimaPastaBacklog = null; // guarda se a chamada é troca de projeto ou só o próprio clique de filtro re-desenhando
 
 // Placar n/m SEMPRE derivado aqui, na hora de desenhar — contagem armazenada
 // viraria segunda fonte de verdade (regra do docs/02_ABA_BACKLOG.md). Também
@@ -35,12 +33,12 @@ function placar(nodos) {
   return { total, prontos };
 }
 
-// Esquema de cores por tag (redesenho 20/08/2026): cada tag canônica do
-// PADROES-BACKLOG.md ganha uma cor distinta, reaproveitando os tokens já
-// existentes — só SEM ESCOPO ("brainstorm registrado") ganha token novo
-// (--ideia), porque é conceitualmente diferente das outras (não é estado
-// operacional, é ideia ainda não comprometida) e a mesma cor reaparece na
-// seção "Brainstorm" da página de projeto (projeto.js).
+// As 6 tags canônicas do PADROES-BACKLOG.md — usadas como filtro fixo na
+// aba Backlog (README Tela 4: "incluindo os de contagem zero, porque são
+// filtros"), diferente dos chips de resumo do painel de projeto (Tela 3.2),
+// que escondem contagem zero.
+const TAGS_CANONICAS = ['DONO', 'BLOQUEADA', 'EMPÍRICA', 'CONGELADA', 'SEM ESCOPO', 'PÓS-PLAYTEST'];
+
 const TAG_CLASSE = {
   DONO: 'tag-dono',
   BLOQUEADA: 'tag-bloqueada',
@@ -89,161 +87,155 @@ function desenharNodo(nodo, comFilhos = true) {
   return el('div', { class: `item-linha folha${classeEstado}${classeTipo}` }, ...conteudoNodo(nodo));
 }
 
+// `modoFiltroTag` (app.js) é lido direto, mesmo padrão de estado
+// compartilhado que `dadosProjetos`/`dadosBacklog` já usam — sem passar
+// parâmetro por toda a cadeia de chamada. Cru (sem `.estado`) sempre conta/
+// aparece: não tem checkbox pra estar "pronto" ou não.
+function nodoVisivelNoModo(nodo) {
+  return modoFiltroTag === 'todos' || nodo.tipo !== 'item' || nodo.estado !== 'pronto';
+}
+
 function nosComTag(nodos, tag, achados = []) {
   for (const nodo of nodos) {
-    if (nodo.tags.some((t) => t.tag === tag)) achados.push(nodo);
+    if (nodo.tags.some((t) => t.tag === tag) && nodoVisivelNoModo(nodo)) achados.push(nodo);
     nosComTag(nodo.filhos ?? [], tag, achados);
   }
   return achados;
 }
 
-function colunaFeature(f, projeto) {
-  // Com filtro ativo a coluna mostra SÓ as linhas com a tag (aceite 3 da
-  // spec) — a linha é a unidade, filho não vem de carona.
-  let corpo;
-  if (tagAtiva) {
-    const achados = nosComTag(f.itens, tagAtiva);
-    if (!achados.length) return null;
-    corpo = achados.map((nodo) => desenharNodo(nodo, false));
-  } else {
-    corpo = f.itens.map((nodo) => desenharNodo(nodo));
-  }
-  const p = placar(f.itens);
-  return el(
-    'div',
-    { class: 'coluna' },
-    // Subtítulo discreto com o projeto dono (pedido do dono, 16/08/2026):
-    // com vários projetos no quadro, a coluna rolada para longe do cabeçalho
-    // do bloco precisa se identificar sozinha.
-    el('div', { class: 'coluna-projeto' }, projeto.titulo),
-    el(
-      'div',
-      { class: 'coluna-cab' },
-      el('h4', {}, ...formatar(f.titulo)),
-      el('span', { class: `etiqueta ${f.estado === 'pronto' ? 'ok' : ''}` }, f.estado === 'pronto' ? 'pronta' : 'aberta'),
-      el('span', { class: 'placar' }, `${p.prontos}/${p.total}`),
-    ),
-    ...corpo,
-  );
-}
-
-function blocoProjeto(pr) {
-  const cabecalho = el(
-    'div',
-    { class: 'backlog-projeto-cab' },
-    el('h3', {}, pr.titulo),
-    el('span', { class: 'discreto' }, `${pr.pasta}/${pr.backlog}`),
-  );
-  if (pr.estado !== 'ok') {
-    // Estado nomeado NA TELA (aceite 4), com o nome CERTO para a causa:
-    // sem_arquivo = não existe no disco; erro_leitura = existe (ou não deu
-    // para saber), mas a leitura falhou — a tela não mente a causa.
-    const mensagem = pr.estado === 'sem_arquivo'
-      ? `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`
-      : `falha ao ler ${pr.pasta}/${pr.backlog} — ${pr.erro ?? pr.estado}`;
-    return el(
-      'div',
-      { class: 'backlog-projeto' },
-      cabecalho,
-      el(
-        'div',
-        { class: 'sonda' },
-        el('span', { class: 'luz falha' }),
-        el('span', {}, mensagem),
-      ),
-    );
-  }
-  const colunas = pr.features.map((f) => colunaFeature(f, pr)).filter(Boolean);
-  if (tagAtiva && !colunas.length) return null;
-  return el('div', { class: 'backlog-projeto' }, cabecalho, el('div', { class: 'quadro' }, ...colunas));
-}
-
-// Os dois filtros compõem: o de projeto decide QUAIS blocos entram, o de tag
-// decide quais linhas dentro deles. Tudo derivado do JSON na hora de desenhar.
-function projetosVisiveis() {
-  return dadosBacklog.projetos.filter((pr) => !projetoAtivo || pr.pasta === projetoAtivo);
-}
-
 function contarTags(nodos, contagem) {
   for (const nodo of nodos) {
-    for (const t of nodo.tags) contagem.set(t.tag, (contagem.get(t.tag) ?? 0) + 1);
+    if (nodoVisivelNoModo(nodo)) {
+      for (const t of nodo.tags) contagem.set(t.tag, (contagem.get(t.tag) ?? 0) + 1);
+    }
     contarTags(nodo.filhos ?? [], contagem);
   }
 }
 
-// Chips de projeto no mesmo padrão visual do filtro de tag; "todos" por
-// padrão. Um chip por projeto COM backlog no catálogo — inclusive os em
-// sem_arquivo/erro_leitura, para o filtro nunca esconder um estado de falha.
-function desenharFiltroProjetos() {
-  const botoes = [
-    el('button', { class: `filtro${projetoAtivo ? '' : ' ativa'}`, type: 'button', 'data-pasta': '' }, 'todos'),
-    ...dadosBacklog.projetos.map((pr) =>
-      el(
-        'button',
-        { class: `filtro${projetoAtivo === pr.pasta ? ' ativa' : ''}`, type: 'button', 'data-pasta': pr.pasta },
-        pr.titulo,
-      ),
+// ---------- painel de projeto (Tela 3.2): <details> por feature, primeira aberta ----------
+// Chamada por projeto.js — vive aqui porque reaproveita desenharNodo/placar
+// direto, sem duplicar a recursão. `tagAtiva` opcional (21/08/2026, pedido
+// do dono): os chips de resumo do cabeçalho do projeto viraram filtro
+// também, mesmo padrão de nosComTag que já filtrava a aba Backlog.
+function outlineFeatureDetalhes(f, aberta, tagAtiva) {
+  const p = placar(f.itens);
+  const corpo = tagAtiva
+    ? nosComTag(f.itens, tagAtiva).map((nodo) => desenharNodo(nodo, false))
+    : f.itens.map((nodo) => desenharNodo(nodo));
+  return el(
+    'details',
+    { class: 'feature-outline', ...(aberta ? { open: '' } : {}) },
+    el(
+      'summary',
+      { class: 'feature-outline-cab' },
+      el('span', { class: 'chev' }, '›'),
+      el('span', { class: 'feature-token' }, f.estado === 'pronto' ? '[x]' : '[ ]'),
+      el('span', { class: 'feature-outline-titulo' }, ...formatar(f.titulo)),
+      el('span', { class: 'placar' }, `${p.prontos}/${p.total}`),
     ),
-  ];
-  for (const b of botoes) {
-    b.addEventListener('click', () => {
-      projetoAtivo = b.dataset.pasta || null;
-      desenharBacklog();
-    });
-  }
-  filtroProjetos.replaceChildren(...botoes);
-}
-
-function desenharFiltro() {
-  const contagem = new Map();
-  // As contagens de tag seguem o filtro de projeto: com um projeto ativo, o
-  // chip diz quantas linhas a tag tem NAQUELE recorte, não no total.
-  for (const pr of projetosVisiveis()) {
-    if (pr.estado === 'ok') for (const f of pr.features) contarTags(f.itens, contagem);
-  }
-  // DONO primeiro: a fila pessoal do dono é o motivo desta aba existir.
-  const ordem = [...contagem.keys()].sort((a, b) =>
-    a === 'DONO' ? -1 : b === 'DONO' ? 1 : a.localeCompare(b),
+    el('div', { class: 'feature-outline-corpo' }, ...corpo),
   );
-  const botoes = [
-    el('button', { class: `filtro${tagAtiva ? '' : ' ativa'}`, type: 'button', 'data-tag': '' }, 'todas'),
-    ...ordem.map((tag) =>
-      el(
-        'button',
-        {
-          class: `filtro${tag === 'DONO' ? ' filtro-dono' : ''}${tagAtiva === tag ? ' ativa' : ''}`,
-          type: 'button',
-          'data-tag': tag,
-        },
-        `${tag} · ${contagem.get(tag)}`,
-      ),
-    ),
-  ];
-  for (const b of botoes) {
-    b.addEventListener('click', () => {
-      tagAtiva = b.dataset.tag || null;
-      desenharBacklog();
-    });
-  }
-  filtroTags.replaceChildren(...botoes);
 }
 
-function desenharBacklog() {
-  if (!dadosBacklog) return;
-  desenharFiltroProjetos();
-  desenharFiltro();
-  const blocos = projetosVisiveis().map(blocoProjeto).filter(Boolean);
-  quadroBacklog.replaceChildren(
-    ...(blocos.length
-      ? blocos
-      : [el('p', { class: 'discreto' }, tagAtiva
-          ? `nenhuma linha com (${tagAtiva})${projetoAtivo ? ` em ${projetoAtivo}` : ''}`
-          : 'nenhum projeto do catálogo tem o campo backlog')]),
+// ---------- aba Backlog (Tela 4): duas colunas, sempre expandido, um projeto só ----------
+
+function blocoFeatureExpandido(f) {
+  const corpo = tagAtivaBacklog
+    ? nosComTag(f.itens, tagAtivaBacklog).map((nodo) => desenharNodo(nodo, false))
+    : f.itens.map((nodo) => desenharNodo(nodo));
+  const p = placar(f.itens);
+  return el(
+    'div',
+    { class: 'feature-bloco' },
+    el(
+      'div',
+      { class: 'feature-cab' },
+      el('span', { class: 'feature-token' }, f.estado === 'pronto' ? '[x]' : '[ ]'),
+      el('h3', { class: 'feature-titulo' }, ...formatar(f.titulo)),
+      el('span', { class: 'placar' }, `${p.prontos}/${p.total}`),
+    ),
+    el('div', { class: 'feature-itens' }, ...corpo),
+  );
+}
+
+function desenharBacklogDoProjeto(pasta) {
+  // Só zera o filtro numa troca DE VERDADE de projeto — o próprio clique
+  // nos chips chama esta função de novo pra re-desenhar com o filtro novo,
+  // e zerar ali apagaria o clique que acabou de acontecer.
+  if (pasta !== ultimaPastaBacklog) {
+    tagAtivaBacklog = null;
+    ultimaPastaBacklog = pasta;
+  }
+  if (!dadosBacklog) {
+    abaBacklogEl.replaceChildren(el('p', { class: 'discreto' }, 'backlog ainda carregando…'));
+    return;
+  }
+  const pr = dadosBacklog.projetos.find((p) => p.pasta === pasta);
+  const doCatalogo = dadosProjetos.find((p) => p.pasta === pasta);
+  const titulo = doCatalogo?.titulo ?? pasta;
+
+  if (!pr) {
+    abaBacklogEl.replaceChildren(el('p', { class: 'discreto' }, `${titulo} não tem o campo backlog no catálogo.`));
+    return;
+  }
+  if (pr.estado !== 'ok') {
+    const mensagem = pr.estado === 'sem_arquivo'
+      ? `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`
+      : `falha ao ler ${pr.pasta}/${pr.backlog} — ${pr.erro ?? pr.estado}`;
+    abaBacklogEl.replaceChildren(
+      el('h2', { class: 'titulo-secao' }, `Backlog — ${titulo}`),
+      el('div', { class: 'sonda' }, el('span', { class: 'luz falha' }), el('span', {}, mensagem)),
+    );
+    return;
+  }
+
+  const contagem = new Map();
+  for (const f of pr.features) contarTags(f.itens, contagem);
+
+  const chips = [
+    el('button', { type: 'button', class: `filtro${tagAtivaBacklog ? '' : ' ativa'}`, 'data-tag': '' }, 'todas'),
+    ...TAGS_CANONICAS.map((tag) => el(
+      'button',
+      { type: 'button', class: `filtro${tag === 'DONO' ? ' filtro-dono' : ''}${tagAtivaBacklog === tag ? ' ativa' : ''}`, 'data-tag': tag },
+      `${tag} · ${contagem.get(tag) ?? 0}`,
+    )),
+  ];
+  for (const b of chips) {
+    b.addEventListener('click', () => {
+      tagAtivaBacklog = b.dataset.tag || null;
+      desenharBacklogDoProjeto(pasta);
+    });
+  }
+
+  const features = tagAtivaBacklog
+    ? pr.features.filter((f) => nosComTag(f.itens, tagAtivaBacklog).length)
+    : pr.features;
+
+  abaBacklogEl.replaceChildren(
+    el(
+      'div',
+      { class: 'backlog-cabecalho' },
+      el(
+        'div',
+        {},
+        el('p', { class: 'kicker' }, `${pr.pasta} · ${pr.backlog}`),
+        el('h2', { class: 'titulo-secao' }, `Backlog — ${titulo}`),
+      ),
+      el(
+        'div',
+        { class: 'linha-filtro-tags' },
+        el('div', { class: 'filtro-tags' }, ...chips),
+        elToggleFiltro(() => desenharBacklogDoProjeto(pasta)),
+      ),
+    ),
+    features.length
+      ? el('div', { class: 'grid-backlog' }, ...features.map(blocoFeatureExpandido))
+      : el('p', { class: 'discreto' }, `nenhuma feature com (${tagAtivaBacklog})`),
+    el('p', { class: 'nota-cru' }, 'linhas fora da gramática aparecem verbatim, sem chip — o parser nunca esconde o que não entendeu.'),
   );
 }
 
 async function carregarBacklog() {
   const resposta = await fetch('/api/backlog');
   dadosBacklog = await resposta.json();
-  desenharBacklog();
 }

@@ -5,70 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel dos Projetos</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+  <!-- Lido antes do primeiro paint — evita flash do tema errado (o padrão é
+       escuro, sem atributo; só grava data-tema quando é "light"). -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('painel-tema') === 'light') {
+          document.documentElement.setAttribute('data-tema', 'light');
+        }
+      } catch { /* localStorage indisponível: fica no padrão escuro */ }
+    })();
+  </script>
   <link rel="stylesheet" href="estilo.css">
   <script src="vendor/mermaid.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🗂️ Painel dos Projetos</h1>
-    <nav class="abas">
-      <button class="aba ativa" data-aba="geral" type="button">Visão geral</button>
-      <button class="aba" data-aba="backlog" type="button">Backlog</button>
-    </nav>
-    <div class="acoes">
-      <span id="atualizado-em" class="discreto"></span>
-      <!-- Desde a fusão de 14/08/2026 o Severino mora neste mesmo processo -->
-      <a class="link-severino" href="/severino/">🎤 Severino</a>
-      <button id="botao-atualizar" type="button">Atualizar</button>
+  <header class="cabecalho">
+    <div class="celula marca">PAINEL</div>
+    <button type="button" class="celula barra-comando" id="abrir-console">
+      <span class="chevron">›</span>
+      <span class="comando-texto">pergunte, dite, ou dispare um job — ⌘K</span>
+      <span class="selo-severino">c-3po</span>
+    </button>
+    <div class="celula placar-tema">
+      <div class="placar">
+        <span class="placar-rotulo">decisões</span>
+        <span class="placar-valor" id="placar-decisoes">—</span>
+      </div>
+      <div class="placar">
+        <span class="placar-rotulo">mês</span>
+        <span class="placar-valor" id="placar-gasto">—</span>
+      </div>
+      <div class="sincronia">
+        <span class="ponto-sync"></span>
+        <span id="texto-sync">—</span>
+      </div>
+      <button id="toggle-tema" type="button">escuro</button>
     </div>
   </header>
 
+  <nav class="barra-abas">
+    <button class="aba ativa" data-aba="projetos" type="button">Projetos</button>
+    <button class="aba" data-aba="backlog" type="button">Backlog</button>
+    <button class="aba" data-aba="decisoes" type="button">Decisões <span class="selo-contagem" id="selo-decisoes">—</span></button>
+    <span class="contrato-backlog">o arquivo é a verdade · o quadro é projeção</span>
+  </nav>
+
   <main>
-    <div id="aba-geral">
-      <section>
-        <h2>Projetos locais</h2>
-        <div id="grade-projetos" class="grade">
-          <p class="discreto">Carregando…</p>
-        </div>
-      </section>
-
-      <section>
-        <h2>Produção — astargne.com</h2>
-        <div id="lista-producao" class="producao">
-          <p class="discreto">Sondando…</p>
-        </div>
-        <div class="ssh">
-          <button id="botao-ssh" type="button">Consultar servidor via SSH (somente leitura)</button>
-          <pre id="saida-ssh" hidden></pre>
-        </div>
-      </section>
-    </div>
-
-    <!-- Aba Backlog (fase 1, só-leitura): o markdown é a verdade, isto é projeção -->
-    <div id="aba-backlog" hidden>
-      <section>
-        <h2>Backlog — o arquivo é a verdade, o quadro é projeção</h2>
-        <!-- Dois filtros client-side, mesmo padrão visual: projeto e tag -->
-        <div id="filtro-projetos" class="filtro-tags"></div>
-        <div id="filtro-tags" class="filtro-tags"></div>
-        <div id="quadro-backlog">
-          <p class="discreto">Carregando…</p>
-        </div>
-      </section>
-    </div>
-
-    <!-- Página de projeto (20/08/2026): aberta pelo clique num card, endereço
-         próprio via hash (#/projeto/<pasta>) -->
-    <div id="vista-projeto" hidden>
-      <p><a href="#/geral" class="voltar">← Visão geral</a></p>
-      <div id="projeto-conteudo">
+    <!-- Aba Projetos (21/08/2026): tira de telemetria (9 células, uma por
+         projeto do catálogo) + painel do projeto focado — não é mais duas
+         views separadas (grade vs. página de projeto). #/projeto/<pasta> e
+         #/projetos (sem parâmetro, mostra a última seleção ou a primeira do
+         catálogo) caem aqui dentro; só o painel focado muda. -->
+    <div id="aba-projetos">
+      <div id="tira-telemetria" class="tira-telemetria">
         <p class="discreto">Carregando…</p>
       </div>
+      <div class="grid-projeto">
+        <div id="painel-projeto-principal" class="painel-projeto-principal">
+          <p class="discreto">Carregando…</p>
+        </div>
+        <div id="painel-projeto-contexto" class="painel-projeto-contexto"></div>
+      </div>
+    </div>
+
+    <!-- Aba Backlog: outline do projeto SELECIONADO (mesmo estado
+         compartilhado da aba Projetos — README Tela 4: "Backlog — <projeto>",
+         sem coluna de contexto, duas colunas de feature sempre expandidas). -->
+    <div id="aba-backlog" hidden>
+      <p class="discreto">Carregando…</p>
+    </div>
+
+    <!-- Aba Decisões (Fase 6 desta entrega — conteúdo real ainda não
+         montado; placeholder honesto até lá). -->
+    <div id="aba-decisoes" hidden>
+      <p class="discreto">em construção — Fase 6 do reskin ainda não chegou aqui.</p>
     </div>
   </main>
 
+  <!-- Tela 6 — console do Severino, overlay por ⌘K/Ctrl+K, pela barra de
+       comando, ou por clique numa decisão (21/08/2026). Substitui a faixa
+       lateral fixa desta manhã — reaproveita severino/voz.js e
+       severino/chat.js inteiros, só muda o container que os hospeda.
+       /severino/ standalone continua existindo como acesso alternativo. -->
+  <div id="console-scrim" class="console-scrim" hidden>
+    <div class="console-painel moldura">
+      <i class="canto tl"></i><i class="canto tr"></i><i class="canto bl"></i><i class="canto br"></i>
+      <div class="console-cabecalho">
+        <div>
+          <span class="console-titulo">C-3PO</span>
+          <span class="kicker" id="console-kicker"></span>
+        </div>
+        <button type="button" id="console-fechar" class="console-esc">esc</button>
+      </div>
+
+      <div id="historico" aria-live="polite"></div>
+
+      <div class="console-rodape">
+        <form id="formulario" autocomplete="off">
+          <span class="console-chevron">›</span>
+          <input id="entrada" type="text" placeholder="digite, ou fale" maxlength="8000">
+          <!-- type=button: falar não é submeter o formulário -->
+          <button id="microfone" type="button" aria-label="Falar com o C-3PO" title="clique e fale (push-to-talk)" class="selo-voz">voz</button>
+          <button id="enviar" type="submit">mandar</button>
+        </form>
+        <div class="console-chips" id="console-chips"></div>
+        <label id="rotulo-copiloto" class="copiloto">
+          <input id="modo-copiloto" type="checkbox">
+          modo copiloto — fica ouvindo, sem clicar; diga "C3PO" pra retomar depois de um hiato
+        </label>
+        <p id="status-voz">preparando a voz…</p>
+        <p id="status-copiloto" hidden></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- grafo.js/relacoes.js/api/relacoes ficam no repo mas saem da nav por
+       ora (decisão do dono, 21/08/2026, ao adotar o design "Industry HUD" —
+       fácil de religar depois como 4ª aba). -->
   <script src="app.js"></script>
   <script src="backlog.js"></script>
+  <script src="decisoes.js"></script>
   <script src="projeto.js"></script>
+  <!-- voz.js antes: define o global Voz que chat.js consome (mesmo contrato
+       de severino/index.html) -->
+  <script src="severino/voz.js"></script>
+  <script src="severino/chat.js"></script>
 </body>
 </html>

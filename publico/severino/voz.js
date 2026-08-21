@@ -3,10 +3,14 @@
 // POST /api/tts, áudio em fila sequencial, com 1 retry por bloco antes de
 // declarar queda — 20/08/2026) → speechSynthesis (Antônio) → só texto — cada
 // queda avisada na linha de status com o motivo. Reconhecimento (fala do
-// dono) passa por correção de nomes próprios contra o catálogo de projetos
-// antes de sair (20/08/2026) — rec.lang fixo em pt-BR não entende nome de
-// projeto em inglês, então corrige depois, declarando a troca. Carrega ANTES
-// de chat.js: define o global `Voz` que o chat consome. Nunca quebra o texto.
+// dono) passa por correção de nomes próprios e termos técnicos contra um
+// catálogo antes de sair (20/08/2026, ampliado 21/08/2026) — rec.lang fixo
+// em pt-BR não entende termo em inglês, então corrige depois, declarando a
+// troca. Modo copiloto (21/08/2026): escuta contínua opcional com gatilho de
+// retomada ("C3PO") depois de um hiato — ver `ouvirContinuo`/`detectarGatilho`
+// mais abaixo; o push-to-talk (`ouvir`) continua existindo como modo padrão.
+// Carrega ANTES de chat.js: define o global `Voz` que o chat consome. Nunca
+// quebra o texto.
 
 const Voz = (() => {
   const statusVoz = document.getElementById('status-voz');
@@ -132,6 +136,14 @@ const Voz = (() => {
 
   let locutorAtivo = null;
 
+  // Quantos blocos de fala estão em voo (baixando ou tocando) agora — usado
+  // pelo modo copiloto (`ouvirContinuo` abaixo) para não escutar a própria
+  // voz do Severino enquanto ele fala. Contador, não booleano: blocos de
+  // ElevenLabs baixam em paralelo mas tocam em ordem, então mais de um pode
+  // estar "em voo" ao mesmo tempo.
+  let blocosEmFala = 0;
+  const mudarBlocosEmFala = (delta) => { blocosEmFala = Math.max(0, blocosEmFala + delta); };
+
   // Acumula tokens e fala por bloco — nem espera a resposta inteira, nem
   // fragmenta por token. Cada bloco tenta a ElevenLabs; na falha cai para o
   // Antônio declarando; sem nada, o texto já está na tela.
@@ -193,9 +205,11 @@ const Voz = (() => {
         }
         const audio = new Audio(URL.createObjectURL(blob));
         audioTocando = audio;
+        mudarBlocosEmFala(1);
         const encerrar = () => {
           URL.revokeObjectURL(audio.src);
           if (audioTocando === audio) audioTocando = null;
+          mudarBlocosEmFala(-1);
           resolve();
         };
         audio.onended = encerrar;
@@ -241,7 +255,10 @@ const Voz = (() => {
       fala.lang = vozEscolhida.lang;
       fala.rate = 1; // decisão do dono: velocidade e tom padrão
       fala.pitch = 1;
+      mudarBlocosEmFala(1);
+      fala.onend = () => mudarBlocosEmFala(-1);
       fala.onerror = (e) => {
+        mudarBlocosEmFala(-1);
         if (e.error === 'canceled' || e.error === 'interrupted') return; // calar() não é falha
         // O Antônio é voz online: sem internet a síntese cai aqui. Avisa uma
         // vez, esvazia a fila e a resposta segue só no texto.
@@ -302,6 +319,7 @@ const Voz = (() => {
   function calar() {
     locutorAtivo?.matar();
     if (temSintese) speechSynthesis.cancel();
+    blocosEmFala = 0; // matar()/cancel() não disparam onended/onend — zera na marra
   }
 
   // ---------- Correção de nomes próprios (catálogo de projetos.js) ----------
@@ -315,15 +333,33 @@ const Voz = (() => {
   // ouve o resultado final recebe o texto corrigido E a lista do que mudou.
   let catalogoNomes = [];
 
+  // Termos técnicos comuns nos projetos da raiz (21/08/2026, pedido do dono:
+  // captura de termo em inglês era "bem bosta"). Palavra única aqui é aceita
+  // — ao contrário do catálogo de projetos abaixo — mas com limiar mais alto
+  // (ver SIMILARIDADE_MINIMA_PALAVRA_UNICA) para não corrigir palavra comum
+  // que só soa parecida. Cobre o vocabulário dos CLAUDE.md da raiz; se um
+  // termo continuar saindo torto, é questão de somar a esta lista.
+  const TERMOS_TECNICOS_CONHECIDOS = [
+    'Fastify', 'Drizzle', 'PostGIS', 'pgRouting', 'Tailscale', 'ElevenLabs',
+    'Vultr', 'RackNerd', 'Mermaid', 'systemd', 'Caddy', 'TypeScript',
+    'React', 'Vite', 'Docker', 'GitHub', 'Ollama', 'Whisper', 'Anthropic',
+    'Claude', 'Postgres', 'MariaDB', 'rAthena', 'Capacitor', 'Tizen',
+  ];
+
+  const SIMILARIDADE_MINIMA_PALAVRA_UNICA = 0.82;
+
   fetch('/api/projetos')
     .then((r) => r.json())
     .then((corpo) => {
       const vistos = new Set();
-      catalogoNomes = (corpo.projetos ?? [])
+      const doCatalogo = (corpo.projetos ?? [])
         .flatMap((p) => [p.pasta, p.titulo])
         .filter((nome) => nome && !vistos.has(nome) && vistos.add(nome))
         .map((nome) => ({ exibicao: nome, falado: separarPalavras(nome) }))
         .filter((alvo) => alvo.falado.length >= 2); // 1 palavra: risco alto de falso positivo
+      const doGlossario = TERMOS_TECNICOS_CONHECIDOS
+        .map((nome) => ({ exibicao: nome, falado: separarPalavras(nome), limiar: SIMILARIDADE_MINIMA_PALAVRA_UNICA }));
+      catalogoNomes = [...doCatalogo, ...doGlossario];
     })
     .catch(() => { /* sem catálogo: correção fica desligada, reconhecimento cru segue */ });
 
@@ -374,7 +410,7 @@ const Voz = (() => {
         if (!juntoJanela) continue;
         const distancia = distanciaEdicao(juntoJanela, juntoAlvo);
         const similaridade = 1 - distancia / Math.max(juntoJanela.length, juntoAlvo.length);
-        if (similaridade >= SIMILARIDADE_MINIMA && janelaTexto.toLowerCase() !== alvo.exibicao.toLowerCase()) {
+        if (similaridade >= (alvo.limiar ?? SIMILARIDADE_MINIMA) && janelaTexto.toLowerCase() !== alvo.exibicao.toLowerCase()) {
           palavras[indices[ini]] = alvo.exibicao;
           for (let k = ini + 1; k < fim; k++) palavras[indices[k]] = '';
           trocas.push(`"${janelaTexto}" → "${alvo.exibicao}"`);
@@ -397,7 +433,7 @@ const Voz = (() => {
     'not-allowed': 'o navegador está sem permissão de microfone — libere nas configurações do site e tente de novo',
     'service-not-allowed': 'o serviço de reconhecimento de voz está bloqueado neste navegador',
     network: 'o reconhecimento de voz precisa de internet e não alcançou o serviço',
-    'no-speech': 'não ouvi nada, patrão — clique no microfone e fale de novo',
+    'no-speech': 'não captei nenhum som, Mestre — clique no microfone e fale de novo',
     'audio-capture': 'não achei microfone nesta máquina',
     'language-not-supported': 'este navegador não reconhece fala em pt-BR',
   };
@@ -439,6 +475,128 @@ const Voz = (() => {
     return { parar: () => rec.abort() };
   }
 
+  // ---------- Modo copiloto: escuta contínua + gatilho de retomada ----------
+  // Pedido do dono (21/08/2026): ligado, fica ouvindo em segundo plano
+  // enquanto ele joga/coda — sem clicar a cada frase. "C3PO" (o nome já
+  // escolhido pra persona nova) reabre a conversa depois de um hiato; dentro
+  // da janela quente, tudo que é dito vai direto pro Severino, sem gatilho.
+  // Quem decide QUANDO exigir o gatilho é o chamador (chat.js guarda o
+  // estado dormente/ativo); aqui só existem os dois blocos que ele precisa:
+  // reconhecer o gatilho num texto, e ouvir sem parar sozinho no silêncio.
+
+  // Variações fonéticas plausíveis do jeito que o reconhecedor pt-BR pode
+  // transcrever "C3PO" dito em voz alta — não existe forma de saber a
+  // priori qual sai, então a lista é um chute educado. Se o gatilho estiver
+  // falhando na prática, é aqui que se soma uma variante nova.
+  const GATILHO_VARIANTES = ['c3po', 'cetrepo', 'cetrepio', 'sipio', 'sepio', 'cepeo', 'ceotrepeo']
+    .map((v) => v.replace(/[^a-z0-9]/g, ''));
+  // Mais tolerante que nome próprio (a palavra é curta e o chute é
+  // grosseiro), mas não tão solto a ponto de qualquer palavra curta do dia a
+  // dia disparar sozinha (ex.: "cepo" bate perto de "cepeo" com limiar
+  // baixo demais) — 0.65 é o meio-termo escolhido sem dado real de uso;
+  // ajuste se o gatilho estiver disparando à toa ou não disparando nunca.
+  const GATILHO_SIMILARIDADE_MINIMA = 0.65;
+
+  // Acha o gatilho em QUALQUER janela de 1 a 4 palavras do texto (o
+  // reconhecedor pode partir "C3PO" em vários pedaços) e devolve o que foi
+  // dito DEPOIS dele, se algo foi — vira a primeira frase da conversa que
+  // reabre, sem esperar um novo turno.
+  function detectarGatilho(texto) {
+    const palavras = texto.split(/(\s+)/);
+    const indices = palavras.map((p, i) => (/\S/.test(p) ? i : -1)).filter((i) => i !== -1);
+    for (let tam = 1; tam <= 4 && tam <= indices.length; tam++) {
+      for (let ini = 0; ini + tam <= indices.length; ini++) {
+        const fim = ini + tam;
+        const janela = indices.slice(ini, fim).map((i) => palavras[i]).join('');
+        const normal = normalizar(janela).replace(/[^a-z0-9]/g, '');
+        if (!normal) continue;
+        for (const variante of GATILHO_VARIANTES) {
+          const distancia = distanciaEdicao(normal, variante);
+          const similaridade = 1 - distancia / Math.max(normal.length, variante.length);
+          if (similaridade >= GATILHO_SIMILARIDADE_MINIMA) {
+            const resto = indices.slice(fim).map((i) => palavras[i]).join(' ').trim();
+            return { encontrado: true, resto };
+          }
+        }
+      }
+    }
+    return { encontrado: false, resto: '' };
+  }
+
+  // Pausa curta de fala NÃO fecha o turno (era a queixa: "ele responde na
+  // pausa") — só fecha depois de TEMPO_SILENCIO_TURNO_MS sem nenhum
+  // resultado final novo, dando espaço pra respirar no meio de uma ideia.
+  const TEMPO_SILENCIO_TURNO_MS = 900;
+
+  // Nunca para sozinha: diferente de `ouvir` (uma captura, um clique), esta
+  // fica no ar até `parar()` ser chamado — reabrindo a sessão nativa quando
+  // o navegador a encerra por conta própria (`continuous: true` não garante
+  // isso em todo navegador). Ignora o que capta enquanto o Severino está
+  // falando (`blocosEmFala`), senão o mic ouve a própria voz dele.
+  function ouvirContinuo({ aoUtterance, aoParcial, aoErro, aoCorrecao } = {}) {
+    let ativo = true;
+    let rec = null;
+    let bufferFinal = '';
+    let timerSilencio = null;
+
+    function fecharTurno() {
+      const bruto = bufferFinal.trim();
+      bufferFinal = '';
+      if (!bruto) return;
+      const { texto: corrigido, trocas } = corrigirNomesProprios(bruto);
+      if (trocas.length) aoCorrecao?.(trocas);
+      aoUtterance?.(corrigido);
+    }
+
+    function agendarFechamento() {
+      clearTimeout(timerSilencio);
+      timerSilencio = setTimeout(fecharTurno, TEMPO_SILENCIO_TURNO_MS);
+    }
+
+    function iniciar() {
+      rec = new ClasseReconhecimento();
+      rec.lang = 'pt-BR';
+      rec.interimResults = true;
+      rec.continuous = true;
+      rec.maxAlternatives = 1;
+
+      rec.onresult = (e) => {
+        if (blocosEmFala > 0) return; // provável eco da própria fala do Severino
+        let parcial = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const resultado = e.results[i];
+          if (resultado.isFinal) {
+            bufferFinal += (bufferFinal ? ' ' : '') + resultado[0].transcript.trim();
+            agendarFechamento();
+          } else {
+            parcial += resultado[0].transcript;
+          }
+        }
+        if (parcial) aoParcial?.((bufferFinal ? bufferFinal + ' ' : '') + parcial);
+      };
+      rec.onerror = (e) => {
+        // silêncio e cancelamento são normais em escuta contínua — não é erro
+        // pra declarar; o onend abaixo já cuida de reabrir sozinho.
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        aoErro?.(ERROS_RECONHECIMENTO[e.error] ?? `o reconhecimento de voz falhou (${e.error})`);
+      };
+      rec.onend = () => {
+        if (ativo) iniciar(); // o navegador encerra a sessão de tempos em tempos: reabre na hora
+      };
+      rec.start();
+    }
+
+    iniciar();
+
+    return {
+      parar() {
+        ativo = false;
+        clearTimeout(timerSilencio);
+        rec?.abort();
+      },
+    };
+  }
+
   // ---------- Status declarado na UI ----------
 
   // A linha de status diz sempre a camada ATIVA e, se houve queda, o motivo:
@@ -470,5 +628,5 @@ const Voz = (() => {
 
   atualizarStatus();
 
-  return { temReconhecimento, temSintese, criarLocutor, calar, ouvir };
+  return { temReconhecimento, temSintese, criarLocutor, calar, ouvir, ouvirContinuo, detectarGatilho };
 })();

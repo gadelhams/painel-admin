@@ -111,12 +111,12 @@ export const PROJETOS = [
     // de backlog — sem entrada aqui, o campo `backlog` não teria onde morar e
     // o docs/BACKLOG.md ficaria invisível para a aba.
     pasta: 'painel-admin',
-    titulo: 'Painel Admin + Severino',
-    descricao: 'Este hub administrativo local — git, portas, sondas de produção e o Severino a bordo.',
+    titulo: 'Painel Admin + C-3PO',
+    descricao: 'Este hub administrativo local — git, portas, sondas de produção e o C-3PO a bordo.',
     stack: 'Node + Claude Agent SDK · vanilla + Web Speech/ElevenLabs',
     entrada: 'CLAUDE.md',
     backlog: 'docs/BACKLOG.md',
-    portas: [{ porta: 7777, servico: 'Dashboard + Severino' }],
+    portas: [{ porta: 7777, servico: 'Dashboard + C-3PO' }],
   },
 ];
 // O severino saiu do catálogo em 14/08/2026: foi fundido NESTE app (rota

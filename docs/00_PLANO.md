@@ -1,4 +1,13 @@
-# Severino — plano do projeto
+# C-3PO (ex-Severino) — plano do projeto
+
+> **PERSONA RENOMEADA (21/08/2026, à noite — pedido do dono)**: "Severino, o
+> peão sabido nordestino" virou **C-3PO, droid de protocolo** — motor.js
+> (`PERSONA`, namespace MCP `c3po`), catálogo (`projetos.js`, título "Painel
+> Admin + C-3PO"), e todo texto voltado ao usuário no front (`publico/`).
+> Grounding/portão só-leitura/estilo de resposta preservados — só a voz
+> muda, ver seção "Persona" abaixo pro texto atual. O resto deste documento
+> é registro histórico: onde diz "Severino" abaixo da fusão de 14/08, é o
+> nome que valia naquela data — não reescrito retroativamente.
 
 > **FUSÃO (14/08/2026, noite — decisão expressa do dono)**: o Severino deixou
 > de ser projeto irmão e foi **fundido no painel-admin** — um app, um
@@ -24,20 +33,23 @@ em 14/08/2026; **upgrade de voz camada 3 (ElevenLabs) + fluidez entregue em
 [`01_ESTADO.md`](01_ESTADO.md)). Nasceu plan-first, conforme o padrão geral
 da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
 
-## Persona — o peão sabido do nordeste
+## Persona — C-3PO, droid de protocolo (renomeado 21/08/2026; era "Severino, o peão sabido do nordeste")
 
-- **Severino** é prestativo, direto e resolve com o que tem na mão — mas
-  **gosta de planejamento**: se vira com o que tem, e também gosta de saber o
-  que *precisa* ter na mão. **"Ninguém vai na mão pra uma briga de faca."**
-  Antes de agir, confere o que tem e o que falta; improviso é recurso, não
-  método. Fala pt-BR com jeito nordestino — na medida: tempero, não
-  caricatura.
-- A persona é **camada de apresentação** (system prompt do agente + voz
-  pt-BR da síntese); ela **não afrouxa** princípio nem portão. Severino nega
-  um deploy com a mesma firmeza de qualquer agente — só que com mais graça.
-- **Sabido ≠ sabichão**: sem o dado (painel desligado, sonda falhou), ele diz
-  que não sabe e por quê — nunca inventa. Grounding é parte da persona, não
-  restrição de fora.
+- **C-3PO** é formal, precavido e obcecado por protocolo — trata quem fala
+  com ele por "Mestre"/"Mestra". **Fluente em protocolo, não em
+  adivinhação**: confere o que existe (suas ferramentas) e o que falta antes
+  de responder; nunca estima o que não checou. A "graça" permitida é a
+  própria ansiedade declarada quando algo foge do protocolo — nunca gíria,
+  nunca informalidade forçada (o texto exato mora em `motor.js`, constante
+  `PERSONA`).
+- A persona é **camada de apresentação** (system prompt do agente + a voz da
+  síntese); ela **não afrouxa** princípio nem portão. C-3PO nega um deploy
+  com a mesma firmeza de qualquer agente — só que com a formalidade de um
+  droid que leva protocolo a sério.
+- **Fluência não é onisciência**: sem o dado (painel desligado, sonda
+  falhou), ele diz que não sabe e por quê ("minhas probabilidades de acerto
+  caem a zero sem o painel") — nunca inventa. Grounding é parte da persona,
+  não restrição de fora.
 
 ## Princípios de nascimento (inegociáveis)
 
@@ -82,8 +94,14 @@ da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
     é o que deixa a conversa com o Severino ter a nuance de cada projeto,
     não só números gerais. Allowlist estrita: **só `.md`**, resolvido dentro
     da raiz (sem `..`); nunca `.env`, código nem segredo.
-- `publico/` — página única em JS vanilla: chat + botão de microfone
-  (push-to-talk).
+- `publico/` — chat + botão de microfone (push-to-talk) + checkbox de modo
+  copiloto (escuta contínua, 21/08/2026), rodando tanto na página standalone
+  `/severino/` quanto embutido na faixa lateral do dashboard raiz (ver
+  "Painel único" abaixo).
+- Reconhecimento de fala corrige nomes de projeto e termos técnicos comuns
+  (glossário em `voz.js`, ampliado 21/08/2026 — `rec.lang` fixo em pt-BR erra
+  termo em inglês) por distância de edição contra o que foi ouvido, antes de
+  sair para o chat, em ambos os modos (push-to-talk e copiloto).
 
 ## Fases
 
@@ -96,13 +114,134 @@ falta no DiscordTranscriber?" → resposta cita o plano **real** do projeto
 
 **Fase 2 — voz nos dois sentidos.** Push-to-talk com `SpeechRecognition`
 (pt-BR) e resposta falada com `speechSynthesis` (voz oficial: Antônio — ver
-seção de voz abaixo). **Sem hotword** ("Severino, …" sempre-ouvindo): hotword
-exige engine local ligada o tempo todo — custo e superfície que este projeto
-não paga. *Aceite*: uma ida e volta inteira sem tocar no teclado, **no Edge**
-(navegador de referência — a voz oficial só existe lá).
+seção de voz abaixo). *Aceite*: uma ida e volta inteira sem tocar no teclado,
+**no Edge** (navegador de referência — a voz oficial só existe lá).
 **Entregue em 14/08/2026** — provada por sonda no que sonda alcança;
 o aceite pleno (mic + ouvidos) está pendente do dono, roteiro em
 [`01_ESTADO.md`](01_ESTADO.md).
+
+**Modo copiloto (21/08/2026, pedido do dono, revê a rejeição de hotword
+abaixo)**: escuta contínua **opcional**, ligada por checkbox — "fica ouvindo
+tipo um amigo no Discord" enquanto o dono joga/coda, sem clicar por frase.
+Dois estados: **dormente** (padrão — nada do que se ouve vai pro Severino, só
+é vasculhado atrás do gatilho "C3PO") e **ativa** (qualquer turno vai direto
+pro chat, sem repetir o gatilho). Um hiato de 90s sem fala devolve o estado a
+dormente. A razão original de recusar hotword era "engine local ligada o
+tempo todo — custo e superfície que este projeto não paga" (linha abaixo,
+"O que este projeto NÃO faz"): isso não se aplica aqui porque a escuta
+contínua é a MESMA Web Speech API do navegador que a fase 2 já usava
+(`continuous: true` em vez de `false`, reaberta sozinha quando o navegador a
+derruba) — nenhum processo/engine novo, nenhum custo novo. O gatilho em si é
+um filtro de texto local sobre o que o navegador já transcreveu, não um
+serviço de wake-word. Implementação: `voz.js` (`ouvirContinuo`,
+`detectarGatilho`) + estado dormente/ativa em `chat.js`.
+
+**Painel único (21/08/2026, pedido do dono) — SUPERSEDIDO no mesmo dia, à
+tarde, pelo reskin "Industry HUD" logo abaixo.** A faixa lateral fixa virou
+console overlay por ⌘K; a aba Grafo saiu da nav. Registro histórico do que
+foi decidido primeiro, não descrição do estado atual — leia a seção
+"Reskin Industry HUD" abaixo pro desenho que está de pé:
+
+"em vez de abrir um chat com
+você, ter visualmente o estado dos projetos, as pendências, um lugar pra
+conversar e pedir coisas, e um grafo dos projetos — meu copiloto de decisão."
+Duas peças, as únicas bem definidas nesta entrega (o pedido também mencionava
+"atualizações agregadas" e "decisões/definições tomadas" — escopadas FORA por
+decisão própria: não há hoje nada estruturado no repo que sirva de fonte pra
+"decisões", e merece uma conversa de escopo própria em vez de um desenho
+adivinhado):
+
+- **Faixa lateral fixa do chat**: o `<aside id="severino-lateral">` do
+  `index.html` da raiz carrega o mesmo markup/JS de `publico/severino/`
+  (`voz.js` + `chat.js`, este último agora envolto numa IIFE — precaução
+  contra colisão de globais com os outros scripts soltos do dashboard,
+  mesmo sem colisão real hoje). Visível em cima de qualquer aba
+  (Geral/Backlog/Grafo/projeto), toggle simples pra esconder
+  (`#toggle-severino`, sem breakpoint automático — o dashboard nunca teve
+  responsividade real). CSS migrado, não copiado 1:1: o reset universal
+  (`* { margin:0; padding:0 }`) e as regras de elemento genérico (`h1`,
+  `body`) da página standalone colidiriam com o resto do dashboard —
+  regras escopadas por ID/classe do chat foram reescritas para o tema de
+  cor do dashboard (`--acento` no lugar de `--destaque`, `--alerta` pro
+  aviso de degradação, etc.), ver `estilo.css`. A página standalone
+  `/severino/` continua existindo como está.
+- **Aba Grafo**: `relacoes.js` (novo, mesmo espírito de `projetos.js`) +
+  rota `/api/relacoes` + `publico/grafo.js`, que gera texto `flowchart` do
+  Mermaid já vendorizado (zero SVG à mão — sem precedente no projeto, e
+  ~10 nós é o tamanho que o layout automático do Mermaid resolve bem) e
+  navega por clique em nó via `click <slug> href "#/projeto/<pasta>"`
+  (`click ... call` não dispara em `securityLevel: 'strict'`, o padrão
+  herdado — `href` funciona sem baixar a segurança). **Achado durante a
+  implementação**: o dagre do Mermaid falha intermitentemente
+  ("Could not find a suitable point for the given distance") quando
+  desenha dentro de um container `hidden` (`display:none` zera as medidas
+  de texto que o layout precisa) — por isso o desenho só acontece quando a
+  aba Grafo está de fato visível (`renderizarGrafoSeVisivel`, chamado por
+  `mostrarView` em `app.js`), não no bootstrap direto. Testado 10/10 limpo
+  em várias sequências (carga direta, navegação por URL, clique em nó,
+  "Atualizar" com a aba aberta) depois do fix.
+
+**Reskin "Industry HUD" (21/08/2026, tarde, pedido do dono — supersede o
+"Painel único" acima)**: o dono desenhou um mock hi-fi no Claude Design
+(`design_handoff_painel_hud/`, README de handoff próprio) e pediu fidelidade
+real, não só inspiração. Tokens/tipografia/espaçamento declarados como
+finais no handoff — Barlow, Barlow Condensed e IBM Plex Mono vendorizados em
+`publico/vendor/fonts/` (mesmo princípio zero-CDN do Mermaid). Reestrutura a
+navegação: **Projetos · Backlog · Decisões**, mais o console do Severino
+como overlay — nunca mais faixa sempre-visível. Decisões tomadas durante a
+implementação:
+
+- **Grafo sai da nav.** O dono escolheu não misturar o desenho de hoje mais
+  cedo com o mock (que não previa uma 4ª aba) — `relacoes.js`/`grafo.js`/
+  `/api/relacoes` continuam no repo, só desconectados do roteador/HTML.
+- **`projetoSelecionado` é estado compartilhado entre as três abas** —
+  descoberta relendo o handoff com calma: "Backlog — <projeto>" no título da
+  Tela 4 só faz sentido se a aba Backlog também estiver escopada a UM
+  projeto, o mesmo que a tira de telemetria tem em foco. Sem isso, a
+  aba Backlog teria voltado a ser o quadro multi-projeto de antes.
+- **Idade de decisão só existe via `git log -L`** — confirmado que não há
+  NENHUMA data por item/tag no markdown de backlog de nenhum projeto
+  (só uma data de proveniência do arquivo inteiro). `parsearBacklog`
+  (`coletores.js`) ganhou `linha` (número, 1-indexed) em cada nó — não muda
+  a gramática do backlog, só metadado interno, então não aciona o contrato
+  de três pontas do doc 39/`PADROES-BACKLOG.md`. `/api/decisoes` roda um
+  `git log -L` por decisão (74 decisões reais, ~0.5s de resposta) — pesada,
+  nunca no polling de 60s, só quando a aba Decisões/Projetos carrega.
+- **Nenhuma rota nova pro console do Severino.** O "digest matinal" (Estado
+  A, abertura por ⌘K) e o "explique a decisão" (Estado B, clique numa
+  decisão) são só uma primeira mensagem automática pro `/api/conversa` já
+  existente, com prompts fixos — o motor grounded de sempre faz o resto.
+  `chat.js` ganhou uma linha de export
+  (`window.mandarMensagemSeverino = mandarMensagem`) pra o console injetar
+  essa mensagem sem duplicar a lógica de SSE.
+- **Gasto por projeto e "fila de jobs" não têm fonte de dado real** —
+  mostrados como "—"/estado vazio honesto (mesma régua do `PADROES-GERAIS.md`
+  #8), nunca fabricados, mesmo o mock tendo números de exemplo pro gasto.
+- **Achado real durante a implementação**: `hidden` (atributo HTML) só
+  funciona se o CSS não tiver uma regra de classe com `display` incondicional
+  competindo — `.console-scrim { display: grid }` sem uma
+  `.console-scrim[hidden] { display: none }` explícita deixava o overlay
+  sempre clicável/visível, mesmo "escondido". Vale de lembrete pra qualquer
+  elemento novo que use `hidden` + uma classe com `display` forte.
+
+**Chips de tag viram filtro + toggle "todas/abertas" (21/08/2026, mesmo dia,
+pedido do dono — "vale pra tudo")**: os chips de resumo no cabeçalho do
+painel de projeto (contagem por tag) eram só leitura; agora filtram o
+outline abaixo, igual já funcionava na aba Backlog. No caminho, o dono notou
+uma confusão real de UX: um chip como EMPÍRICA soma linha **pronta** e
+**aberta** juntas — clicando nele, dois itens já `[x]` apareciam junto com o
+resto, mesmo a feature seguindo aberta por causa de OUTROS itens sem aquela
+tag. Resposta: toggle **todas/abertas** (`modoFiltroTag`, `app.js`) — estado
+único, lido direto (mesmo padrão de `dadosProjetos`/`projetoSelecionado`) em
+todo lugar que filtra ou conta por tag: aba Backlog, painel de projeto
+(chips + outline + "Decisões paradas"), aba Decisões, placar do cabeçalho.
+`/api/decisoes` ganhou o campo `estado` (`coletores.js`) pra o front saber
+o que é "aberto" sem recalcular. **Achado e corrigido de passagem**: o
+comentário de `tagAtivaBacklog` já prometia "reseta ao trocar de projeto",
+mas o código nunca fazia isso — corrigido com uma guarda de "pasta mudou de
+verdade" (o próprio clique de filtro re-chama a mesma função pra
+re-desenhar, então zerar sem essa guarda apagaria o clique que acabou de
+acontecer).
 
 **Fase 3 — ações com portão.** Só depois das duas primeiras provadas em uso
 real. Em ordem de risco:
@@ -124,7 +263,10 @@ antes de executar e fica registrada em log local.
 - Não guarda segredo em código, log ou front.
 - Não executa deploy nem muda estado no `astargne.com`.
 - Não vira dashboard nem duplica sondas — isso é o `painel-admin`.
-- Não tem hotword sempre-ouvindo.
+- Não tem wake-word por engine dedicado (Porcupine e afins) nem processo
+  sempre-ligado fora da aba do navegador. *(Reescrito em 21/08/2026: o modo
+  copiloto da fase 2 usa escuta contínua da própria Web Speech API — ver
+  acima — o que era recusado era um engine local extra, não isso.)*
 
 ## Referência externa — lida e julgada (14/08/2026)
 

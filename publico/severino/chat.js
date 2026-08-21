@@ -1,5 +1,11 @@
 // Chat do Severino — vanilla, zero dependências. EventSource não faz POST,
 // então o SSE é lido na mão de um fetch com ReadableStream.
+// IIFE (21/08/2026): desde que o markup passou a poder ser embutido na
+// mesma página do dashboard (app.js/backlog.js/grafo.js/projeto.js, também
+// scripts soltos), os globais deste arquivo precisam ficar isolados — sem
+// isso, dois "mundos" de script solto na mesma página arriscam colisão de
+// nome. voz.js já é IIFE (só expõe o global `Voz`); este segue o mesmo padrão.
+(() => {
 
 const historico = document.getElementById('historico');
 const formulario = document.getElementById('formulario');
@@ -10,6 +16,11 @@ const microfone = document.getElementById('microfone');
 // Continuidade da conversa: o motor devolve o id da sessão e a gente devolve
 // ele no próximo turno. Sobrevive a F5 dentro da mesma aba.
 let sessao = sessionStorage.getItem('severino-sessao') || undefined;
+
+// Lido pelo `finally` de mandarMensagem (abaixo) para não reabilitar o botão
+// de push-to-talk depois de cada resposta quando o modo copiloto (mais
+// abaixo no arquivo) está no comando do microfone.
+let modoCopilotoAtivo = false;
 
 function adicionarFala(classe, texto = '') {
   const div = document.createElement('div');
@@ -51,7 +62,7 @@ function extrairEventosSse(buffer) {
 
 async function mandarMensagem(mensagem) {
   adicionarFala('usuario', mensagem);
-  const pensando = adicionarNota('pensando', 'Severino tá pensando');
+  const pensando = adicionarNota('pensando', 'C-3PO está calculando');
   pensando.insertAdjacentHTML('beforeend', '<span class="pontos"></span>');
 
   let falaSeverino = null;
@@ -111,7 +122,7 @@ async function mandarMensagem(mensagem) {
     locutor.concluir(); // fala o rabo do buffer (última sentença sem pontuação)
     pensando.remove();
     enviar.disabled = false;
-    microfone.disabled = !Voz.temReconhecimento;
+    microfone.disabled = modoCopilotoAtivo || !Voz.temReconhecimento;
     entrada.focus();
   }
 }
@@ -164,3 +175,104 @@ if (!Voz.temReconhecimento) {
     });
   });
 }
+
+// ---------- Modo copiloto (pedido do dono, 21/08/2026) ----------
+// "Fica ouvindo, tipo um amigo no Discord, enquanto eu jogo/codo." Escuta
+// contínua (Voz.ouvirContinuo) em vez de clique por frase. Dois estados:
+// - dormente: nada do que é ouvido vai pro Severino, só é vasculhado em
+//   busca do gatilho "C3PO" (Voz.detectarGatilho) — é o padrão, pra não
+//   mandar pra API tudo que se fala perto do micro (custo e ruído: você
+//   narrando o jogo não é conversa com ele).
+// - ativa: qualquer turno reconhecido vai direto pro chat, sem gatilho —
+//   like uma conversa de verdade, sem ficar repetindo o nome dele.
+// Um hiato sem fala (TEMPO_HIATO_MS) devolve o estado a dormente: é o que
+// evita "ficou ouvindo pra sempre" sem reintroduzir hotword-sempre-ligado
+// (a escuta em si é a mesma Web Speech API do navegador, sem engine extra —
+// só o gatilho de RETOMADA que estava sendo cogitado como hotword antes).
+const modoCopilotoCaixa = document.getElementById('modo-copiloto');
+const rotuloCopiloto = document.getElementById('rotulo-copiloto');
+const statusCopiloto = document.getElementById('status-copiloto');
+const TEMPO_HIATO_MS = 90_000; // 1min30 sem fala: volta a exigir "C3PO"
+
+if (!Voz.temReconhecimento) {
+  rotuloCopiloto.hidden = true;
+} else {
+  let escutaContinua = null;
+  let estadoConversa = 'dormente';
+  let ultimaAtividade = 0;
+  let verificadorHiato = null;
+
+  function atualizarStatusCopiloto() {
+    statusCopiloto.hidden = false;
+    if (estadoConversa === 'ativa') {
+      statusCopiloto.textContent = 'copiloto: ouvindo, pode falar à vontade';
+      statusCopiloto.classList.add('ativa');
+    } else {
+      statusCopiloto.textContent = 'copiloto: em espera — diga "C3PO" pra retomar';
+      statusCopiloto.classList.remove('ativa');
+    }
+  }
+
+  function tratarUtterance(texto) {
+    // Resposta em andamento: não atropela a conversa em curso — quem falou
+    // repete depois, como faria com uma pessoa ocupada respondendo.
+    if (enviar.disabled) return;
+
+    if (estadoConversa === 'dormente') {
+      const { encontrado, resto } = Voz.detectarGatilho(texto);
+      if (!encontrado) return;
+      estadoConversa = 'ativa';
+      ultimaAtividade = Date.now();
+      atualizarStatusCopiloto();
+      if (resto) mandarMensagem(resto);
+      return;
+    }
+
+    ultimaAtividade = Date.now();
+    mandarMensagem(texto);
+  }
+
+  function ligar() {
+    Voz.calar(); // se ele estava falando quando o dono ligou o copiloto, não fica se ouvindo
+    modoCopilotoAtivo = true;
+    microfone.disabled = true; // modos mutuamente exclusivos: um ou outro
+    microfone.title = 'desligue o modo copiloto pra usar o push-to-talk';
+    estadoConversa = 'dormente';
+    atualizarStatusCopiloto();
+    escutaContinua = Voz.ouvirContinuo({
+      aoParcial: () => {}, // sem eco no campo de texto em modo copiloto: seria ruído constante
+      aoUtterance: tratarUtterance,
+      aoCorrecao: (trocas) => adicionarNota('aviso-voz', `corrigi o que ouvi: ${trocas.join(', ')}`),
+      aoErro: (motivo) => adicionarNota('aviso-voz', motivo),
+    });
+    verificadorHiato = setInterval(() => {
+      if (estadoConversa === 'ativa' && Date.now() - ultimaAtividade > TEMPO_HIATO_MS) {
+        estadoConversa = 'dormente';
+        atualizarStatusCopiloto();
+      }
+    }, 5000);
+  }
+
+  function desligar() {
+    modoCopilotoAtivo = false;
+    escutaContinua?.parar();
+    escutaContinua = null;
+    clearInterval(verificadorHiato);
+    verificadorHiato = null;
+    statusCopiloto.hidden = true;
+    microfone.disabled = false;
+    microfone.title = 'clique e fale (push-to-talk)';
+  }
+
+  modoCopilotoCaixa.addEventListener('change', () => {
+    if (modoCopilotoCaixa.checked) ligar();
+    else desligar();
+  });
+}
+
+// Único ponto de saída da IIFE (21/08/2026) — o console overlay (app.js)
+// injeta a primeira mensagem (digest ou contexto de decisão) sem duplicar a
+// lógica de SSE/streaming que mandarMensagem já tem.
+window.mandarMensagemSeverino = mandarMensagem;
+
+})();
