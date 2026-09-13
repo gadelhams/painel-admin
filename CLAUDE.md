@@ -21,6 +21,7 @@ e história continuam aqui (`github.com/gadelhams/painel-admin`).
 npm start   # node --env-file-if-exists=.env servidor.js
 # http://localhost:7777           → dashboard
 # http://localhost:7777/severino/ → chat do Severino (texto e voz)
+npm test    # node --test — suíte do módulo contas.js (ssh sempre falso, I5)
 ```
 
 Node ≥ 22.9 (pelo `--env-file-if-exists`). **Uma dependência**:
@@ -44,8 +45,30 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
   do backlog + idade por `git log -L`, pesada — sob demanda, nunca no
   polling de 60s; aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
   `relacoes.js` — hoje fora da nav, ver abaixo), `POST /api/conversa` (SSE,
-  motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs) e estáticos de
-  `publico/` (dashboard na raiz, chat em `/severino/`).
+  motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
+  (aba Contas — abaixo) e estáticos de `publico/` (dashboard na raiz, chat
+  em `/severino/`).
+- `contas.js` (13/09/2026, Fase 5 do `../PLANO-CADASTRO-UNICO.md`) —
+  administração do **CadastroUnico** (login único do `astargne.com`). A API
+  interna do central (`/interno/*`, `127.0.0.1:8790`) só existe no loopback
+  **do servidor**, autenticada por `TOKEN_INTERNO` — e **o token nunca sai
+  do servidor**: cada ação da aba vira UM `ssh` (`spawn`, sem shell no PC,
+  chave `paroquia-vultr`, timeout 15 s) rodando um script fixo lá dentro que
+  lê o token com `sudo`, grava um config do `curl` em `mktemp` sob
+  `umask 077` (apagado por `trap … EXIT`), aborta com exit 97 se o token
+  não veio (`test -s`), e chama o central com `curl --max-time 10 -sS`. O
+  PC só vê `{ status, corpo }`. Tabela **fechada** de operações
+  (`OPERACOES`: método + rota), `:id` validado como inteiro positivo antes
+  de entrar na string, corpo JSON **só pelo stdin** (`curl -d @-`) — dado de
+  usuário jamais entra na linha de comando. Falha de ssh/script vira
+  `502 {erro:'sem acesso ao servidor'}`; **401 do central também é 502**
+  (`… (token interno recusado)`): o bearer nasce no servidor, então 401 só
+  significa encanamento quebrado, nunca "usuário sem permissão"; stderr vai
+  ao log mesmo com exit 0, redigindo qualquer `Bearer …` por defesa em
+  profundidade. Executor injetável (`{ executar }`) e binário injetável
+  (`criarExecutorSsh({ binario, timeoutMs, maxSaida })`) —
+  `test/contas.test.js` nunca chama ssh de verdade: o encanamento real
+  (stdin/EOF/timeout/teto) é provado com `node -e` como binário falso.
 - `coletores.js` — coletores de estado (git, portas, sondas de produção,
   backlog, **leitura segura de docs modeladores por projeto**),
   **compartilhados**: as rotas da API e as ferramentas do motor chamam as
@@ -71,13 +94,14 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
   (mock hi-fi do dono em `design_handoff_painel_hud/`; tokens/tipografia
   declarados como finais no handoff — Barlow/Barlow Condensed/IBM Plex Mono
   vendorizados em `publico/vendor/fonts/`, mesmo princípio zero-CDN do
-  Mermaid). Três abas — **Projetos · Backlog · Decisões** — mais o console
-  do Severino como overlay por ⌘K/Ctrl+K:
+  Mermaid). Quatro abas — **Projetos · Backlog · Decisões · Contas** — mais
+  o console do Severino como overlay por ⌘K/Ctrl+K:
   - `app.js` — núcleo compartilhado: roteador por hash
-    (`#/projetos`·`#/backlog`·`#/decisoes`·`#/projeto/<pasta>`), estado
-    `projetoSelecionado` **compartilhado entre as três abas** (a mesma
-    variável que a tira de telemetria, o outline do Backlog e a coluna de
-    contexto do painel de projeto leem), tira de telemetria (9 células, uma
+    (`#/projetos`·`#/backlog`·`#/decisoes`·`#/contas`·`#/projeto/<pasta>`), estado
+    `projetoSelecionado` **compartilhado entre as abas Projetos e Backlog**
+    (a mesma variável que a tira de telemetria, o outline do Backlog e a
+    coluna de contexto do painel de projeto leem — `decisoes.js` e
+    `contas.js` não a leem), tira de telemetria (9 células, uma
     por projeto do catálogo), tema claro/escuro (`data-tema` em `<html>`,
     persistido em `localStorage`), e o console do Severino (`#console-scrim`
     — abre por ⌘K/barra de comando/clique numa decisão, sempre reabre no
@@ -98,6 +122,15 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
     `abrirConsoleComDecisao` (chamada por `app.js`/`decisoes.js`).
   - `decisoes.js` — aba Decisões: todas as decisões agrupadas por projeto
     (top 3 por contagem abertos, resto em "Outros N projetos" colapsado).
+  - `contas.js` (13/09/2026) — aba Contas: usuários (nome, e-mail, ativo,
+    apps como chips; ações permissões/desativar-reativar/redefinir senha),
+    convites pendentes (reenviar/revogar) e o formulário Convidar (e-mail,
+    nome opcional, checkboxes dos apps com `sso: true` vindos de
+    `/api/contas/apps`). Depois de convidar mostra `enviado` e, se `false`,
+    o `erro` e o `link` para mandar por outro canal. Desativar e revogar
+    pedem `confirm()`. **Sem polling**: busca ao ENTRAR na aba (`rotear`
+    detecta a troca de view por `viewAtual`) e após cada ação — o `rotear()`
+    de 60 s passando pela mesma view não dispara ssh nenhum.
   - `grafo.js`/`relacoes.js` — fora da nav (ver acima), arquivos intactos.
   - `publico/vendor/mermaid.min.js` — Mermaid vendorizado, reaproveitado
     pelos diagramas dos docs e pela Arquitetura do painel de projeto.
@@ -176,9 +209,18 @@ técnico aqui; o freio é o próprio personagem.
 - **SSH só-leitura** (`/api/producao/ssh`): apenas `uptime`,
   `systemctl is-active`, `docker ps`, `df`, `free`, com a chave
   `~/.ssh/paroquia-vultr`, só sob demanda (botão) — nunca no refresh
-  automático. Comando que muda estado no servidor está fora do escopo:
-  ação administrativa de verdade é SSH manual, seguindo
+  automático. **Única exceção, delimitada** (13/09/2026, aba Contas): o
+  `ssh` de `contas.js` muda estado — mas só o **banco do CadastroUnico**,
+  só pelas rotas `/interno/*` do central, só pela tabela fechada
+  `OPERACOES`. Nada de `systemctl`, deploy, arquivo ou Caddy por ali: infra
+  continua sendo SSH manual + `validador-deploy`, seguindo
   `/opt/servidor/LEIA-ME.md`.
+- **O `TOKEN_INTERNO` do CadastroUnico nunca sai do servidor** (decisão do
+  dono, 13/09/2026): não entra em `.env` do painel, não é lido nem logado
+  no PC, não aparece em resposta HTTP. O painel chega ao central **por
+  ssh**, e o script remoto monta o cabeçalho lá dentro. Se um dia alguém
+  propuser "copiar o token pro `.env` local pra simplificar", a resposta é
+  não — é a arquitetura da fatia, não um detalhe.
 - **Ferramentas de IA só-leitura até a fase 3** (`docs/00_PLANO.md`): o motor
   roda com `tools: []` + allowlist das três ferramentas MCP — limitação
   **estrutural**, não promessa de comportamento.

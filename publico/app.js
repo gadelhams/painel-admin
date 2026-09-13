@@ -185,10 +185,10 @@ function renderizarMarkdown(texto) {
 let dadosProjetos = [];
 let dadosDecisoes = [];
 
-// Estado compartilhado entre as três abas (README, "Estado necessário"): o
-// projeto em foco na tira/painel é o MESMO que a aba Backlog usa pro
-// outline. `selecionarProjeto` (mais abaixo, depois do roteador) é quem
-// muda isto e redesenha as duas abas.
+// Estado compartilhado entre as abas Projetos e Backlog (README, "Estado
+// necessário"): o projeto em foco na tira/painel é o MESMO que a aba Backlog
+// usa pro outline — Decisões e Contas não o leem. `selecionarProjeto` (mais
+// abaixo, depois do roteador) é quem muda isto e redesenha as duas abas.
 let projetoSelecionado = null;
 
 function decisoesDoProjeto(pasta) {
@@ -274,7 +274,7 @@ async function carregarProducao() {
 }
 
 // ---------- Roteador: views + hash leve ----------
-// #/projetos (padrão) · #/backlog · #/decisoes · #/projeto/<pasta>. A URL é
+// #/projetos (padrão) · #/backlog · #/decisoes · #/contas · #/projeto/<pasta>. A URL é
 // a única fonte de verdade de qual view está ativa — clique em aba/tira só
 // muda o hash. `grafo` saiu da nav (relacoes.js/grafo.js ficam no repo,
 // desconectados — decisão do dono, 21/08/2026). "Projetos" e "página de
@@ -285,9 +285,16 @@ const paineis = {
   projetos: document.getElementById('aba-projetos'),
   backlog: document.getElementById('aba-backlog'),
   decisoes: document.getElementById('aba-decisoes'),
+  contas: document.getElementById('aba-contas'),
 };
 
+// Qual view está na tela agora. A aba Contas precisa saber se está ENTRANDO
+// (aí busca no servidor, via ssh) ou se é só o rotear() de 60s passando de
+// novo pela mesma view (aí não busca — sem polling de ssh, por contrato).
+let viewAtual = null;
+
 function mostrarView(nome) {
+  viewAtual = nome;
   for (const [chave, painel] of Object.entries(paineis)) painel.hidden = chave !== nome;
   for (const botao of document.querySelectorAll('.aba')) botao.classList.toggle('ativa', botao.dataset.aba === nome);
 }
@@ -319,6 +326,10 @@ function rotear() {
   } else if (view === 'backlog' || view === 'decisoes') {
     mostrarView(view);
     if (view === 'decisoes' && window.desenharDecisoes) desenharDecisoes();
+  } else if (view === 'contas') {
+    const entrando = viewAtual !== 'contas';
+    mostrarView('contas');
+    if (entrando && window.carregarContas) carregarContas();
   } else {
     mostrarView('projetos');
   }

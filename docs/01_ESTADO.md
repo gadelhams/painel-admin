@@ -1,9 +1,87 @@
 # Severino — estado real
 
-**Atualizado em 14/08/2026, madrugada seguinte (FUSÃO no painel-admin).**
+**Atualizado em 13/09/2026 (aba Contas — Fase 5 do cadastro único).** Antes:
+14/08/2026, madrugada seguinte (FUSÃO no painel-admin).
 Este arquivo registra o que está **provado funcionando**, com as evidências
 colhidas de fora (curl contra o processo em execução, nunca só leitura do
 código — regra 4 dos padrões gerais).
+
+## Aba Contas (administração do CadastroUnico): ENTREGUE PELO EXECUTOR E CORRIGIDA APÓS O CÉTICO (13/09/2026, sem commit, aguarda selo do dono)
+
+Contrato: `../../PLANO-CADASTRO-UNICO.md` Fase 5 + governança do
+`../../CadastroUnico/docs/00_PLANO.md` (admin só pelo loopback do servidor;
+**token nunca sai do servidor**). Relatório completo da fatia, com as cinco
+coisas não feitas, as pendências e a seção "Correções após o cético"
+(10 achados): [`RELATORIO-F5-CONTAS.md`](RELATORIO-F5-CONTAS.md).
+
+| Peça | Arquivo | Estado |
+|---|---|---|
+| Cliente ssh + tabela fechada + adaptador HTTP `/api/contas/*` | `contas.js` (novo) | Provado (suíte + prova viva + navegador); corrigido: script remoto `mktemp`/`trap`/`test -s`/`curl -sS --max-time 10`, sed tolera aspas, 401 → 502, stderr sempre no log |
+| Rotas `GET apps/usuarios/convites`, `POST convites`, `POST convites/:id/reenviar`, `DELETE convites/:id`, `PUT usuarios/:id/permissoes`, `POST usuarios/:id/desativar\|reativar\|redefinir` | `servidor.js` | Provado (curl no processo com ssh falso) |
+| Aba Contas: usuários, convites, formulário Convidar, resultado enviado/erro/link | `publico/contas.js` (novo), `index.html`, `app.js`, `estilo.css` | Provado por Playwright headless; corrigido: `carregarContas` com try/catch, botões travados até a recarga voltar, "feito" só com lista nova, revogar limpa a caixa do link |
+| Suíte `npm test` — **28 testes**, nunca chama ssh (executor injetado; o encanamento real do `spawn` é provado com `node -e` como binário falso) | `test/contas.test.js` (novo), `package.json` | Verde |
+
+**Correções após o cético (13/09/2026)** — o que ficou provado além do que a
+tabela acima já dizia (detalhe e comandos no RELATORIO):
+
+```
+script remoto, local, contra central falso: token sem/com aspas "…"/'…' -> Bearer certo (201);
+  chave ausente -> exit 97 "sem token"; pipeline falhando -> exit 97; central fora -> exit 7 +
+  "curl: (7) Failed to connect" no stderr; restos em /tmp: 0 em todos os casos (trap)
+ssh REAL com `cat` no lugar do script (só-leitura): 209 bytes UTF-8 com acentos/CR/LF/tab ->
+  209 bytes de volta, iguais byte a byte, exit 0, 2997 ms
+mutações: 12 no backend (401 repassado, stderr sem log, script sem test -s/exit 97/trap/mktemp/-sS,
+  sed sem strip, stdin sem EOF, sem timeout, sem teto, SIGTERM) -> todas vermelhas; 4 no front
+  (sem try/catch, "feito" com recarga em erro, destravar antes da recarga, revogar sem limpar)
+  -> todas vermelhas (harness vm no scratchpad, fora do repo)
+```
+
+### Provas (13/09/2026, ~00:50–01:10)
+
+**Prova viva do mecanismo, só leitura, uma vez cada** (`node -e` chamando o
+módulo real, e-mails mascarados na hora de imprimir):
+
+```
+listarApps     -> 200 {"apps":[{"id":"filosofia",…,"sso":true},{"id":"player",…,"sso":true},
+                               {"id":"jogos",…,"sso":true},{"id":"tarado",…,"sso":false},
+                               {"id":"ro",…,"sso":false},{"id":"anya",…,"sso":false}]}   3028ms
+listarUsuarios -> 200 {"usuarios":[{"id":1,"email":"g***@gmail.com","nome":"Matheus","ativo":true,
+                       "criado_em":"2026-09-12T22:56:59.702Z","apps":["filosofia","jogos","player"]}]} 1707ms
+listarConvites -> 200 {"convites":[]}                                                    3273ms
+grep Bearer na saída do módulo + logs: nada (I1 ok) · logs emitidos: 0
+servidor: ls /tmp/painel-contas.* -> No such file (o rm -f do script limpa)
+```
+
+Latência real por ação: **1,7–3,3 s** (um ssh completo cada) — por isso a aba
+não faz polling e trava os botões durante a ação.
+
+**Painel inteiro no navegador** (`PORTA=7797 node --import ssh-falso.mjs
+servidor.js` — `servidor.js` → `contas.js` → `executarSsh` reais; só o
+`child_process.spawn('ssh')` foi interceptado por um preload no scratchpad da
+sessão, que responde como o central. Zero chamada à produção):
+
+```
+curl /api/contas/usuarios                  -> 200 (3 usuários falsos)
+curl -X POST /api/contas/convites/abc/reenviar -> 400 {"erro":"id inválido"} (nenhum spawn)
+Playwright headless, #/contas: 3 usuários · 1 convite · form; editor de permissões
+  salvar (PUT stdin=27B) → chips "Player M3U, Fliperama"; convidar "…sememail@…"
+  → 201, caixa vermelha "e-mail NÃO enviado — provedor fora do ar", link no campo;
+  desativar (confirm aceito) → linha riscada; reativar → volta; revogar (confirm) → 0 convites;
+  trocar de aba esconde #aba-contas; erros de console/página: nenhum.
+```
+
+Screenshots (scratchpad da sessão, efêmeros — ver pendência no relatório):
+`01-usuarios.png`, `02-convites.png`, `03-formulario.png`,
+`04-editor-permissoes.png`, `05-convite-sem-email.png`, `06-final.png`.
+
+**Mutações nomeadas (L-EXE-02), todas vermelhas e depois restauradas
+(`diff` idêntico)**: M-I1 redigir bearer desligado → 2 ✖; M-I2 corpo
+interpolado no comando em vez do stdin → 5 ✖; M-I3a `RE_ID` aceita tudo → 2 ✖;
+M-I3b tabela indexada sem `hasOwn` (`constructor` passa) → 1 ✖; M-I3c formato
+do id não checado → 2 ✖; M-502 falha de ssh vira 500 → 3 ✖.
+
+Processo de prova (7797) **parado** ao fim; nada ficou escutando em 7797 nem
+7777 (o painel do workspace não estava de pé durante a fatia).
 
 ## Fusão no painel-admin: EXECUTADA E PROVADA (14/08/2026, noite)
 
@@ -39,6 +117,10 @@ GET /api/projetos  -> 200 · 8 projetos (severino AUSENTE do catálogo)
 GET /api/producao  -> 200 · Corre do Tarado -> HTTP 200 500ms ·
                       Caddy do host (astargne.com) -> HTTP 301 485ms
 ```
+
+(Exemplo colhido em 08/2026. Desde 12/09/2026 a raiz `astargne.com` é o
+CadastroUnico e responde **303 → /login**, não 301 — a sonda continua verde
+porque o critério é `status < 500`.)
 
 Estáticos — dashboard e chat na mesma porta:
 
@@ -489,9 +571,11 @@ O caminho feliz (áudio real) não tem como ser provado sem chave. Roteiro:
   estrutural (`continuous: false`, gesto explícito).
 - **Botão de mudo da síntese**: não pedido no contrato da fase 2; se doer no
   uso real, é uma linha de decisão no plano.
-- **Teste automatizado**: o aceite segue por sondas manuais externas
-  (permitidas pelos contratos das fases 1 e 2). Se/quando entrar, o LLM é
-  mock — nunca a API real.
+- **Teste automatizado do motor/voz**: o aceite dessas fases segue por sondas
+  manuais externas (permitidas pelos contratos das fases 1 e 2). Se/quando
+  entrar, o LLM é mock — nunca a API real. (Desde 13/09/2026 existe `npm test`
+  — mas só para `contas.js`, a aba Contas, com ssh injetado; motor e voz
+  continuam sem suíte.)
 
 ## Observações
 

@@ -13,8 +13,14 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog } from './coletores.js';
 import { conversar } from './motor.js';
+import { criarClienteContas, criarManipuladorContas } from './contas.js';
 
 const execFileAsync = promisify(execFile);
+
+// Aba Contas (13/09/2026): /api/contas/* — administração do CadastroUnico.
+// Cada rota vira UM comando ssh fixo executado no servidor; o TOKEN_INTERNO
+// é lido lá dentro e nunca chega a este processo (contas.js, I1).
+const manipularContas = criarManipuladorContas({ cliente: criarClienteContas() });
 
 // Defesa em profundidade para o .env: o `npm start` já passa
 // --env-file-if-exists, mas o gatilho do workspace da raiz sobe o servidor
@@ -299,6 +305,16 @@ const servidor = http.createServer(async (req, res) => {
       responderJson(res, await decisoesDoBacklog());
     } else if (pathname === '/api/relacoes') {
       responderJson(res, await catalogoRelacoes());
+    } else if (pathname.startsWith('/api/contas/')) {
+      // GET apps|usuarios|convites · POST convites · POST convites/:id/reenviar
+      // · DELETE convites/:id · PUT usuarios/:id/permissoes · POST
+      // usuarios/:id/desativar|reativar|redefinir — tabela fechada em
+      // contas.js; o corpo (quando há) vai ao servidor pelo stdin do ssh.
+      // Sob demanda apenas (a aba recarrega ao abrir e após cada ação),
+      // nunca no polling de 60s: cada chamada é um ssh de verdade.
+      const corpoTexto = req.method === 'GET' ? '' : await lerCorpo(req);
+      const { status, corpo } = await manipularContas(req.method, pathname, corpoTexto);
+      responderJson(res, corpo, status);
     } else if (pathname === '/severino' && req.method === 'GET') {
       // Sem a barra final os assets relativos do chat resolveriam na raiz
       // (estilo do dashboard em vez do estilo do chat).

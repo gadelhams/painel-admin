@@ -40,6 +40,24 @@ export const RELACOES = [
     tipo: 'hospedagem',
     rotulo: 'produção — ro.astargne.com + portas de jogo',
   },
+  {
+    de: 'CadastroUnico',
+    para: 'astargne.com',
+    tipo: 'hospedagem',
+    rotulo: 'produção — raiz do domínio (login/SSO), systemd 127.0.0.1:8790',
+  },
+  {
+    de: 'PlayerForM3UList',
+    para: 'CadastroUnico',
+    tipo: 'leitura',
+    rotulo: 'valida sessão em /interno/sessao/verificar (app player) desde 13/09/2026',
+  },
+  {
+    de: 'painel-admin',
+    para: 'CadastroUnico',
+    tipo: 'operacao',
+    rotulo: 'aba Contas administra o cadastro via ssh + curl no loopback do servidor (token nunca no PC)',
+  },
 ];
 
 // Nós que não são projeto do catálogo (projetos.js), mas aparecem como ponta

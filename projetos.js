@@ -118,6 +118,17 @@ export const PROJETOS = [
     backlog: 'docs/BACKLOG.md',
     portas: [{ porta: 7777, servico: 'Dashboard + C-3PO' }],
   },
+  {
+    // Nasceu em 12/09/2026 (PLANO-CADASTRO-UNICO.md) e no mesmo dia passou a
+    // servir a raiz astargne.com (303 → /login) — a sonda "Caddy do host" em
+    // PRODUCAO_EXTRA agora bate nele.
+    pasta: 'CadastroUnico',
+    titulo: 'Cadastro Único (SSO)',
+    descricao: 'Login único do astargne.com — convite por e-mail, permissão por app, esqueci minha senha; serve a raiz do domínio.',
+    stack: 'Node 22 · Express 5 · node:sqlite · scrypt · Brevo',
+    entrada: 'AGENTS.md',
+    portas: [{ porta: 8790, servico: 'Login/SSO (loopback)' }],
+  },
 ];
 // O severino saiu do catálogo em 14/08/2026: foi fundido NESTE app (rota
 // /severino/, mesma porta 7777) — deixou de existir como projeto irmão.

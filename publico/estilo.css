@@ -725,3 +725,66 @@ details.item.cru > summary { background: var(--ui-bg); }
 .linha-filtro-tags { display: flex; align-items: flex-start; gap: 13.6px; flex-wrap: wrap; }
 .linha-chips-resumo { display: flex; align-items: center; gap: 13.6px; flex-wrap: wrap; }
 .decisoes-cabecalho { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }
+
+/* ================================================================
+   Aba Contas (13/09/2026) — administração do CadastroUnico
+   ================================================================ */
+
+#aba-contas { max-width: 1400px; }
+.contas-cab-direita { display: flex; align-items: center; gap: 13.6px; flex-wrap: wrap; }
+.contas-status { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+.contas-status.erro { color: var(--falha); }
+.contas-status.andamento { color: var(--alerta); }
+.contas-status.ok { color: var(--ui-faint); }
+
+.grid-contas { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 27.2px; align-items: start; }
+.contas-principal { display: flex; flex-direction: column; gap: 27.2px; min-width: 0; }
+.contas-lateral { display: flex; flex-direction: column; gap: 20.4px; border-left: 1px solid var(--ui-line); padding-left: 27.2px; min-width: 0; }
+
+.contas-secao { border: 1px solid var(--ui-line); background: var(--ui-panel); }
+.contas-secao-cab { display: flex; align-items: baseline; gap: 13.6px; padding: 13.6px 20.4px; border-bottom: 1px solid var(--ui-line); }
+.contas-secao-cab .selo-contagem { margin-left: auto; }
+.contas-subtitulo { font-family: var(--font-heading); font-weight: 600; font-size: 19px; margin: 0; color: var(--ui-text); text-transform: none; letter-spacing: normal; }
+.contas-secao > .discreto { padding: 13.6px 20.4px; margin: 0; }
+
+.linha-conta { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 20.4px; padding: 13.6px 20.4px; background: var(--ui-bg); border-top: 1px solid var(--ui-line); align-items: start; }
+.linha-conta:first-of-type { border-top: none; }
+.linha-conta.inativa .conta-nome, .linha-conta.inativa .conta-email { color: var(--ui-faint); text-decoration: line-through; }
+.conta-nome { font-size: 15px; color: var(--ui-text); display: flex; align-items: center; gap: 8px; }
+.conta-email { font-family: var(--font-mono); font-size: 12px; color: var(--ui-dim); overflow-wrap: anywhere; }
+.conta-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); margin-top: 2px; }
+.etiqueta.inativo { color: var(--falha); border-color: var(--falha); text-decoration: none; }
+.chip-app { font-family: var(--font-mono); font-size: 10px; padding: 3.4px 6.8px; border: 1px solid var(--ui-hot); color: var(--ui-dim); }
+
+.contas-acoes { display: flex; flex-wrap: wrap; gap: 6.8px; align-items: center; }
+.botao-contas { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; border: 1px solid var(--ui-line); border-radius: 0; background: none; color: var(--ui-dim); }
+.botao-contas:hover { border-color: var(--ui-hot); color: var(--ui-text); }
+.botao-contas.perigo { color: var(--falha); }
+.botao-contas.perigo:hover { border-color: var(--falha); }
+.botao-contas.destaque { background: var(--ui-hot); color: var(--ui-onhot); border-color: var(--ui-hot); font-weight: 600; }
+
+.contas-editor { grid-column: 1 / -1; border-top: 1px dashed var(--ui-line); padding-top: 10.2px; display: flex; flex-direction: column; gap: 10.2px; }
+.contas-checkboxes { display: flex; flex-direction: column; gap: 4px; }
+.contas-checkbox { font: 14px var(--font-body); letter-spacing: normal; text-transform: none; color: var(--ui-text); cursor: pointer; }
+.contas-checkbox code { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+
+.contas-form { display: flex; flex-direction: column; gap: 13.6px; }
+.contas-form .discreto { margin: -6.8px 0 0; }
+.contas-rotulo { display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ui-faint); }
+.contas-campo, .contas-link { font: 14px var(--font-mono); background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-line); border-radius: 0; padding: 6.8px 10.2px; }
+.contas-campo:focus, .contas-link:focus { outline: none; border-color: var(--ui-hot); }
+.contas-link { flex: 1; min-width: 0; font-size: 12px; }
+
+.contas-resultado { border: 1px solid var(--ui-line); padding: 13.6px; display: flex; flex-direction: column; gap: 6.8px; min-width: 0; }
+.contas-resultado .contas-acoes { flex-wrap: nowrap; min-width: 0; }
+.contas-resultado-cab { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); margin: 0; overflow-wrap: anywhere; }
+.contas-resultado p { margin: 0; font-size: 14px; }
+.contas-resultado.ok { border-color: var(--ok); }
+.contas-resultado.erro { border-color: var(--falha); }
+.contas-resultado .kicker { margin: 0; }
+
+@media (max-width: 1000px) {
+  .grid-contas { grid-template-columns: minmax(0, 1fr); }
+  .contas-lateral { border-left: none; padding-left: 0; border-top: 1px solid var(--ui-line); padding-top: 20.4px; }
+  .linha-conta { grid-template-columns: minmax(0, 1fr); }
+}

@@ -48,6 +48,36 @@ As referências externas foram julgadas ideia a ideia no [`00_PLANO.md`](00_PLAN
   (o texto das respostas não sai da máquina) — segue registrada como upgrade
   possível; só com nova decisão expressa do dono (00_PLANO §Voz da persona) **(DONO)**
 
+## F4 — Aba Contas: administração do CadastroUnico (Fase 5 do plano-mãe) `[ ]`
+
+Numeração própria do painel (F4); no
+[`../../PLANO-CADASTRO-UNICO.md`](../../PLANO-CADASTRO-UNICO.md) é a **Fase 5**.
+Provas e relatório em [`01_ESTADO.md`](01_ESTADO.md) e
+[`RELATORIO-F5-CONTAS.md`](RELATORIO-F5-CONTAS.md).
+
+- `[ ]` **Épico: aba Contas** — `contas.js` (ssh + tabela fechada, token nunca no
+  PC), rotas `/api/contas/*`, aba com usuários/convites/convidar. Estado: entregue
+  pelo executor em 13/09/2026; **corrigido após o cético em 13/09/2026** (10
+  achados — script remoto com `mktemp`/`trap`/`test -s`/`-sS`, 401 do central
+  vira 502, executor coberto com binário falso, front com try/catch; 28 testes,
+  12+4 mutações vermelhas — RELATORIO §"Correções após o cético"); **aguarda
+  selo do dono**; **sem commit** (01_ESTADO §Aba Contas)
+- `[ ]` Task: integração (commit) da fatia F5 — próxima sessão lê o relatório, não
+  a conversa **(DONO)**
+- `[ ]` Task: primeira **ação de escrita real** contra a produção pela aba (convidar
+  alguém de verdade) — o executor só leu; a escrita foi provada com central falso
+  (RELATORIO §C) **(DONO)** **(EMPÍRICA)**
+- `[ ]` Task: guardar os screenshots da prova fora do scratchpad efêmero (ex.
+  `docs/provas-f5/`) — arquivo fora da lista do card, ficou como pendência
+  (RELATORIO §E)
+- `[ ]` Task: teste da fronteira HTTP contra o **`servidor.js` real** — hoje a suíte
+  testa uma réplica da cola (3 linhas) porque `servidor.js` faz `listen` ao ser
+  importado e não exporta o handler; separar "montar handler" de "escutar" é
+  refatoração além de extrair (RELATORIO §"Correções após o cético", D)
+- `[ ]` Decisão: `/api/contas/*` e `contas.js` são a primeira mudança de estado no
+  servidor feita pelo painel — o C-3PO (fase 3, F1) um dia ganha essas operações
+  como ferramentas com portão, ou a aba fica humana-só? (00_PLANO §Fase 3) **(DONO)**
+
 ## F3 — Aba Backlog: aceites e fase 2 `[ ]`
 
 Spec e status no [`02_ABA_BACKLOG.md`](02_ABA_BACKLOG.md); a gramática que o parser
