@@ -256,12 +256,27 @@ export async function lerModeladorProjeto(pasta, arquivo) {
 
 // ---------- sondas de produção ----------
 
-function sondar(url) {
+function sondar(url, conferirCorpo) {
   return new Promise((resolve) => {
     const inicio = Date.now();
     const req = https.get(url, { timeout: 6000 }, (res) => {
-      res.resume();
-      resolve({ url, ok: res.statusCode < 500, status: res.statusCode, ms: Date.now() - inicio });
+      const base = { url, status: res.statusCode, ms: Date.now() - inicio };
+      const okHttp = res.statusCode < 500;
+      if (!conferirCorpo || !okHttp) {
+        res.resume();
+        return resolve({ ...base, ok: okHttp });
+      }
+      // Há serviço que responde 200 estando meio fora do ar — o cadastro único
+      // é um deles (ver `conferirEscutaDoSSO`). Nesses, status não basta.
+      let corpo = '';
+      res.setEncoding('utf8');
+      res.on('data', (p) => { if (corpo.length < 8192) corpo += p; });
+      res.on('end', () => {
+        let dado = null;
+        try { dado = JSON.parse(corpo); } catch { /* corpo não-JSON */ }
+        const veredito = conferirCorpo(dado);
+        resolve({ ...base, ok: veredito.ok, ...(veredito.detalhe ? { detalhe: veredito.detalhe } : {}) });
+      });
     });
     req.on('timeout', () => req.destroy(new Error('tempo esgotado')));
     req.on('error', (erro) => resolve({ url, ok: false, erro: erro.message }));
@@ -521,7 +536,7 @@ export async function estadoProducao() {
     ...PRODUCAO_EXTRA,
   ];
   const sondas = await Promise.all(
-    alvos.map(async (a) => ({ rotulo: a.rotulo, ...(await sondar(a.url)) })),
+    alvos.map(async (a) => ({ rotulo: a.rotulo, ...(await sondar(a.url, a.conferirCorpo)) })),
   );
   return { sondas };
 }

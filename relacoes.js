@@ -44,7 +44,7 @@ export const RELACOES = [
     de: 'CadastroUnico',
     para: 'astargne.com',
     tipo: 'hospedagem',
-    rotulo: 'produção — raiz do domínio (login/SSO), systemd 127.0.0.1:8790',
+    rotulo: 'produção — raiz do domínio (login/SSO), systemd 127.0.0.1:8790 + ponte astargne_sso',
   },
   {
     de: 'PlayerForM3UList',
