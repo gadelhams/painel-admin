@@ -8,15 +8,36 @@ import https from 'node:https';
 import net from 'node:net';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { PROJETOS, PRODUCAO_EXTRA } from './projetos.js';
 import { RELACOES, NOS_EXTRA } from './relacoes.js';
+import { lerWorkspacePlane, montarFeatures } from './plane.js';
 
 const execFileAsync = promisify(execFile);
 
 // A raiz "Projetos Pessoais" fica um nível acima deste repo.
-export const RAIZ = path.resolve(import.meta.dirname, '..');
+export const RAIZ = path.resolve(import.meta.dirname, '..', '..');
+
+// Desde a reorganização de 30/09/2026 os projetos moram em áreas dentro de
+// ~/Work, e cada entrada do catálogo declara a sua (`area`). Só estas áreas
+// são legíveis pelo painel e pelo C-3PO: `Exitlag/` (trabalho da empresa) fica
+// de fora de propósito, pela fronteira de contexto do AGENTS.md da raiz.
+export const AREAS = ['ProjetosPessoais', 'ProjetosCompartilhados'];
+
+export function dirDoProjeto(projeto) {
+  return path.join(RAIZ, projeto.area, projeto.pasta);
+}
+
+// O C-3PO pede documento pelo nome da pasta. Catálogo primeiro; senão a
+// primeira área onde a pasta existe (ex.: SupervisorHandoff, fora do catálogo).
+export function trechosDoNome(nome) {
+  const doCatalogo = PROJETOS.find((p) => p.pasta === nome);
+  if (doCatalogo) return [doCatalogo.area, doCatalogo.pasta];
+  const area = AREAS.find((a) => existsSync(path.join(RAIZ, a, nome)));
+  return [area ?? AREAS[0], nome];
+}
 
 // ---------- coleta local ----------
 
@@ -81,7 +102,7 @@ export async function gitDetalhado(pasta) {
   const projeto = PROJETOS.find((p) => p.pasta === pasta);
   if (!projeto) return { erro: 'projeto não encontrado' };
 
-  const caminhoRepo = projeto.subRepo ? path.join(RAIZ, pasta, projeto.subRepo) : path.join(RAIZ, pasta);
+  const caminhoRepo = projeto.subRepo ? path.join(dirDoProjeto(projeto), projeto.subRepo) : dirDoProjeto(projeto);
   const existe = await fs.access(caminhoRepo).then(() => true, () => false);
   if (!existe) return { erro: 'pasta não sincronizada nesta máquina' };
 
@@ -103,7 +124,7 @@ function portaAberta(porta) {
 }
 
 async function coletarProjeto(projeto) {
-  const caminho = path.join(RAIZ, projeto.pasta);
+  const caminho = dirDoProjeto(projeto);
   let existe = true;
   try {
     await fs.access(caminho);
@@ -151,7 +172,7 @@ function temEscapeDeCaminho(trecho) {
 export function resolverDentroDaRaiz(...trechos) {
   if (trechos.some(temEscapeDeCaminho)) return null;
   const alvo = path.resolve(RAIZ, ...trechos);
-  if (!alvo.startsWith(RAIZ + path.sep)) return null;
+  if (!AREAS.some((a) => alvo.startsWith(path.join(RAIZ, a) + path.sep))) return null;
   return alvo;
 }
 
@@ -216,14 +237,14 @@ async function lerDocsCurados(dirProjeto, docsDeclarados) {
 // no catálogo volta com os três grupos vazios — nunca um erro, a página
 // declara "sem diagrama catalogado ainda" em vez de fingir que existe.
 function trechosProjeto(projeto, ...resto) {
-  return projeto.subRepo ? [projeto.pasta, projeto.subRepo, ...resto] : [projeto.pasta, ...resto];
+  return projeto.subRepo ? [projeto.area, projeto.pasta, projeto.subRepo, ...resto] : [projeto.area, projeto.pasta, ...resto];
 }
 
 export async function docsProjeto(pasta) {
   const projeto = PROJETOS.find((p) => p.pasta === pasta);
   if (!projeto) return { erro: 'projeto não encontrado' };
 
-  const caminho = path.join(RAIZ, pasta);
+  const caminho = dirDoProjeto(projeto);
   const existe = await fs.access(caminho).then(() => true, () => false);
   if (!existe) return { erro: 'pasta não sincronizada nesta máquina' };
 
@@ -285,11 +306,14 @@ function sondar(url, conferirCorpo) {
 
 // ---------- backlog (aba Backlog: fase 1, só-leitura) ----------
 
+// Desde 30/09/2026 a verdade da maioria dos projetos é o Plane (plane.js);
+// o parser abaixo sobrevive para o `_oldSistemaLoreEngine` congelado.
 // O markdown de backlog é a VERDADE; isto aqui é só projeção (decisão de
 // desenho em docs/02_ABA_BACKLOG.md). Por isso: sem cache — cada chamada
 // relê o working tree, mais fresco que qualquer push — e nada é escrito.
 // A gramática é a da seção "Como este arquivo funciona" do
-// SistemaLoreEngine/docs/39_BACKLOG.md — mudou lá, muda aqui NA MESMA ENTREGA.
+// _oldSistemaLoreEngine/docs/39_BACKLOG.md (congelado em 27/09/2026; o
+// LoreEngine novo não pratica o padrão) — mudou lá, muda aqui NA MESMA ENTREGA.
 
 // Os tokens de estado vêm entre CRASES no arquivo real (`[ ]`/`[x]`); as
 // crases são opcionais aqui para um deslize de formatação não sumir com item.
@@ -409,20 +433,41 @@ export function parsearBacklog(texto) {
   return features;
 }
 
-// Só projetos com o campo opcional `backlog` entram — projeto sem o campo não
-// aparece, sem erro e sem inferência. Falha de leitura vira estado NOMEADO
-// ("sem_arquivo" para ausente, "erro_leitura" para o resto): lista vazia
-// silenciosa esconderia o defeito da tela.
-// O parâmetro existe para teste com catálogo falso; a rota usa o real.
-export async function lerBacklog(projetos = PROJETOS) {
+// Duas fontes: o campo `plane` (id do projeto no Plane — a verdade de quase
+// todos os projetos desde 30/09/2026; antes foi o Linear) e o campo `backlog`
+// (markdown), que sobra só para o `_oldSistemaLoreEngine` congelado.
+// Projeto sem nenhum dos dois não aparece, sem erro e sem inferência. Falha
+// vira estado NOMEADO ("sem_arquivo" para ausente, "erro_leitura" para o
+// resto, "erro_plane" para a API): lista vazia silenciosa esconderia o
+// defeito da tela.
+// Os parâmetros existem para teste com catálogo e Plane falsos; a rota usa os reais.
+export async function lerBacklog(projetos = PROJETOS, { lerPlane = lerWorkspacePlane } = {}) {
+  const doPlane = projetos.filter((p) => p.plane);
+  let plane = null;
+  let erroPlane = null;
+  if (doPlane.length) {
+    try {
+      plane = await lerPlane();
+    } catch (erro) {
+      erroPlane = String(erro?.message ?? erro);
+    }
+  }
   return {
     projetos: await Promise.all(
       projetos
-        .filter((p) => p.backlog)
+        .filter((p) => p.backlog || p.plane)
         .map(async (p) => {
-          const base = { pasta: p.pasta, titulo: p.titulo, backlog: p.backlog };
+          if (p.plane) {
+            const base = { pasta: p.pasta, titulo: p.titulo, fonte: 'plane', backlog: 'Plane' };
+            if (erroPlane) return { ...base, estado: 'erro_plane', erro: erroPlane };
+            const montado = montarFeatures(plane, p.plane);
+            // Projeto novo no Plane só aparece se o usuário "painel" for Guest nele.
+            if (!montado) return { ...base, estado: 'erro_plane', erro: `projeto ${p.plane} não existe ou o usuário "painel" não é membro dele` };
+            return { ...base, backlog: `Plane · ${montado.nome}`, url: montado.url, estado: 'ok', features: montado.features };
+          }
+          const base = { pasta: p.pasta, titulo: p.titulo, fonte: 'markdown', backlog: p.backlog };
           try {
-            const bruto = await fs.readFile(path.join(RAIZ, p.pasta, p.backlog), 'utf8');
+            const bruto = await fs.readFile(path.join(dirDoProjeto(p), p.backlog), 'utf8');
             return { ...base, estado: 'ok', features: parsearBacklog(bruto) };
           } catch (erro) {
             // Só ENOENT significa "não existe". Qualquer outra falha (EACCES,
@@ -485,11 +530,13 @@ export async function decisoesDoBacklog() {
     const projeto = PROJETOS.find((p) => p.pasta === pr.pasta);
     if (!projeto) continue;
 
-    const caminhoRepo = projeto.subRepo ? path.join(RAIZ, pr.pasta, projeto.subRepo) : path.join(RAIZ, pr.pasta);
+    const caminhoRepo = projeto.subRepo ? path.join(dirDoProjeto(projeto), projeto.subRepo) : dirDoProjeto(projeto);
+    // Do Plane não há arquivo nem git: o caminho relativo fica nulo e a
+    // idade vem da própria issue (ver o fim desta função).
     // O `backlog` do catálogo é relativo a RAIZ/pasta (inclui o prefixo do
     // subRepo quando há um — comentário de projetos.js); `git -C caminhoRepo`
     // já está DENTRO do subRepo, então o prefixo precisa sair daqui.
-    const caminhoRelativo = projeto.subRepo && pr.backlog.startsWith(`${projeto.subRepo}/`)
+    const caminhoRelativo = pr.fonte === 'plane' ? null : projeto.subRepo && pr.backlog.startsWith(`${projeto.subRepo}/`)
       ? pr.backlog.slice(projeto.subRepo.length + 1)
       : pr.backlog;
 
@@ -497,7 +544,7 @@ export async function decisoesDoBacklog() {
       for (const nodo of nodosComTag(feature.itens)) {
         for (const tag of nodo.tags) {
           pendentes.push({
-            id: `${pr.pasta}:${nodo.linha}:${tag.tag}`,
+            id: `${pr.pasta}:${nodo.identificador ?? nodo.linha}:${tag.tag}`,
             projeto: pr.pasta,
             tituloProjeto: pr.titulo,
             arquivo: pr.backlog,
@@ -509,6 +556,9 @@ export async function decisoesDoBacklog() {
             // "aberta" por padrão: nunca foi marcada pronta, então não é.
             estado: nodo.estado ?? 'aberto',
             linha: nodo.linha,
+            identificador: nodo.identificador ?? null,
+            url: nodo.url ?? null,
+            criadoEm: nodo.criadoEm ?? null,
             caminhoRepo,
             caminhoRelativo,
           });
@@ -517,9 +567,12 @@ export async function decisoesDoBacklog() {
     }
   }
 
-  const decisoes = await Promise.all(pendentes.map(async ({ caminhoRepo, caminhoRelativo, ...decisao }) => ({
+  // No Plane a idade é a criação do work item. Para os migrados (29–30/09/2026)
+  // isso zera a idade — a de antes mora no git do BACKLOG.md de origem, cuja
+  // linha está citada na descrição.
+  const decisoes = await Promise.all(pendentes.map(async ({ caminhoRepo, caminhoRelativo, criadoEm, ...decisao }) => ({
     ...decisao,
-    desde: await idadeDaDecisao(caminhoRepo, caminhoRelativo, decisao.linha),
+    desde: caminhoRelativo === null ? criadoEm : await idadeDaDecisao(caminhoRepo, caminhoRelativo, decisao.linha),
   })));
   return { decisoes };
 }

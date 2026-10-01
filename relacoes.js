@@ -1,20 +1,28 @@
 // Relações estruturadas entre os projetos da raiz — espelho do que está em
-// prosa na seção "Relações entre projetos" do CLAUDE.md da raiz. Mude os
+// prosa em ../../RELACOES.md (era seção do CLAUDE.md da raiz até 30/09/2026). Mude os
 // dois juntos: uma relação nova ali entra aqui também, na mesma entrega.
 // `de`/`para` referenciam `pasta` de projetos.js (ou `id` de NOS_EXTRA) —
 // mesma chave usada em todo o resto do sistema, sem duplicar identidade.
 export const RELACOES = [
   {
-    de: 'SistemaLoreEngine',
+    // A integração espacial só existe no repo congelado; o LoreEngine novo
+    // resolve viagem por dado informado pelo Mestre (ADR-0047 dele).
+    de: '_oldSistemaLoreEngine',
     para: 'Mapa Khorvaire',
     tipo: 'leitura',
-    rotulo: 'lê por Postgres só-leitura (SPATIAL_DATABASE_URL)',
+    rotulo: 'lia por Postgres só-leitura (SPATIAL_DATABASE_URL); o LoreEngine novo não tem adapter espacial',
   },
   {
     de: 'DiscordTranscriber',
-    para: 'SistemaLoreEngine',
+    para: 'LoreEngine',
     tipo: 'contrato',
-    rotulo: 'contrato lore-transcript-v2',
+    rotulo: 'contrato lore-transcript-v2 — desenhado contra o antigo, a revalidar contra o novo',
+  },
+  {
+    de: 'LoreEngine',
+    para: '_oldSistemaLoreEngine',
+    tipo: 'leitura',
+    rotulo: 'predecessor congelado (../sistemaloreengine nos docs dele) — referência somente-leitura',
   },
   {
     de: 'ProjetoConversaComDeus',

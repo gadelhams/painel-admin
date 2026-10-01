@@ -8,7 +8,7 @@
 const painelPrincipal = document.getElementById('painel-projeto-principal');
 const painelContexto = document.getElementById('painel-projeto-contexto');
 
-const PROJETOS_COM_DIAGRAMA = new Set(['SistemaLoreEngine', 'Mapa Khorvaire', 'DiscordTranscriber']);
+const PROJETOS_COM_DIAGRAMA = new Set(['_oldSistemaLoreEngine', 'Mapa Khorvaire', 'DiscordTranscriber']);
 
 // ---------- coluna principal ----------
 
@@ -71,9 +71,7 @@ function secaoCabecalhoProjeto(projeto, prBacklog, decisoes) {
 function secaoOutlineBacklog(prBacklog, tagAtiva) {
   if (!prBacklog) return el('p', { class: 'discreto' }, 'este projeto não tem o campo backlog no catálogo.');
   if (prBacklog.estado !== 'ok') {
-    const mensagem = prBacklog.estado === 'sem_arquivo'
-      ? `sem arquivo — ${prBacklog.pasta}/${prBacklog.backlog} não existe no disco`
-      : `falha ao ler ${prBacklog.pasta}/${prBacklog.backlog} — ${prBacklog.erro ?? prBacklog.estado}`;
+    const mensagem = mensagemFalhaBacklog(prBacklog);
     return el('div', { class: 'sonda' }, el('span', { class: 'luz falha' }), el('span', {}, mensagem));
   }
   if (!prBacklog.features.length) return el('p', { class: 'discreto' }, 'backlog sem features ainda.');

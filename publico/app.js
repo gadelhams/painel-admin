@@ -224,7 +224,8 @@ function celulaTelemetria(p) {
 // Nomes encurtados pra tira (o nome cheio vive no título do painel focado) —
 // README §3.1. Projeto sem entrada aqui usa o título cheio mesmo.
 const NOME_CURTO = {
-  SistemaLoreEngine: 'Lore Engine',
+  LoreEngine: 'Lore Engine',
+  _oldSistemaLoreEngine: 'Lore Engine antigo',
   ProjetoConversaComDeus: 'Conversa com Deus',
   'painel-admin': 'Painel + C-3PO',
   'Mapa Khorvaire': 'Khorvaire',

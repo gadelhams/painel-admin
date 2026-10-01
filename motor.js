@@ -13,7 +13,7 @@ import { query, tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod';
 import {
   estadoProjetos, estadoProducao,
-  resolverDentroDaRaiz, listarModeladores, lerArquivoMd,
+  resolverDentroDaRaiz, trechosDoNome, listarModeladores, lerArquivoMd,
 } from './coletores.js';
 
 // Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
@@ -43,7 +43,7 @@ async function consultarColetor(nome, coletor) {
 // página de projeto. Aqui só formata a resposta no formato MCP.
 
 async function lerDocProjeto({ projeto, arquivo }) {
-  const dirProjeto = resolverDentroDaRaiz(projeto);
+  const dirProjeto = resolverDentroDaRaiz(...trechosDoNome(projeto));
   if (!dirProjeto) {
     return { content: [{ type: 'text', text: 'Caminho de projeto inválido: precisa ser uma pasta direta da raiz, sem "..".' }], isError: true };
   }
@@ -62,7 +62,7 @@ async function lerDocProjeto({ projeto, arquivo }) {
   if (!arquivo.toLowerCase().endsWith('.md')) {
     return { content: [{ type: 'text', text: 'Só leio arquivos .md (documentos modeladores). Nada de código, .env ou segredo.' }], isError: true };
   }
-  const alvo = resolverDentroDaRaiz(projeto, arquivo);
+  const alvo = resolverDentroDaRaiz(...trechosDoNome(projeto), arquivo);
   if (!alvo) {
     return { content: [{ type: 'text', text: 'Caminho de arquivo inválido: precisa ficar dentro da pasta do projeto, sem "..".' }], isError: true };
   }

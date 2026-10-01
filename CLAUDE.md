@@ -1,6 +1,7 @@
 # painel-admin — o painel com o Severino a bordo
 
-Hub administrativo **local** dos projetos da raiz — estado do git, portas
+Hub administrativo **local** dos projetos de `~/Work` (áreas `ProjetosPessoais`
+e `ProjetosCompartilhados`) — estado do git, portas
 locais ativas, sondas HTTPS da produção no `astargne.com`, consulta SSH sob
 demanda — **e o Severino**, o peão sabido: assistente conversacional (texto e
 voz) por cima desses mesmos instrumentos. Um app, um processo, uma porta.
@@ -21,7 +22,7 @@ e história continuam aqui (`github.com/gadelhams/painel-admin`).
 npm start   # node --env-file-if-exists=.env servidor.js
 # http://localhost:7777           → dashboard
 # http://localhost:7777/severino/ → chat do Severino (texto e voz)
-npm test    # node --test — suíte do módulo contas.js (ssh sempre falso, I5)
+npm test    # node --test — contas.js (ssh sempre falso, I5), sonda do SSO, plane.js (Plane falso) e caminhos das áreas
 ```
 
 Node ≥ 22.9 (pelo `--env-file-if-exists`). **Uma dependência**:
@@ -30,8 +31,15 @@ histórico do painel acabou com a fusão, e o motor do Severino é o único
 motivo; upgrade da versão é decisão consciente, nunca automática. O `zod`
 aparece em `node_modules` como peer do SDK — não é dependência nossa.
 
-Sobe sozinho ao abrir o workspace da raiz no VS Code (gatilho `folderOpen`
-em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
+Roda como **serviço de usuário do systemd na Omarchy** desde 27/09/2026
+(`~/.config/systemd/user/painel-admin.service`, `WorkingDirectory` =
+`~/Work/ProjetosPessoais/painel-admin` desde a reorganização de 30/09/2026;
+`enable --now`, linger ligado:
+sobe no boot sem login e reinicia se cair). Operação: `systemctl --user
+{status,restart} painel-admin`; log em `journalctl --user -u painel-admin`.
+Do Windows chega-se por `localhost:7777` via encaminhamento do Remote-SSH do
+VS Code (`remote.SSH.defaultForwardedPorts` no settings do usuário). O gatilho
+`folderOpen` do `.vscode/tasks.json` da raiz foi removido nos dois lados.
 
 ## Arquitetura
 
@@ -42,13 +50,14 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
   enviados ao remoto de UM projeto — só sob demanda, mais pesado que o
   resumo que os cards já usam; 20/08/2026), `/api/producao`,
   `/api/producao/ssh`, `/api/backlog`, `/api/decisoes` (decisões derivadas
-  do backlog + idade por `git log -L`, pesada — sob demanda, nunca no
-  polling de 60s; aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
+  do backlog; idade = criação do work item no Plane, ou `git log -L` no
+  markdown do repo congelado, pesada — sob demanda, nunca no polling de 60s;
+  aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
   `relacoes.js` — hoje fora da nav, ver abaixo), `POST /api/conversa` (SSE,
   motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
   (aba Contas — abaixo) e estáticos de `publico/` (dashboard na raiz, chat
   em `/severino/`).
-- `contas.js` (13/09/2026, Fase 5 do `../PLANO-CADASTRO-UNICO.md`) —
+- `contas.js` (13/09/2026, Fase 5 do `../../PLANO-CADASTRO-UNICO.md`) —
   administração do **CadastroUnico** (login único do `astargne.com`). A API
   interna do central (`/interno/*`, `127.0.0.1:8790`) só existe no loopback
   **do servidor**, autenticada por `TOKEN_INTERNO` — e **o token nunca sai
@@ -69,9 +78,29 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
   (`criarExecutorSsh({ binario, timeoutMs, maxSaida })`) —
   `test/contas.test.js` nunca chama ssh de verdade: o encanamento real
   (stdin/EOF/timeout/teto) é provado com `node -e` como binário falso.
+- `plane.js` (30/09/2026; de 29 a 30/09 foi `linear.js`, com o Linear) — o
+  backlog vem do **Plane** (instância própria no Omarchy, workspace
+  `astargne`, `https://astargne-linux.tail30484d.ts.net`; a verdade desde a
+  migração; `../../PADROES-BACKLOG.md`): API v1 com o token do usuário
+  **"painel"** (`PLANE_API_KEY` no `.env`; papel Guest no workspace e em cada
+  projeto — lê tudo, e a API devolve 403 a qualquer escrita, conferido de
+  fora), e `montarFeatures` (pura, testada) devolve a mesma forma que o parser
+  de markdown produzia — módulo = feature (na ordem do `sort_order` do Plane),
+  sub-work item = filho, label de tag canônica = chip. A API não diz o módulo
+  de um work item: é uma consulta por módulo (~100 consultas no total, ~11 s
+  com o único worker do Plane), por isso o cache devolve o dado anterior na
+  hora e renova em segundo plano, uma renovação por vez. Falha vira
+  `erro_plane` nomeado, nunca lista vazia; a mensagem de erro nunca ecoa o
+  token. **Projeto novo no Plane só aparece depois de o usuário "painel"
+  entrar nele como Guest.**
 - `coletores.js` — coletores de estado (git, portas, sondas de produção,
   backlog, **leitura segura de docs modeladores por projeto**),
-  **compartilhados**: as rotas da API e as ferramentas do motor chamam as
+  **compartilhados**. `RAIZ` é `~/Work` (dois níveis acima) e, desde a
+  reorganização de 30/09/2026, todo caminho passa por `dirDoProjeto()` =
+  `RAIZ/<area>/<pasta>`; `resolverDentroDaRaiz` só aceita as áreas de
+  `AREAS` (`ProjetosPessoais`, `ProjetosCompartilhados`) — **`Exitlag/`
+  (empresa) fica fora do alcance de propósito**, por nome direto ou por `..`
+  (`test/caminhos.test.js`): as rotas da API e as ferramentas do motor chamam as
   mesmas funções — o motor nunca faz HTTP para o próprio processo.
 - `motor.js` — Claude Agent SDK (`claude-sonnet-5` fixo), persona do
   Severino, três ferramentas **só-leitura**: `estado_projetos`,
@@ -79,14 +108,19 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
   allowlist estrita — mecânica de resolução de caminho mora em
   `coletores.js`, compartilhada com a rota HTTP acima).
 - `projetos.js` — catálogo dos projetos: metadados que não dão para derivar
-  do disco, incluindo o campo opcional `docs` (arquitetura/objetos/dataFlow
-  — só nos projetos que já têm diagrama Mermaid vivo: `SistemaLoreEngine`,
+  do disco, incluindo `area` (pasta de `~/Work` onde o projeto mora), o campo
+  `plane` (id do projeto no Plane — sem ele o projeto não aparece nas abas de
+  backlog; só o `_oldSistemaLoreEngine` usa ainda o campo `backlog`, de
+  markdown) e o campo opcional `docs` (arquitetura/objetos/dataFlow
+  — só nos projetos que já têm diagrama Mermaid vivo: `_oldSistemaLoreEngine`,
   `Mapa Khorvaire`, `DiscordTranscriber`). **Mantenha em sincronia com o
-  `CLAUDE.md` da raiz** quando um projeto nascer, morrer ou mudar de porta.
+  `../CLAUDE.md` (mapa de `ProjetosPessoais/`) e com `../../PORTAS.md`**
+  quando um projeto nascer, morrer ou mudar de porta.
 - `relacoes.js` (21/08/2026) — relações estruturadas entre projetos (`de`,
   `para`, `tipo`, `rotulo`) + `NOS_EXTRA` para nós de infra fora do catálogo
-  (hoje só `astargne.com`). Espelho estruturado da seção "Relações entre
-  projetos" do `CLAUDE.md` da raiz — **mude os dois juntos**. Alimenta
+  (hoje só `astargne.com`). Espelho estruturado do `../../RELACOES.md` (era a
+  seção "Relações entre projetos" do `CLAUDE.md` da raiz até 30/09/2026) —
+  **mude os dois juntos**. Alimenta
   `/api/relacoes` e `publico/grafo.js` (aba Grafo) — **ambos fora da nav
   desde o reskin abaixo** (decisão do dono, código intacto no repo, fácil de
   religar como 4ª aba).
@@ -101,8 +135,8 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
     `projetoSelecionado` **compartilhado entre as abas Projetos e Backlog**
     (a mesma variável que a tira de telemetria, o outline do Backlog e a
     coluna de contexto do painel de projeto leem — `decisoes.js` e
-    `contas.js` não a leem), tira de telemetria (9 células, uma
-    por projeto do catálogo), tema claro/escuro (`data-tema` em `<html>`,
+    `contas.js` não a leem), tira de telemetria (uma célula
+    por projeto do catálogo — 13 desde 29/09/2026), tema claro/escuro (`data-tema` em `<html>`,
     persistido em `localStorage`), e o console do Severino (`#console-scrim`
     — abre por ⌘K/barra de comando/clique numa decisão, sempre reabre no
     digest).
@@ -151,12 +185,11 @@ em `.vscode/tasks.json` da raiz, idempotente por sonda de porta).
     lugar de plugar.
 - `docs/00_PLANO.md` e `docs/01_ESTADO.md` — plano e estado real do Severino,
   trazidos do repo antigo; leia o plano antes de mexer no motor ou na voz.
-- `docs/02_ABA_BACKLOG.md` — a aba Backlog (quadro kanban só-leitura). O
-  arquivo markdown é a verdade; a aba é projeção. Gramática canônica em
-  `../PADROES-BACKLOG.md` — **contrato de três pontas**: padrão + espelho no
-  doc 39 do LoreEngine + o parser em `coletores.js` mudam JUNTOS, na mesma
-  entrega. Backlog próprio: `docs/BACKLOG.md` — todo selo o atualiza NA
-  MESMA ENTREGA.
+- `docs/02_ABA_BACKLOG.md` — a aba Backlog (quadro kanban só-leitura). Desde
+  30/09/2026 **o Plane é a verdade** e a aba é projeção (convenção e a tabela
+  de projetos em `../../PADROES-BACKLOG.md`); o parser de markdown sobrevive
+  só para o doc 39 do `_oldSistemaLoreEngine` congelado. Backlog próprio: o
+  projeto **PAINEL** no Plane — todo selo o atualiza NA MESMA ENTREGA.
 
 ## Severino por voz, fora de casa (Claude app + Remote Control)
 
@@ -227,5 +260,7 @@ técnico aqui; o freio é o próprio personagem.
 - **Voz não fura o canon de deploy**: qualquer ação futura que mude estado no
   `astargne.com` continua exigindo `validador-deploy` + validação de
   premissas, como para qualquer agente.
-- **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, coberto pelo `.gitignore`) —
+- **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` — esta do
+  usuário Guest "painel", o painel nunca escreve no Plane; coberto pelo
+  `.gitignore`) —
   jamais em código, log, commit ou resposta HTTP.

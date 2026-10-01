@@ -429,6 +429,8 @@ button:disabled { opacity: .5; cursor: wait; }
 
 .item-linha { display: flex; align-items: baseline; gap: .4rem; flex-wrap: wrap; }
 .item-texto { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.id-rastreador { font-family: var(--font-mono); font-size: .7rem; color: var(--ui-faint); text-decoration: none; flex: none; }
+.id-rastreador:hover { color: var(--ui-text); text-decoration: underline; }
 .marca { flex: none; }
 .marca.pronto { color: var(--ok); }
 .marca.aberto { color: var(--ui-faint); }

@@ -57,10 +57,24 @@ function chipTag({ tag, detalhe }) {
   );
 }
 
+// Compartilhada com o painel de projeto (projeto.js): a falha diz a fonte
+// verdadeira — arquivo no disco ou API do Plane.
+function mensagemFalhaBacklog(pr) {
+  if (pr.estado === 'erro_plane') return `falha ao consultar o Plane — ${pr.erro ?? pr.estado}`;
+  return pr.estado === 'sem_arquivo'
+    ? `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`
+    : `falha ao ler ${pr.pasta}/${pr.backlog} — ${pr.erro ?? pr.estado}`;
+}
+
 function conteudoNodo(nodo) {
   const partes = [];
   if (nodo.tipo === 'item') {
     partes.push(el('span', { class: `marca ${nodo.estado}` }, nodo.estado === 'pronto' ? '☑' : '☐'));
+  }
+  // Item vindo do Plane leva o identificador (ex.: CORRE-7) como link para o work item —
+  // é lá que se edita; o painel só lê.
+  if (nodo.identificador) {
+    partes.push(el('a', { class: 'id-rastreador', href: nodo.url, target: '_blank', rel: 'noopener' }, nodo.identificador));
   }
   partes.push(el('span', { class: 'item-texto' }, ...formatar(nodo.texto)));
   const p = placar(nodo.filhos ?? []);
@@ -179,9 +193,7 @@ function desenharBacklogDoProjeto(pasta) {
     return;
   }
   if (pr.estado !== 'ok') {
-    const mensagem = pr.estado === 'sem_arquivo'
-      ? `sem arquivo — ${pr.pasta}/${pr.backlog} não existe no disco`
-      : `falha ao ler ${pr.pasta}/${pr.backlog} — ${pr.erro ?? pr.estado}`;
+    const mensagem = mensagemFalhaBacklog(pr);
     abaBacklogEl.replaceChildren(
       el('h2', { class: 'titulo-secao' }, `Backlog — ${titulo}`),
       el('div', { class: 'sonda' }, el('span', { class: 'luz falha' }), el('span', {}, mensagem)),
@@ -218,7 +230,9 @@ function desenharBacklogDoProjeto(pasta) {
       el(
         'div',
         {},
-        el('p', { class: 'kicker' }, `${pr.pasta} · ${pr.backlog}`),
+        pr.url
+          ? el('p', { class: 'kicker' }, `${pr.pasta} · `, el('a', { href: pr.url, target: '_blank', rel: 'noopener' }, pr.backlog))
+          : el('p', { class: 'kicker' }, `${pr.pasta} · ${pr.backlog}`),
         el('h2', { class: 'titulo-secao' }, `Backlog — ${titulo}`),
       ),
       el(
@@ -231,7 +245,9 @@ function desenharBacklogDoProjeto(pasta) {
     features.length
       ? el('div', { class: 'grid-backlog' }, ...features.map(blocoFeatureExpandido))
       : el('p', { class: 'discreto' }, `nenhuma feature com (${tagAtivaBacklog})`),
-    el('p', { class: 'nota-cru' }, 'linhas fora da gramática aparecem verbatim, sem chip — o parser nunca esconde o que não entendeu.'),
+    pr.fonte === 'plane'
+      ? el('p', { class: 'nota-cru' }, 'lido do Plane (a verdade) — módulo = feature, sub-work item = filho; edite lá, o painel só lê.')
+      : el('p', { class: 'nota-cru' }, 'linhas fora da gramática aparecem verbatim, sem chip — o parser nunca esconde o que não entendeu.'),
   );
 }
 

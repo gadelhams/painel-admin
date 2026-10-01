@@ -30,6 +30,12 @@ function agruparDecisoesPorProjeto(decisoes) {
   return [...porProjeto.entries()].sort((a, b) => b[1].length - a[1].length);
 }
 
+function linkIssue(d) {
+  const a = el('a', { class: 'id-rastreador', href: d.url, target: '_blank', rel: 'noopener' }, d.identificador);
+  a.addEventListener('click', (e) => e.stopPropagation());
+  return a;
+}
+
 function linhaDecisaoTabela(d) {
   const linha = el(
     'div',
@@ -39,7 +45,13 @@ function linhaDecisaoTabela(d) {
       'div',
       { class: 'texto-decisoes-tab' },
       el('div', { class: 'texto-decisao-principal' }, ...formatar(d.texto)),
-      el('div', { class: 'contexto-decisao' }, `${d.feature}`),
+      el(
+        'div',
+        { class: 'contexto-decisao' },
+        // O link não pode abrir o console junto (a linha inteira é botão).
+        ...(d.url ? [linkIssue(d), ' · '] : []),
+        `${d.feature}`,
+      ),
     ),
     chipTag({ tag: d.tag, detalhe: d.detalhe }),
   );

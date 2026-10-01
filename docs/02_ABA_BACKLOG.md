@@ -1,5 +1,27 @@
 # Aba Backlog — o quadro kanban dos projetos (fase 1: só-leitura)
 
+> **Incremento: DO LINEAR PARA O PLANE, 30/09/2026 (`PLANO-PLANE-SELF-HOSTED.md`).**
+> `plane.js` substituiu `linear.js` com a mesma forma de dado: projeto do Plane
+> = campo `plane` do catálogo, módulo = feature (ordem = `sort_order` do Plane),
+> sub-work item = filho, label = chip. Token do usuário Guest "painel"
+> (`PLANE_API_KEY`), cache que devolve o dado anterior e renova por trás (a
+> busca completa leva ~11 s). Estados `erro_plane`. O incremento abaixo
+> descreve a fase Linear, que durou um dia.
+
+> **Incremento: A FONTE VIROU O LINEAR, 29/09/2026 (decisão do dono).** Os
+> backlogs dos projetos migraram para o workspace `astargneprojects` do Linear
+> (`../../PADROES-BACKLOG.md`), e a aba passou a **ler de lá** (`linear.js`):
+> campo `linear` do catálogo = id do Project; milestone = feature, issue-pai =
+> item de topo, sub-issue = filho, label de tag canônica = chip, motivo da tag
+> tirado da descrição. Mesma forma de dado que o parser produzia, então as
+> abas e a página de projeto quase não mudaram (só o identificador AST-nn
+> clicável e as mensagens de falha, que agora nomeiam a API). Chave de escopo
+> Read no `.env` (`LINEAR_API_KEY`), cache de 60 s. Falha da API vira estado
+> `erro_linear` com o motivo, nunca quadro vazio. Idade das decisões = criação
+> da issue (zerada para as migradas; a de antes mora no git dos arquivos). O
+> parser de markdown abaixo sobrevive só para o `_oldSistemaLoreEngine`
+> congelado. **O resto deste documento descreve a era do markdown.**
+
 > **Incremento: CARDS EXPANSÍVEIS + CORES POR TAG, 20/08/2026 (pedido do
 > dono, junto com a página de projeto — `01_ESTADO.md`).** Item/cru com
 > filhos virou `<details>`/`<summary>` nativo (sem JS de estado; o navegador

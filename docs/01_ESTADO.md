@@ -177,7 +177,9 @@ curl http://100.87.142.59:7777/ (IP de rede da máquina) -> conexão RECUSADA
   arquivado; o código vive aqui).
 - Raiz: `CLAUDE.md` (tabela de projetos, relações, tabela de portas — a 7778
   sai) e qualquer outro doc que cite o severino como projeto.
-- `.vscode/tasks.json` + `iniciar-assistentes.cmd` da raiz: parar de subir o
+- `.vscode/tasks.json` + `iniciar-assistentes.cmd` da raiz *(gatilho removido
+  em 27/09/2026 — o painel virou serviço systemd de usuário na Omarchy, ver
+  "Como roda" no `CLAUDE.md`)*: parar de subir o
   severino na 7778 (senão ele ressuscita ao abrir o workspace); o painel
   fundido exige Node ≥ 22.9 (o load do `.env` continua defensivo no próprio
   `servidor.js`, então `node servidor.js` seco segue funcionando).
