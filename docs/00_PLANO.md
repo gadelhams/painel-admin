@@ -66,9 +66,10 @@ da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
    `astargne.com` continua exigindo o ciclo normal de agente: `validador-deploy`
    + `validar-premissas.sh`. Até a fase 3, o Severino **nem possui** ferramenta
    de escrita — a limitação é estrutural, não comportamental.
-3. **Localhost only.** Escuta em `127.0.0.1` (porta **7777** desde a fusão;
-   nasceu na 7778), sem autenticação — **nunca** expor fora da máquina nem
-   publicar.
+3. **Sem login, então porta fechada.** Escuta em `127.0.0.1` (porta **7777**
+   desde a fusão; nasceu na 7778), sem autenticação. Desde 06/10/2026 a borda
+   do tailnet publica `painel.casa.astargne.com` só para o Windows do dono
+   (`docs/arquitetura.md`, invariante 1).
 4. **Mínimo de dependências.** Backend: só `@anthropic-ai/claude-agent-sdk`
    (versão fixada). Frontend: zero deps — voz pela Web Speech API nativa
    (`SpeechRecognition` para ouvir, `speechSynthesis` para falar).

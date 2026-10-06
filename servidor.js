@@ -1,7 +1,8 @@
 // Servidor único do painel-admin desde a fusão de 14/08/2026: dashboard na
 // raiz (/), Severino em /severino/, e toda a API na mesma porta 7777.
-// Localhost only: escuta em 127.0.0.1 e NUNCA em 0.0.0.0 — sem autenticação
-// justamente porque a porta não sai da máquina.
+// Escuta só em 127.0.0.1, NUNCA em 0.0.0.0, e não tem autenticação: fora do
+// loopback, a única entrada é a borda do tailnet, restrita ao Windows do dono
+// (06/10/2026); Host e origem são conferidos em guarda.js.
 
 import http from 'node:http';
 import os from 'node:os';
@@ -14,6 +15,7 @@ import { promisify } from 'node:util';
 import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog } from './coletores.js';
 import { conversar } from './motor.js';
 import { criarClienteContas, criarManipuladorContas } from './contas.js';
+import { criarGuarda } from './guarda.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -39,6 +41,7 @@ const CHAVE_SSH = path.join(os.homedir(), '.ssh', 'paroquia-vultr');
 const MAX_CORPO = 64 * 1024;
 const MAX_MENSAGEM = 8_000;
 const MAX_TEXTO_TTS = 4_000;
+const recusaDaGuarda = criarGuarda(PORTA);
 
 // Camada 3 da voz do Severino: a chave vive só no processo (.env local) e
 // JAMAIS aparece em log, erro ou resposta. Voice_id default é o do quickstart
@@ -261,6 +264,16 @@ async function responderTts(req, res) {
 const servidor = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORTA}`);
   const { pathname } = url;
+  const recusa = recusaDaGuarda({
+    metodo: req.method,
+    host: req.headers.host,
+    origem: req.headers.origin,
+    secFetchSite: req.headers['sec-fetch-site'],
+  });
+  if (recusa) {
+    responderJson(res, { erro: recusa.erro }, recusa.status);
+    return;
+  }
   try {
     if (pathname === '/api/conversa' && req.method === 'POST') {
       await responderConversa(req, res);
