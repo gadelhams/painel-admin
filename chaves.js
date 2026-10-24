@@ -40,7 +40,7 @@ export const CATALOGO = Object.freeze([
   ] },
   { projeto: 'alexa youtube', local: { arquivo: 'alexa youtube/.env.stream-proxy', unit: 'alexa-stream-proxy', descobrir: true }, chaves: [
     { nome: 'STREAM_PROXY_SECRET', descricao: 'token do proxy de áudio (vai na query; o journal do Caddy o grava)',
-      rotacao: { pendente: true, desde: '2026-10-02', card: 'ALEXA-11', motivo: 'token gravado em claro no journal do Caddy do servidor', depois: 'trocar o mesmo valor na skill da Alexa (Lambda) e filtrar o log do Caddy' } },
+      rotacao: { pendente: true, desde: '2026-10-02', card: 'ALEXA-11', motivo: 'token gravado em claro no journal do Caddy do servidor', depois: 'nada mais desde 24/10/2026: skill e proxy são o mesmo processo no Omarchy e o Caddy já filtra o token do log' } },
     { nome: 'YOUTUBE_MUSIC_COOKIE', descricao: 'cookie da conta YouTube Music usada pelo proxy' },
   ] },
   { projeto: 'ProjetoConversaComDeus', local: { arquivo: 'ProjetoConversaComDeus/filosofia/.env', descobrir: true },
