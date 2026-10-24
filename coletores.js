@@ -147,6 +147,7 @@ async function coletarProjeto(projeto) {
     stack: projeto.stack,
     entrada: projeto.entrada,
     producao: projeto.producao ?? null,
+    congelado: projeto.congelado === true,
     existe,
     git: gitInfo,
     portas,

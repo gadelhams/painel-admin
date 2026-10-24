@@ -9,6 +9,10 @@ function tituloDoProjeto(pasta) {
   return dadosProjetos.find((p) => p.pasta === pasta)?.titulo ?? pasta;
 }
 
+function projetoCongelado(pasta) {
+  return dadosProjetos.find((p) => p.pasta === pasta)?.congelado === true;
+}
+
 function arquivoDoProjeto(pasta) {
   return dadosBacklog?.projetos.find((p) => p.pasta === pasta)?.backlog ?? '';
 }
@@ -69,42 +73,56 @@ function linhaDecisaoTabela(d) {
 // dita como tal na tela: "contas externas e chaves" vem do catálogo de chaves (rotações
 // pendentes), "push/deploy/sudo", "provas suas" e "decisões de produto" dos cards abertos
 // com ASTARGNE/EMPÍRICA.
-let chavesPendentesCache = { quando: 0, lista: [] };
-async function lerChavesPendentes() {
-  if (Date.now() - chavesPendentesCache.quando < 60_000) return chavesPendentesCache.lista;
+const SEM_CHAVES = { pendentes: [], feitas: [] };
+let chavesCache = { quando: 0, dados: SEM_CHAVES };
+async function lerChaves() {
+  if (Date.now() - chavesCache.quando < 60_000) return chavesCache.dados;
   try {
     const r = await fetch('/api/chaves');
     const dados = await r.json();
-    chavesPendentesCache = { quando: Date.now(), lista: r.ok ? dados.pendentes : [] };
-  } catch { chavesPendentesCache = { quando: Date.now(), lista: [] }; }
-  return chavesPendentesCache.lista;
+    chavesCache = { quando: Date.now(), dados: r.ok ? { pendentes: dados.pendentes ?? [], feitas: dados.rotacoesFeitas ?? [] } : SEM_CHAVES };
+  } catch { chavesCache = { quando: Date.now(), dados: SEM_CHAVES }; }
+  return chavesCache.dados;
 }
 const RE_PUSH = /\b(push|deploy|publicar|sudo|instalar|borda|unit de usu)/i;
 const RE_PROVA = /\b(prova|aceite|conferir|conferência|exercitar|retestar|testar|entra no|aprova|convidar|olho humano|rotulad|revisada e aceita|medir|real)\b/i;
-function classificarAstargne(decisoes, chavesPendentes) {
-  const cardsDeChave = new Set(chavesPendentes.map(c => c.card));
-  const grupos = { chaves: [], push: [], provas: [], produto: [] };
+function classificarAstargne(decisoes, { pendentes, feitas }) {
+  const cardsDeChave = new Set(pendentes.map(c => c.card));
+  const feitaPorCard = new Map(feitas.map(f => [f.card, f]));
+  const grupos = { chaves: [], feitas: [], push: [], provas: [], produto: [] };
   for (const d of decisoes) {
-    if (d.estado !== 'aberto' || !['ASTARGNE', 'EMPÍRICA'].includes(d.tag)) continue;
-    if (cardsDeChave.has(d.identificador)) grupos.chaves.push(d);
+    if (d.estado !== 'aberto' || !['ASTARGNE', 'EMPÍRICA'].includes(d.tag) || projetoCongelado(d.projeto)) continue;
+    if (feitaPorCard.has(d.identificador)) grupos.feitas.push({ ...d, feita: feitaPorCard.get(d.identificador) });
+    else if (cardsDeChave.has(d.identificador)) grupos.chaves.push(d);
     else if (RE_PUSH.test(d.texto)) grupos.push.push(d);
     else if (d.tag === 'EMPÍRICA' || RE_PROVA.test(d.texto)) grupos.provas.push(d);
     else grupos.produto.push(d);
   }
   return grupos;
 }
-function painelAstargne(grupos, chavesPendentes) {
+// Aberto/fechado é conveniência deste navegador (localStorage); começa aberto.
+const CHAVE_ASTARGNE_ABERTO = 'painel-astargne-aberto';
+function astargneAberto() { try { return localStorage.getItem(CHAVE_ASTARGNE_ABERTO) !== 'nao'; } catch { return true; } }
+function painelAstargne(grupos, { pendentes }) {
   const lista = (itens, vazio) => itens.length ? el('ul', {}, ...itens.map(d => el('li', {}, ...(d.url ? [linkIssue(d), ' '] : []), `${tituloDoProjeto(d.projeto)} · ${d.texto.slice(0, 110)}`))) : el('p', { class: 'discreto' }, vazio);
-  const chaves = chavesPendentes.length
-    ? el('ul', {}, ...chavesPendentes.map(c => el('li', {}, el('a', { href: '#/chaves', class: 'id-rastreador' }, c.card), ` ${c.projeto} · `, el('code', {}, c.nome), ` — ${c.motivo}`)))
+  const chaves = pendentes.length
+    ? el('ul', {}, ...pendentes.map(c => el('li', {}, el('a', { href: '#/chaves', class: 'id-rastreador' }, c.card), ` ${c.projeto} · `, el('code', {}, c.nome), ` — ${c.motivo}`)))
     : el('p', { class: 'discreto' }, 'nenhuma rotação pendente.');
-  return el('section', { class: 'astargne-painel', 'aria-label': 'O que depende de Astargne' },
-    el('p', { class: 'pagina-kicker' }, 'ASTARGNE · O QUE DEPENDE DE VOCÊ'),
-    el('h3', {}, `Chaves e contas externas (${chavesPendentes.length})`), chaves,
+  // Rotação já registrada na aba Chaves com o card ainda aberto no Plane: não é
+  // mais pendência sua — é o orquestrador que fecha o card no próximo fecho.
+  const feitas = grupos.feitas.length
+    ? el('ul', { class: 'astargne-feitas' }, ...grupos.feitas.map(d => el('li', {}, ...(d.url ? [linkIssue(d), ' '] : []), `${tituloDoProjeto(d.projeto)} · rotação registrada${d.feita.quando ? ` em ${new Date(d.feita.quando).toLocaleDateString('pt-BR')}` : ''} — card a fechar pelo orquestrador`)))
+    : null;
+  const total = pendentes.length + grupos.push.length + grupos.provas.length + grupos.produto.length;
+  const painel = el('details', { class: 'astargne-painel', ...(astargneAberto() ? { open: '' } : {}) },
+    el('summary', { class: 'astargne-cab' }, el('span', { class: 'chev' }, '›'), el('span', { class: 'pagina-kicker' }, 'ASTARGNE · O QUE DEPENDE DE VOCÊ'), el('span', { class: 'selo-contagem' }, String(total))),
+    el('h3', {}, `Chaves e contas externas (${pendentes.length})`), chaves, ...(feitas ? [feitas] : []),
     el('h3', {}, `Push, deploy e sudo (${grupos.push.length})`), lista(grupos.push, 'nada esperando push, deploy ou sudo.'),
     el('h3', {}, `Provas suas (${grupos.provas.length})`), lista(grupos.provas, 'nenhuma prova humana pendente.'),
     el('h3', {}, `Decisões de produto (${grupos.produto.length})`), lista(grupos.produto, 'nenhuma decisão de produto pendente.'),
-    el('p', { class: 'kicker' }, 'classificação por etiqueta e verbo do título; o resto da aba é o orquestrador quem resolve.'));
+    el('p', { class: 'kicker' }, 'classificação por etiqueta e verbo do título; projetos congelados ficam de fora; o resto da aba é o orquestrador quem resolve.'));
+  painel.addEventListener('toggle', () => { try { localStorage.setItem(CHAVE_ASTARGNE_ABERTO, painel.open ? 'sim' : 'nao'); } catch { /* sem armazenamento: só não lembra */ } });
+  return painel;
 }
 
 function desenharDecisoes() {
@@ -114,7 +132,7 @@ function desenharDecisoes() {
   }
   // Toggle todas/abertas (app.js) filtra ANTES de agrupar/contar — grupo,
   // contagem e "mais velha" refletem só o que está visível no modo atual.
-  const visiveis = dadosDecisoes.filter(decisaoVisivel);
+  const visiveis = dadosDecisoes.filter((d) => decisaoVisivel(d) && !projetoCongelado(d.projeto));
   const toggle = elToggleFiltro(desenharDecisoes);
 
   if (!visiveis.length) {
@@ -169,7 +187,7 @@ function desenharDecisoes() {
   }
 
   const astargneEl = el('div', { class: 'astargne-ancora' });
-  lerChavesPendentes().then(pendentes => { if (astargneEl.isConnected) astargneEl.replaceChildren(painelAstargne(classificarAstargne(dadosDecisoes, pendentes), pendentes)); });
+  lerChaves().then(chaves => { if (astargneEl.isConnected) astargneEl.replaceChildren(painelAstargne(classificarAstargne(dadosDecisoes, chaves), chaves)); });
   abaDecisoesEl.replaceChildren(
     el(
       'div',

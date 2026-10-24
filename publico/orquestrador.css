@@ -87,6 +87,10 @@
 .chaves-form input { flex: 1 1 16rem; font-family: var(--mono, monospace); }
 .chaves-eventos { margin: 0; padding-left: 1.1rem; font-family: var(--mono, monospace); font-size: .8rem; }
 .astargne-painel { border: 1px solid var(--acento, #e0a800); padding: .8rem 1rem; margin: .8rem 0 1.2rem; }
+.astargne-painel > summary.astargne-cab { cursor: pointer; display: flex; align-items: center; gap: .5rem; list-style: none; }
+.astargne-painel > summary.astargne-cab::-webkit-details-marker { display: none; }
+.astargne-painel[open] > summary .chev { transform: rotate(90deg); }
+.astargne-feitas { opacity: .7; }
 .astargne-painel h3 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
 .astargne-painel ul { margin: 0; padding-left: 1.1rem; }
 @media (max-width: 720px) { .chaves-linha { grid-template-columns: 1fr; } }

@@ -165,6 +165,10 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
     }
     return { atualizadoEm: new Date(agora()).toISOString(), escritaServidorHabilitada, servidorLidoEm: inventarioServidorCache?.quando ?? null,
       pendentes: projetos.flatMap(p => [...p.chaves, ...p.foraDoEnv].filter(c => c.rotacao).map(c => ({ projeto: p.projeto, nome: c.nome, ...c.rotacao }))),
+      // Rotação do catálogo já satisfeita por evento: o card no Plane pode ainda
+      // estar aberto — a aba Decisões mostra "feita, fechar o card" em vez de cobrar.
+      rotacoesFeitas: catalogo.flatMap(p => [...(p.chaves ?? []), ...(p.foraDoEnv ?? [])].filter(c => c.rotacao?.pendente && !pendenciaDe(c, p.projeto, historico))
+        .map(c => ({ projeto: p.projeto, nome: c.nome, card: c.rotacao.card, quando: historico.filter(e => e.tipo === 'ROTACIONADA' && e.projeto === p.projeto && e.nome === c.nome).at(-1)?.quando ?? null }))),
       projetos, eventos: historico.slice(-20).reverse(),
       observacao: 'Só nomes de variáveis saem do servidor; valores só entram pela confirmação e nunca ficam em log.' };
   }

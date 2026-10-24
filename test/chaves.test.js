@@ -79,6 +79,7 @@ test('troca local: escrita atômica 0600 com cópia .bak, evento sem valor, rein
     assert.deepEqual(a.spawns[0], ['systemctl', '--user', 'restart', 'painel-admin']);
     const inv = await a.servico.inventario();
     assert.deepEqual(inv.pendentes.map(p => p.card).sort(), ['CAD-18', 'CAD-18b'], 'XAI rotacionada deixa de estar pendente');
+    assert.deepEqual(inv.rotacoesFeitas.map(f => [f.card, f.nome, typeof f.quando]), [['PAINEL-99', 'XAI_API_KEY', 'string']], 'rotação satisfeita aparece como feita, com a data');
     await assert.rejects(a.servico.confirmar({ projeto: 'painel-admin', nome: 'XAI_API_KEY', alvo: 'local' }, 'com\nquebra', '1'), /valor inválido/);
     await assert.rejects(a.servico.preparar({ projeto: 'painel-admin', nome: 'ELEVENLABS_API_KEY', alvo: 'servidor' }), /sem \.env no servidor/);
     await assert.rejects(a.servico.preparar({ projeto: 'CadastroUnico', nome: 'OUTRA', alvo: 'servidor' }), /não catalogada/);

@@ -127,7 +127,10 @@ uma vez, no corpo do `confirmar`, e termina no `.env` local (cópia `.bak` 600,
 escrita atômica 600, `systemctl --user restart` da unit 1 s depois — se a unit for o
 próprio painel, ele reinicia) ou no servidor (valor pelo **stdin** do ssh, `sudo
 python3 -c` fixo que reescreve a linha com o dono e o modo originais e reinicia a
-unit do catálogo; só o arquivo descoberto pelo inventário). A escrita no servidor
+unit do catálogo; só o arquivo descoberto pelo inventário). O inventário devolve também
+`rotacoesFeitas` (rotação do catálogo já satisfeita por evento): a aba Decisões a
+usa para mostrar "rotação registrada — card a fechar" em vez de cobrar o dono, até
+o orquestrador fechar o card no Plane. A escrita no servidor
 só existe com `CHAVES_SERVIDOR_ESCRITA=true`, depois do APROVADO do
 `validador-deploy`. O validador **REPROVOU** a 1ª versão (24/10/2026) e o código já
 traz a correção mínima pedida: `bloqueado` (TOKEN_INTERNO do central e os
@@ -150,7 +153,10 @@ levam valor; a pendência some quando há evento posterior à data do catálogo.
 bloco **Astargne** da aba Decisões (`publico/decisoes.js`) junta as rotações
 pendentes com os cards abertos `ASTARGNE`/`EMPÍRICA` em quatro grupos — chaves e
 contas externas, push/deploy/sudo, provas suas, decisões de produto — por etiqueta
-e verbo do título (heurística dita na tela).
+e verbo do título (heurística dita na tela). O bloco é um `<details>` (aberto por
+padrão; estado lembrado em `localStorage`), ignora projetos com `congelado: true`
+no catálogo (`projetos.js`, propagado por `coletores.js`) e lista à parte as
+rotações já registradas.
 
 ### plane.js
 

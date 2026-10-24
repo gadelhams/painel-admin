@@ -30,6 +30,9 @@ export const PROJETOS = [
     // backlog doc 39, os diagramas e o canal 59 do SupervisorHandoff moram aqui.
     pasta: '_oldSistemaLoreEngine',
     area: 'ProjetosPessoais',
+    // Congelado = fora das listas de decisão (aba Decisões e bloco Astargne):
+    // card parado de projeto só-leitura não é pendência de ninguém.
+    congelado: true,
     titulo: 'Sistema Lore Engine (congelado)',
     descricao: 'O Lore Engine original (Notion como autoridade), congelado em 27/09/2026 — só referência de leitura.',
     stack: 'pnpm · TypeScript · Fastify · React · Postgres',
