@@ -1,0 +1,16 @@
+{
+  "versao": 1,
+  "optIn": true,
+  "projetoPlane": "c24e3d36-2e2a-4760-a3f3-53998297a245",
+  "ambiente": "local",
+  "tiposTeste": ["unitários Node", "documentação"],
+  "criteriosAceite": ["npm test sem regressões", "cada carta mostra os motivos de elegibilidade ou bloqueio"],
+  "acoesProibidas": ["deploy", "escrita no Plane pela identidade Guest", "execução pelo C-3PO"],
+  "comandos": [
+    { "id": "testes", "executavel": "npm", "argumentos": ["test"] }
+  ],
+  "agentes": [
+    { "id": "Claude", "provedor": "claude", "modelo": "claude-opus-5", "esforco": "max", "disponivel": false },
+    { "id": "OpenAI", "provedor": "openai", "modelo": "gpt-6-astra", "esforco": "extreme high", "disponivel": false }
+  ]
+}

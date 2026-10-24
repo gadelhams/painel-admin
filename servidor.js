@@ -16,6 +16,23 @@ import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorPr
 import { conversar } from './motor.js';
 import { criarClienteContas, criarManipuladorContas } from './contas.js';
 import { criarGuarda } from './guarda.js';
+import { criarServicoOrquestracao } from './orquestrador/fila.js';
+import { criarTriagemDev } from './orquestrador/triagem.js';
+import { criarLeitorConsumo } from './orquestrador/consumo.js';
+import { criarEscritorPerfilPlane } from './orquestrador/perfil-plane.js';
+import { criarVerificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
+import { criarConfirmacoes } from './orquestrador/confirmacoes.js';
+import { criarApiPerfil } from './orquestrador/api-perfil.js';
+import { criarEscritorHandoffPlane } from './orquestrador/handoff-plane.js';
+import { criarApiHandoff, criarConfirmacoesHandoff } from './orquestrador/api-handoff.js';
+import { criarApiVoz } from './orquestrador/voz-xai.js';
+import { criarEscritorGatePlane } from './orquestrador/gate-plane.js';
+import { criarApiGate, criarConfirmacoesGate } from './orquestrador/api-gate.js';
+import { criarApiDespacho, criarConfirmacoesDespacho } from './orquestrador/api-despacho.js';
+import { criarExecutorCli } from './orquestrador/executor-cli.js';
+import { criarLeitorCanalLegado } from './orquestrador/canal-legado.js';
+import { criarClientePlane } from './plane.js';
+import { PROJETOS } from './projetos.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -42,6 +59,63 @@ const MAX_CORPO = 64 * 1024;
 const MAX_MENSAGEM = 8_000;
 const MAX_TEXTO_TTS = 4_000;
 const recusaDaGuarda = criarGuarda(PORTA);
+const proprietarioId = process.env.ORQ_OWNER_USER_ID?.trim();
+// Cada identidade só escreve no projeto explicitamente autorizado. Guest
+// continua exclusivamente de leitura; uma configuração parcial falha fechada.
+const identidadesEscrita = {};
+const chavesUsadas = new Set([process.env.PLANE_API_KEY?.trim()]);
+for (const { sufixo, pasta } of [{ sufixo: '', pasta: 'CK3BannerLord' },
+  { sufixo: 'PLAYER_', pasta: 'PlayerForM3UList' }]) {
+  const chave = process.env[`PLANE_ORQ_${sufixo}WRITE_KEY`]?.trim();
+  const projetoId = process.env[`PLANE_ORQ_${sufixo}WRITE_PROJECT_ID`]?.trim();
+  const autorId = process.env[`PLANE_ORQ_${sufixo}WRITE_ACTOR_ID`]?.trim();
+  if (!chave && !projetoId && !autorId) continue;
+  if (!chave || chavesUsadas.has(chave) || projetoId !== PROJETOS.find(p => p.pasta === pasta)?.plane ||
+      !/^[0-9a-f-]{36}$/i.test(autorId ?? '') || !/^[1-9]\d{0,9}$/.test(proprietarioId ?? '')) {
+    console.error(`[orquestracao] identidade ${pasta} inválida; escrita desativada para o projeto`);
+    continue;
+  }
+  try {
+    identidadesEscrita[projetoId] = {
+      autorEscrita: autorId,
+      escritorPerfil: criarEscritorPerfilPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
+      escritorHandoff: criarEscritorHandoffPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
+      escritorGate: criarEscritorGatePlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
+    };
+    chavesUsadas.add(chave);
+  } catch { console.error(`[orquestracao] identidade ${pasta} inválida; escrita desativada para o projeto`); }
+}
+// Portão real: o executor só existe com ORQ_EXECUCAO_HABILITADA=true no .env — e, mesmo
+// assim, cada despacho ainda exige identidade de escrita do projeto, contrato, agente
+// disponível, perfil no card, sessão do Cadastro Único e confirmação em duas ações. Sem a
+// variável, a rota existe para diagnóstico e falha fechada.
+const execucaoHabilitada = process.env.ORQ_EXECUCAO_HABILITADA?.trim() === 'true';
+const executor = execucaoHabilitada && process.env.PLANE_API_KEY?.trim()
+  ? criarExecutorCli({ diretorioEstado: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao'),
+    consultar: criarClientePlane({ chave: process.env.PLANE_API_KEY.trim() }) })
+  : null;
+if (execucaoHabilitada && !executor) console.error('[orquestracao] ORQ_EXECUCAO_HABILITADA sem PLANE_API_KEY: executor não construído');
+const orquestracao = criarServicoOrquestracao({ identidadesEscrita, executor, execucaoHabilitada: Boolean(executor) });
+// Lease deixado por queda entre RESULTADO e sua remoção é reconciliado no arranque
+// (só metadado local; lease ainda válido de outro processo nunca é tomado).
+orquestracao.recuperarInterrupcoes().catch(e => console.error('[orquestracao] reconciliação no arranque falhou:', e.message));
+const triagemDev = criarTriagemDev();
+const lerConsumoIas = criarLeitorConsumo();
+const lerCanalLegado = criarLeitorCanalLegado();
+const autorizarPrivilegiado = criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId });
+const apiPerfil = criarApiPerfil({
+  autorizar: autorizarPrivilegiado,
+  confirmacoes: criarConfirmacoes({ servico: orquestracao }),
+});
+const apiHandoff = criarApiHandoff({ autorizar: autorizarPrivilegiado,
+  confirmacoes: criarConfirmacoesHandoff({ servico: orquestracao }) });
+const apiGate = criarApiGate({ autorizar: autorizarPrivilegiado,
+  confirmacoes: criarConfirmacoesGate({ servico: orquestracao }) });
+// Com o executor desligado a rota falha fechada; ligado, continua atrás de SSO e confirmação.
+const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
+  confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) });
+const apiVoz = criarApiVoz({ autorizar: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
+  tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }) });
 
 // Camada 3 da voz do Severino: a chave vive só no processo (.env local) e
 // JAMAIS aparece em log, erro ou resposta. Voice_id default é o do quickstart
@@ -316,6 +390,63 @@ const servidor = http.createServer(async (req, res) => {
       // Pesada (git log -L por decisão) — sob demanda, nunca no polling de
       // 60s do front (mesma régua de gitDetalhado/SSH).
       responderJson(res, await decisoesDoBacklog());
+    } else if (pathname === '/api/orquestracao' && req.method === 'GET') {
+      responderJson(res, await orquestracao.fila());
+    } else if (pathname === '/api/orquestracao/triagem-dev' && req.method === 'GET') {
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, await triagemDev());
+    } else if (pathname === '/api/orquestracao/prontidao' && req.method === 'GET') {
+      try {
+        responderJson(res, await orquestracao.preavaliar(url.searchParams.get('carta'), url.searchParams.get('gate')));
+      } catch (erro) {
+        responderJson(res, { erro: erro.message }, 422);
+      }
+    } else if (pathname === '/api/orquestracao/canal' && req.method === 'GET') {
+      try { responderJson(res, await orquestracao.canal(url.searchParams.get('carta'), url.searchParams.get('projeto'))); }
+      catch (erro) { responderJson(res, { erro: erro.message }, 422); }
+    } else if (pathname === '/api/orquestracao/modelos' && req.method === 'GET') {
+      try { responderJson(res, await orquestracao.modelos(url.searchParams.get('carta'))); }
+      catch (erro) { responderJson(res, { erro: erro.message }, 422); }
+    } else if (pathname === '/api/orquestracao/modelos/validar' && req.method === 'POST') {
+      try {
+        const corpo = JSON.parse(await lerCorpo(req));
+        responderJson(res, await orquestracao.validarModelos(corpo.carta, corpo.selecoes));
+      } catch (erro) { responderJson(res, { erro: erro.message }, 422); }
+    } else if ((pathname === '/api/orquestracao/modelos/preparar' || pathname === '/api/orquestracao/modelos/confirmar') && req.method === 'POST') {
+      const { status, corpo } = await apiPerfil(req, pathname, lerCorpo);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
+    } else if ((pathname === '/api/orquestracao/handoff/preparar' || pathname === '/api/orquestracao/handoff/confirmar') && req.method === 'POST') {
+      const { status, corpo } = await apiHandoff(req, pathname, lerCorpo);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
+    } else if ((pathname === '/api/orquestracao/gates/preparar' || pathname === '/api/orquestracao/gates/confirmar') && req.method === 'POST') {
+      const { status, corpo } = await apiGate(req, pathname, lerCorpo);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
+    } else if ((pathname === '/api/orquestracao/despacho/preparar' || pathname === '/api/orquestracao/despacho/confirmar') && req.method === 'POST') {
+      const { status, corpo } = await apiDespacho(req, pathname, lerCorpo);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
+    } else if (pathname === '/api/orquestracao/consumo' && req.method === 'GET') {
+      responderJson(res, await lerConsumoIas());
+    } else if (pathname === '/api/orquestracao/legado' && req.method === 'GET') {
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, await lerCanalLegado());
+    } else if (pathname === '/api/orquestracao/voz/transcrever' && req.method === 'POST') {
+      const { status, corpo } = await apiVoz(req);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
+    } else if (pathname === '/api/orquestracao/simular' && req.method === 'POST') {
+      try {
+        const corpo = JSON.parse(await lerCorpo(req));
+        if (typeof corpo.carta !== 'string' || typeof corpo.comando !== 'string') throw new Error('carta e comando obrigatórios');
+        responderJson(res, await orquestracao.simular(corpo.carta, corpo.comando, corpo.selecoes ?? null));
+      } catch (erro) {
+        responderJson(res, { erro: erro.message }, 422);
+      }
+    } else if (pathname.startsWith('/api/orquestracao')) {
+      responderJson(res, { erro: 'escrita e execução indisponíveis nesta etapa' }, 405);
     } else if (pathname === '/api/relacoes') {
       responderJson(res, await catalogoRelacoes());
     } else if (pathname.startsWith('/api/contas/')) {

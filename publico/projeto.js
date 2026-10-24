@@ -25,13 +25,13 @@ function chipsResumoDecisoes(decisoes) {
   const visiveis = decisoes.filter(decisaoVisivel);
   const contagem = new Map();
   for (const d of visiveis) contagem.set(d.tag, (contagem.get(d.tag) ?? 0) + 1);
-  // DONO primeiro e destacado — mesma régua da aba Backlog: é a fila pessoal do dono.
-  const ordem = [...contagem.keys()].sort((a, b) => (a === 'DONO' ? -1 : b === 'DONO' ? 1 : a.localeCompare(b)));
+  // ASTARGNE primeiro e destacado — mesma régua da aba Backlog: é a fila pessoal do dono.
+  const ordem = [...contagem.keys()].sort((a, b) => (a === 'ASTARGNE' ? -1 : b === 'ASTARGNE' ? 1 : a.localeCompare(b)));
   return ordem.map((tag) => {
     const chip = el(
       'span',
       {
-        class: `chip-resumo${tag === 'DONO' ? ' hot' : ''}${tagAtivaProjeto === tag ? ' ativa' : ''}`,
+        class: `chip-resumo${tag === 'ASTARGNE' ? ' hot' : ''}${tagAtivaProjeto === tag ? ' ativa' : ''}`,
         role: 'button',
         tabindex: '0',
       },

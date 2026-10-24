@@ -1,0 +1,180 @@
+/* Protocolo — identidade unificada das cinco abas. Nenhum dado ou ação nasce
+   nesta camada; ela apresenta as views existentes com a mesma linguagem. */
+:root {
+  --color-bg: #0b0907;
+  --color-surface: #17130f;
+  --color-text: #f4ead6;
+  --color-accent: #f4b446;
+  --ui-bg: #0b0907;
+  --ui-panel: #17130f;
+  --ui-line: #463826;
+  --ui-hover: #282015;
+  --ui-hatch: #30271b;
+  --ui-text: #f4ead6;
+  --ui-dim: #c9bba4;
+  --ui-faint: #ac9b81;
+  --ui-hot: #f4b446;
+  --ui-onhot: #211509;
+  --ui-scrim: rgba(4, 3, 2, .9);
+  --ok: #7fd6be;
+  --alerta: #f4b446;
+  --falha: #ff795b;
+  --ideia: #c9a9e8;
+}
+:root[data-tema="light"] {
+  --ui-bg: #faf7ef;
+  --ui-panel: #fffdf8;
+  --ui-line: #d8c6a8;
+  --ui-hover: #f4ead8;
+  --ui-hatch: #eadbc3;
+  --ui-text: #2a1d10;
+  --ui-dim: #594b39;
+  --ui-faint: #705d42;
+  --ui-hot: #9c5900;
+  --ui-onhot: #fffaf0;
+  --ui-scrim: rgba(34, 23, 11, .78);
+  --ok: #166f58;
+  --alerta: #9c5900;
+  --falha: #aa341e;
+  --ideia: #694e96;
+}
+::selection { background: var(--ui-hot); color: var(--ui-onhot); }
+body { background: var(--ui-bg); }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(ellipse at 74% -12%, color-mix(in srgb, var(--ui-hot) 8%, transparent), transparent 49%);
+}
+[hidden], .console-scrim[hidden] { display: none !important; }
+button { border-radius: 0; }
+button, select, input { accent-color: var(--ui-hot); }
+a { color: var(--ui-hot); }
+
+/* Terminal de comando e navegação: presente em todas as abas. */
+.cabecalho {
+  border-top: 3px solid var(--ui-hot);
+  background: var(--ui-panel);
+  min-height: 74px;
+}
+.cabecalho .celula { padding: 13px 22px; }
+.cabecalho .marca {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 198px;
+  color: var(--ui-hot);
+  font: 700 1.35rem/1 var(--font-heading);
+  letter-spacing: .1em;
+}
+.cabecalho .marca span { font: 500 .58rem/1.2 var(--font-mono); letter-spacing: .12em; color: var(--ui-faint); }
+.barra-comando { margin: 8px; border: 1px solid var(--ui-line); min-height: 50px; color: var(--ui-dim); }
+.barra-comando .chevron { font-size: 1.55rem; line-height: 1; }
+.barra-comando .selo-severino { border-color: var(--ui-hot); color: var(--ui-hot); }
+.placar-tema { gap: 16px; }
+.ponto-sync { border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-hot) 18%, transparent); }
+.barra-abas { gap: 6px; padding: 0 22px; background: var(--ui-bg); }
+.barra-abas .aba { padding: 16px 15px 13px; color: var(--ui-dim); text-transform: uppercase; letter-spacing: .06em; }
+.barra-abas .aba.ativa { color: var(--ui-hot); border-bottom-color: var(--ui-hot); background: color-mix(in srgb, var(--ui-hot) 7%, transparent); }
+.barra-abas .aba:hover { color: var(--ui-hot); }
+.contrato-backlog { color: var(--ui-faint); }
+main { max-width: 1660px; margin: 0 auto; padding: 24px 28px 60px; }
+.pagina-intro { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 6px 0 22px; margin-bottom: 16px; border-bottom: 1px solid var(--ui-line); }
+.pagina-intro p, .pagina-kicker { margin: 0 0 6px; font: 500 .72rem/1.3 var(--font-mono); letter-spacing: .16em; color: var(--ui-hot); }
+.pagina-intro h1 { margin: 0 0 3px; font: 700 2.3rem/1.05 var(--font-heading); }
+.pagina-intro span { color: var(--ui-dim); }
+.pagina-intro .pagina-intro-modo { flex: none; padding: 8px 11px; border: 1px solid var(--ui-line); color: var(--ui-hot); font: 500 .7rem/1.2 var(--font-mono); letter-spacing: .1em; }
+.kicker, .rotulo-bloco, .contas-rotulo, .orq-kicker { color: var(--ui-hot); }
+.titulo-secao, .titulo-projeto, .orq-topo h1 { letter-spacing: .025em; }
+.discreto { color: var(--ui-dim); }
+
+/* Projetos: o catálogo é uma faixa de cartões navegável, não 9 colunas fixas. */
+.tira-telemetria {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 12px;
+  margin: 0 0 22px;
+  border: 0;
+  background: transparent;
+  scrollbar-color: var(--ui-line) var(--ui-bg);
+}
+.celula-telemetria {
+  flex: 0 0 168px;
+  min-height: 91px;
+  padding: 13px;
+  border: 1px solid var(--ui-line);
+  border-bottom: 3px solid var(--ui-line);
+  background: var(--ui-panel);
+}
+.celula-telemetria:last-child { border-right: 1px solid var(--ui-line); }
+.celula-telemetria.selecionada { background: var(--ui-hover); border-color: var(--ui-hot); }
+.tt-nome { color: var(--ui-text); }
+.tt-meta { color: var(--ui-faint); }
+.grid-projeto { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: 18px; }
+.painel-projeto-principal, .painel-projeto-contexto { border: 1px solid var(--ui-line); background: var(--ui-panel); padding: 23px; }
+.painel-projeto-contexto { border-left: 3px solid var(--ui-hot); }
+.outline-backlog { background: var(--ui-line); }
+.feature-outline, .feature-bloco, .grupo-projeto-decisoes, .contas-secao { background: var(--ui-panel); }
+.feature-outline[open], .feature-bloco, .grupo-projeto-decisoes[open], .contas-secao { border-top: 2px solid var(--ui-hot); }
+.feature-outline-cab:hover, .grupo-projeto-cab:hover { background: var(--ui-hover); }
+.chip-resumo, .etiqueta, .chip-app { border-radius: 0; }
+.chip-resumo.hot, .toggle-filtro.ativa { background: var(--ui-hot); color: var(--ui-onhot); }
+
+/* Backlog, Decisões e Contas mantêm suas interações; a composição é comum. */
+#aba-backlog, #aba-decisoes, #aba-contas { max-width: 1500px; margin: 0 auto; }
+.backlog-cabecalho, .decisoes-cabecalho, .contas-cabecalho { padding: 3px 0 20px; border-bottom: 1px solid var(--ui-line); }
+.grid-backlog { gap: 16px; }
+.feature-bloco, .grupo-projeto-decisoes, .contas-secao { box-shadow: 0 12px 32px rgba(0,0,0,.11); }
+.feature-cab .feature-token, .feature-outline-cab .feature-token, .idade-decisoes-tab { color: var(--ui-hot); }
+.linha-decisoes-tab, .linha-conta { border-left: 2px solid transparent; }
+.linha-decisoes-tab:hover, .linha-conta:hover { border-left-color: var(--ui-hot); background: var(--ui-hover); }
+.contas-lateral { border-left-color: var(--ui-line); }
+.botao-contas.destaque { background: var(--ui-hot); color: var(--ui-onhot); }
+
+/* Orquestração: o mesmo vocabulário visual dos painéis de gestão. */
+#aba-orquestracao { max-width: none; padding: 0; }
+.orq-topo { padding: 6px 0 20px; }
+.orq-marca { border-color: var(--ui-hot); }
+.orq-projeto-estado { border-top: 1px solid var(--ui-line); padding-top: 6px; }
+.orq-projeto.ativo { border-left: 3px solid var(--ui-hot); }
+.orq-projeto:hover, .orq-bloqueio:hover, .orq-carta:hover { background: var(--ui-hover); }
+.orq-comando { border-top: 3px solid var(--ui-hot); }
+.orq-fila, .orq-atividade { border-top: 2px solid var(--ui-hot); }
+.orq-carta { border-top-color: var(--falha); }
+.orq-carta.orq-elegivel { border-top-color: var(--ok); }
+.orq-gate-atual { color: var(--ui-hot); font: 500 .77rem/1.45 var(--font-mono); }
+.orq-pendencias-titulo { margin: 15px 0 6px; color: var(--ui-dim); font: 500 .7rem/1.35 var(--font-mono); letter-spacing: .11em; text-transform: uppercase; }
+.orq-definicao-gate { max-width: 640px; color: var(--ui-hot) !important; }
+.orq-previa { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.orq-preavaliar { padding: 7px 10px; background: var(--ui-panel); border: 1px solid var(--ui-hot); color: var(--ui-hot); font: 500 .7rem/1.2 var(--font-mono); }
+.orq-preavaliar:hover { background: var(--ui-hover); }
+.orq-previa-resultado:not(:empty) { border: 1px solid var(--ui-line); padding: 10px; background: var(--ui-panel); }
+.orq-previa-titulo { margin: 0; font: 500 .76rem/1.3 var(--font-mono); color: var(--ui-hot); }
+.orq-previa-subtitulo { margin: 10px 0 2px; font: 500 .68rem/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ui-dim); }
+.orq-previa-resultado .orq-motivos { margin: 8px 0; }
+.orq-filtros input:focus, .orq-filtros select:focus, .contas-campo:focus { border-color: var(--ui-hot); }
+
+@media (max-width: 1150px) {
+  .contrato-backlog, .placar-tema .placar { display: none; }
+  .grid-projeto { grid-template-columns: 1fr; }
+  .painel-projeto-contexto { border-left: 1px solid var(--ui-line); border-top: 3px solid var(--ui-hot); }
+}
+@media (max-width: 800px) {
+  .cabecalho { flex-wrap: wrap; }
+  .cabecalho .marca { min-width: 0; }
+  .barra-comando { order: 3; flex-basis: calc(100% - 16px); }
+  .placar-tema { margin-left: auto; }
+  .barra-abas { overflow-x: auto; padding: 0 10px; }
+  .barra-abas .aba { white-space: nowrap; }
+  main { padding: 16px; }
+  .grid-backlog { grid-template-columns: 1fr; }
+  .titulo-secao, .titulo-projeto { font-size: 2rem; }
+  .orq-painel { grid-template-columns: 1fr; }
+  .orq-comando { grid-row: auto; }
+  .orq-bloqueios { grid-column: auto; }
+}

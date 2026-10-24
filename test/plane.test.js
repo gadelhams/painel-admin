@@ -84,14 +84,14 @@ test('feature toda concluída é pronto', () => {
 
 test('label canônica vira tag, com o motivo tirado da descrição', () => {
   const r = montarFeatures(workspace([issue(1, {
-    labels: { nodes: [{ name: 'BLOQUEADA' }, { name: 'DONO' }, { name: 'Bug' }] },
-    description: 'Task: rodar X **(BLOQUEADA: exige macOS + Xcode)** e (DONO)',
+    labels: { nodes: [{ name: 'BLOQUEADA' }, { name: 'ASTARGNE' }, { name: 'Bug' }] },
+    description: 'Task: rodar X **(BLOQUEADA: exige macOS + Xcode)** e (ASTARGNE)',
   })]), 'P1');
-  assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'DONO' }, { tag: 'BLOQUEADA', detalhe: 'exige macOS + Xcode' }]);
+  assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'ASTARGNE' }, { tag: 'BLOQUEADA', detalhe: 'exige macOS + Xcode' }]);
 });
 
 test('tag escrita na descrição sem a label não conta — a label é a verdade', () => {
-  const r = montarFeatures(workspace([issue(1, { description: '(DONO) antigo' })]), 'P1');
+  const r = montarFeatures(workspace([issue(1, { description: '(ASTARGNE) antigo' })]), 'P1');
   assert.deepEqual(r.features[0].itens[0].tags, []);
 });
 
@@ -183,11 +183,11 @@ test('lerBacklog: projeto invisível para o "painel" é erro nomeado; projeto se
 test('descrição hostil não trava o painel (regex com teto)', () => {
   const t = Date.now();
   const r = montarFeatures(workspace([issue(1, {
-    labels: { nodes: [{ name: 'DONO' }] },
+    labels: { nodes: [{ name: 'DONO' }] }, // nome legado: ainda deve virar ASTARGNE
     description: '(DONO '.repeat(40000),
   })]), 'P1');
   assert.ok(Date.now() - t < 500, `levou ${Date.now() - t} ms`);
-  assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'DONO' }]);
+  assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'ASTARGNE' }]);
 });
 
 test('cache: dado velho sai na hora e a renovação é uma só, em segundo plano', async () => {
@@ -210,4 +210,9 @@ test('cache: dado velho sai na hora e a renovação é uma só, em segundo plano
   assert.equal(buscas, 2, 'uma carga inicial + UMA renovação, mesmo com duas chamadas');
   liberar();
   limparCachePlane();
+});
+
+test('label legada DONO e tag "(DONO: motivo)" na descrição viram ASTARGNE com o motivo', async () => {
+  const r = montarFeatures(workspace([issue(1, { labels: { nodes: [{ name: 'DONO' }] }, description: 'x (DONO: espera o dado)' })]), 'P1');
+  assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'ASTARGNE', detalhe: 'espera o dado' }]);
 });

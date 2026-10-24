@@ -11,15 +11,24 @@
 // filho, label com nome de tag canônica = chip. O detalhe de uma tag
 // ("BLOQUEADA: motivo") vem da descrição — a migração copiou a linha original.
 
-const WEB = 'https://astargne-linux.tail30484d.ts.net';
+// Links clicáveis apontam para o endereço do tailnet; a API é consultada pelo
+// loopback da própria máquina (o Plane roda aqui) — assim o painel não cai
+// quando a publicação no tailnet cai (aconteceu em 01/10/2026, na troca do
+// `tailscale serve` pelo Caddy de ~/servicos/borda).
+// O link tem de ser o endereço canônico (WEB_URL do Plane): é nele que o
+// navegador do dono tem a sessão; no apelido ts.net o clique cai no login.
+const WEB = 'https://plane.casa.astargne.com';
 const SLUG = 'astargne';
-const API = `${WEB}/api/v1/workspaces/${SLUG}`;
+const API = `${process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095'}/api/v1/workspaces/${SLUG}`;
 
-export const TAGS_CANONICAS = ['DONO', 'EMPÍRICA', 'BLOQUEADA', 'SEM ESCOPO', 'CONGELADA', 'PÓS-PLAYTEST'];
+// `ASTARGNE` = decisão do dono (era `DONO` até 01/10/2026; a label foi renomeada no
+// Plane e no Linear, e descrições antigas ainda trazem "(DONO: …)" — normalizado abaixo).
+export const TAGS_CANONICAS = ['ASTARGNE', 'EMPÍRICA', 'BLOQUEADA', 'SEM ESCOPO', 'CONGELADA', 'PÓS-PLAYTEST'];
+const LEGADO = { DONO: 'ASTARGNE' };
 // O motivo é limitado a 200 caracteres e só o começo da descrição é varrido:
 // com `[^)]*` livre, cada "(DONO" sem fecho varria até o fim do texto —
 // quadrático, 6,8 s de event loop parado com 240 mil caracteres (medido).
-const RE_TAG = /\((DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]{0,200})\)/gu;
+const RE_TAG = /\((ASTARGNE|DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]{0,200})\)/gu;
 const VARREDURA_MAX = 4000;
 const TIPO_ESTADO = { backlog: 'backlog', unstarted: 'unstarted', started: 'started', completed: 'completed', cancelled: 'canceled' };
 
@@ -94,11 +103,12 @@ export async function buscarWorkspace(consultar) {
 }
 
 function tagsDaIssue(issue) {
-  const rotulos = new Set(issue.labels.nodes.map((l) => l.name));
+  const rotulos = new Set(issue.labels.nodes.map((l) => LEGADO[l.name] ?? l.name));
   const detalhes = new Map();
   for (const m of (issue.description ?? '').slice(0, VARREDURA_MAX).matchAll(RE_TAG)) {
     const detalhe = m[2].replace(/^[\s:;,—–-]+/, '').trim();
-    if (detalhe && !detalhes.has(m[1])) detalhes.set(m[1], detalhe);
+    const tag = LEGADO[m[1]] ?? m[1];
+    if (detalhe && !detalhes.has(tag)) detalhes.set(tag, detalhe);
   }
   return TAGS_CANONICAS.filter((t) => rotulos.has(t))
     .map((tag) => (detalhes.has(tag) ? { tag, detalhe: detalhes.get(tag) } : { tag }));

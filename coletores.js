@@ -322,19 +322,21 @@ const RE_TOKEN = /`?\[([ x])\]`?/;
 const RE_ITEM = /^(\s*)-\s+`?\[([ x])\]`?\s*(.*)$/;
 const RE_LISTA = /^\s*-\s+/;
 const RE_LINK = /\[([^\]]*)\]\(([^)]*)\)/g;
-// (?![\p{L}]) impede "(DONOSA...)" de contar como DONO; o resto do parêntese
+// (?![\p{L}]) impede "(DONOSA...)" de contar como tag; o resto do parêntese
+// `(DONO)` do doc 39 congelado vira `ASTARGNE` (a tag foi renomeada em 01/10/2026).
 // é aceito porque as variantes reais trazem texto extra ("(DONO, com dado)",
 // "(CONGELADA — doc 23 §5)").
-const RE_TAG = /\((DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]*)\)/gu;
+const RE_TAG = /\((ASTARGNE|DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]*)\)/gu;
 
 function extrairTags(texto) {
   const tags = [];
   for (const m of texto.matchAll(RE_TAG)) {
-    if (tags.some((t) => t.tag === m[1])) continue;
+    const nome = m[1] === 'DONO' ? 'ASTARGNE' : m[1];
+    if (tags.some((t) => t.tag === nome)) continue;
     // A classe cobre TODOS os separadores vistos no doc 39 (": ", " — ", ", ")
     // — sem a vírgula, "(DONO, com dado)" gerava detalhe ", com dado".
     const detalhe = m[2].replace(/^[\s:;,—–-]+/, '').trim();
-    tags.push(detalhe ? { tag: m[1], detalhe } : { tag: m[1] });
+    tags.push(detalhe ? { tag: nome, detalhe } : { tag: nome });
   }
   return tags;
 }

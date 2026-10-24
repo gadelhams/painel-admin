@@ -119,7 +119,10 @@ export const PROJETOS = [
     stack: 'React 19 + Vite · hls.js · Capacitor',
     entrada: 'README.md',
     plane: 'bbcd79e6-ff42-4a2e-8d9d-72011021e664', // PLAYER
-    portas: [{ porta: 5173, servico: 'Dev (Vite)' }],
+    portas: [
+      { porta: 5173, servico: 'Dev (Vite)' },
+      { porta: 5433, servico: 'Postgres (pfml-local-pg)' },
+    ],
   },
   {
     pasta: 'RagPTdoZero',
@@ -165,6 +168,16 @@ export const PROJETOS = [
     portas: [{ porta: 8790, servico: 'Login/SSO (loopback + ponte astargne_sso)' }],
   },
   {
+    pasta: 'CK3BannerLord',
+    area: 'ProjetosPessoais',
+    titulo: 'CK3 Bannerlord',
+    descricao: 'Mod de Bannerlord em desenvolvimento; piloto do Orquestrador restrito a trabalho e testes offline, sem jogo.',
+    stack: 'C# · .NET 8 · testes offline',
+    entrada: 'AGENTS.md',
+    plane: '7ce26c40-6e46-49a8-9a7d-bf06bbda6542', // CKBL
+    portas: [],
+  },
+  {
     // EmuladorWeb e Anya entraram no catálogo em 29/09/2026, com a migração
     // dos backlogs para o rastreador — sem entrada aqui a aba não os mostraria.
     pasta: 'EmuladorWeb',
@@ -182,6 +195,18 @@ export const PROJETOS = [
   {
     // A pasta Anya/ não é repo: o código é o clone Anya/app (gadelhams/anya)
     // e o acervo o Anya/dados — por isso o `subRepo`.
+    // SupervisorHandoff entrou no catálogo em 01/10/2026, com o projeto SUPER
+    // no Plane (PLANO-SUPERVISOR-LOREENGINE.md).
+    pasta: 'SupervisorHandoff',
+    area: 'ProjetosPessoais',
+    titulo: 'SupervisorHandoff',
+    descricao: 'Supervisor determinístico que orquestra agentes: um faz, outro supervisiona; alvo novo é o LoreEngine do Felipe.',
+    stack: 'Python 3.12 puro · codex exec + claude -p',
+    entrada: 'AGENTS.md',
+    plane: 'e2a3c301-7597-42f7-a2c1-9b4b4b3d3f29', // SUPER
+    portas: [{ porta: 7791, servico: 'Painel do supervisor (plataforma)' }],
+  },
+  {
     pasta: 'Anya',
     area: 'ProjetosCompartilhados',
     subRepo: 'app',

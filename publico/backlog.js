@@ -37,10 +37,10 @@ function placar(nodos) {
 // aba Backlog (README Tela 4: "incluindo os de contagem zero, porque são
 // filtros"), diferente dos chips de resumo do painel de projeto (Tela 3.2),
 // que escondem contagem zero.
-const TAGS_CANONICAS = ['DONO', 'BLOQUEADA', 'EMPÍRICA', 'CONGELADA', 'SEM ESCOPO', 'PÓS-PLAYTEST'];
+const TAGS_CANONICAS = ['ASTARGNE', 'BLOQUEADA', 'EMPÍRICA', 'CONGELADA', 'SEM ESCOPO', 'PÓS-PLAYTEST'];
 
 const TAG_CLASSE = {
-  DONO: 'tag-dono',
+  ASTARGNE: 'tag-astargne',
   BLOQUEADA: 'tag-bloqueada',
   CONGELADA: 'tag-congelada',
   'EMPÍRICA': 'tag-empirica',
@@ -208,7 +208,7 @@ function desenharBacklogDoProjeto(pasta) {
     el('button', { type: 'button', class: `filtro${tagAtivaBacklog ? '' : ' ativa'}`, 'data-tag': '' }, 'todas'),
     ...TAGS_CANONICAS.map((tag) => el(
       'button',
-      { type: 'button', class: `filtro${tag === 'DONO' ? ' filtro-dono' : ''}${tagAtivaBacklog === tag ? ' ativa' : ''}`, 'data-tag': tag },
+      { type: 'button', class: `filtro${tag === 'ASTARGNE' ? ' filtro-astargne' : ''}${tagAtivaBacklog === tag ? ' ativa' : ''}`, 'data-tag': tag },
       `${tag} · ${contagem.get(tag) ?? 0}`,
     )),
   ];
@@ -230,6 +230,7 @@ function desenharBacklogDoProjeto(pasta) {
       el(
         'div',
         {},
+        el('p', { class: 'pagina-kicker' }, 'PROTOCOLO · 02 / DEMANDAS'),
         pr.url
           ? el('p', { class: 'kicker' }, `${pr.pasta} · `, el('a', { href: pr.url, target: '_blank', rel: 'noopener' }, pr.backlog))
           : el('p', { class: 'kicker' }, `${pr.pasta} · ${pr.backlog}`),

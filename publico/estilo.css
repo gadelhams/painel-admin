@@ -98,6 +98,78 @@ body {
 
 :focus-visible { outline: 2px solid var(--ui-hot); outline-offset: 2px; }
 
+/* Orquestração: hierarquia do protótipo Protocolo, dentro dos tokens Industry.
+   O orbe é somente um convite à consulta, nunca indicador de escuta ativa. */
+#aba-orquestracao { padding: var(--space-5); max-width: 1600px; margin: 0 auto; }
+.orq-topo { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; border-bottom: 1px solid var(--ui-line); padding-bottom: var(--space-5); }
+.orq-marca { width: 42px; height: 42px; border: 1px solid var(--ui-hot); border-radius: 50%; display: grid; place-items: center; flex: none; }
+.orq-marca span { width: 22px; height: 22px; border-radius: 50%; background: var(--ui-hot); box-shadow: inset 0 0 0 7px var(--ui-panel); }
+.orq-titulo { flex: 1 1 330px; }
+.orq-titulo p { margin: 2px 0 0; color: var(--ui-dim); }
+.orq-titulo .orq-kicker { margin: 0 0 4px; color: var(--ui-hot); font: 500 .72rem/1.4 var(--font-mono); letter-spacing: .16em; }
+.orq-topo h1 { font: 700 2rem/1 var(--font-heading); margin: 0; }
+.orq-modo { border: 1px solid var(--ui-line); padding: 8px 12px; color: var(--ui-hot); font: 500 .72rem/1.3 var(--font-mono); letter-spacing: .07em; }
+.orq-topo button, .orq-comando button, .orq-simular { min-height: 40px; background: var(--ui-panel); color: var(--ui-text); border: 1px solid var(--ui-hot); padding: 8px 14px; cursor: pointer; font: 500 .78rem/1.3 var(--font-mono); }
+.orq-topo button:hover, .orq-comando button:hover, .orq-simular:hover { background: var(--ui-hover); }
+.orq-topo button:disabled, .orq-comando button:disabled, .orq-simular:disabled { opacity: .5; cursor: wait; }
+.orq-resumo { margin: var(--space-4) 0 var(--space-5); color: var(--ui-dim); font: 400 .8rem/1.5 var(--font-mono); }
+.orq-painel { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(360px, 1.6fr) minmax(260px, 1fr); gap: var(--space-5); align-items: stretch; }
+.orq-painel h2, .orq-fila h2, .orq-atividade h2 { margin: 0 0 var(--space-4); color: var(--ui-dim); font: 500 .76rem/1.4 var(--font-mono); letter-spacing: .13em; }
+.orq-projetos, .orq-bloqueios { min-width: 0; }
+.orq-projetos-lista, #orq-bloqueios-lista { display: grid; gap: var(--space-3); }
+.orq-projeto, .orq-bloqueio { width: 100%; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 7px; padding: var(--space-4); color: var(--ui-text); background: var(--ui-panel); border: 1px solid var(--ui-line); cursor: pointer; }
+.orq-projeto:hover, .orq-projeto.ativo, .orq-bloqueio:hover { border-color: var(--ui-hot); }
+.orq-projeto strong, .orq-bloqueio strong { font: 600 1.15rem/1.2 var(--font-heading); overflow-wrap: anywhere; }
+.orq-projeto span, .orq-bloqueio span { color: var(--ui-dim); font: 400 .74rem/1.5 var(--font-mono); }
+.orq-bloqueio { border-left: 3px solid var(--falha); }
+.orq-bloqueio .orq-bloqueio-id { color: var(--falha); }
+.orq-bloqueio .orq-bloqueio-causa { color: var(--ui-text); }
+.orq-comando { min-width: 0; min-height: 425px; border: 1px solid var(--ui-line); background: var(--ui-panel); display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--space-5); }
+.orq-stats { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.orq-stat { display: flex; align-items: center; gap: 9px; padding: 8px 12px; border: 1px solid var(--ui-line); min-width: 105px; text-align: left; }
+.orq-stat strong { color: var(--ui-hot); font: 700 2rem/1 var(--font-heading); }
+.orq-stat span { max-width: 80px; color: var(--ui-dim); font-size: .78rem; }
+.orq-orbe { width: 150px; height: 150px; margin: 22px auto 12px; border: 1px solid var(--ui-faint); border-radius: 50%; position: relative; display: grid; place-items: center; box-shadow: 0 0 0 15px var(--ui-hover); }
+.orq-orbe-anel { position: absolute; inset: 11px; border: 2px dashed var(--ui-faint); border-radius: 50%; animation: orq-girar 80s linear infinite; }
+.orq-orbe-nucleo { width: 72px; height: 72px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--ui-text), var(--ui-hot) 38%, var(--ui-line)); box-shadow: inset 0 0 0 2px var(--ui-hot); }
+@keyframes orq-girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .orq-orbe-anel { animation: none; } }
+.orq-comando .orq-comando-estado { color: var(--ui-hot); font: 500 .74rem/1.4 var(--font-mono); letter-spacing: .15em; }
+.orq-comando h2 { color: var(--ui-text); font: 700 1.8rem/1.1 var(--font-heading); letter-spacing: 0; margin: 8px 0; }
+.orq-comando p { max-width: 450px; margin: 6px 0 16px; color: var(--ui-dim); }
+.orq-comando .orq-voz-aviso { margin: 10px 0 0; font: 400 .7rem/1.4 var(--font-mono); }
+.orq-fila, .orq-atividade { margin-top: var(--space-6); padding: var(--space-5); background: var(--ui-panel); border: 1px solid var(--ui-line); }
+.orq-fila-topo { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); align-items: end; margin-bottom: var(--space-5); }
+.orq-fila-topo h2 { margin-bottom: 3px; }
+.orq-fila-topo p { margin: 0; color: var(--ui-dim); font-size: .86rem; }
+.orq-filtros { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.orq-filtros label { display: grid; gap: 4px; color: var(--ui-dim); font: 400 .72rem/1.3 var(--font-mono); }
+.orq-filtros input, .orq-filtros select { background: var(--ui-bg); color: var(--ui-text); border: 1px solid var(--ui-line); padding: 9px; min-height: 40px; font: 400 .8rem/1.2 var(--font-body); }
+.orq-filtros input { width: min(70vw, 310px); }
+#orq-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--space-4); }
+.orq-carta { background: var(--ui-bg); border: 1px solid var(--ui-line); border-top: 3px solid var(--falha); padding: var(--space-4); min-width: 0; }
+.orq-elegivel { border-top-color: var(--ok); }
+.orq-carta-topo { display: flex; justify-content: space-between; gap: var(--space-3); align-items: start; }
+.orq-carta-topo strong { display: block; font: 600 1.35rem/1.2 var(--font-heading); overflow-wrap: anywhere; }
+.orq-id { font: 500 .78rem/1.5 var(--font-mono); color: var(--ui-hot); }
+.orq-situacao { font: 500 .7rem/1.4 var(--font-mono); white-space: nowrap; color: var(--falha); }
+.orq-elegivel .orq-situacao { color: var(--ok); }
+.orq-carta p { margin: 8px 0; overflow-wrap: anywhere; }
+.orq-meta { color: var(--ui-dim); font-size: .82rem; }
+.orq-motivos { margin: var(--space-3) 0; padding: 10px 10px 10px 29px; background: var(--ui-panel); border-left: 2px solid var(--ui-faint); }
+.orq-motivos li { margin: 3px 0; overflow-wrap: anywhere; }
+.orq-historico { border-top: 1px solid var(--ui-line); padding-top: 8px; margin: var(--space-3) 0; }
+.orq-historico summary { cursor: pointer; }
+.orq-historico li { overflow-wrap: anywhere; }
+.orq-simulacao { color: var(--ui-hot); }
+.orq-vazio { color: var(--ui-dim); font-size: .85rem; }
+#orq-atividade-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: var(--space-4); }
+.orq-evento { display: flex; flex-direction: column; gap: 5px; border-top: 2px solid var(--ui-hot); padding-top: 10px; }
+.orq-evento span { color: var(--ui-dim); font: 400 .76rem/1.5 var(--font-mono); }
+.orq-evento strong { font: 600 1.05rem/1.3 var(--font-heading); }
+@media (max-width: 1100px) { .orq-painel { grid-template-columns: minmax(220px, 1fr) minmax(360px, 1.5fr); } .orq-bloqueios { grid-column: 1 / -1; } #orq-bloqueios-lista { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); } }
+@media (max-width: 720px) { #aba-orquestracao { padding: var(--space-4); } .orq-painel { grid-template-columns: 1fr; } .orq-comando { grid-row: 1; min-height: 0; } .orq-bloqueios { grid-column: auto; } .orq-filtros, .orq-filtros label, .orq-filtros input, .orq-filtros select { width: 100%; } }
+
 /* Marcas de registro (obrigatórias em todo elemento emoldurado, README —
    "elemento emoldurado sem as marcas está errado"). Quatro <i> absolutos,
    7×7px, deslocados -3px, duas bordas de 1px em --ui-hot cada. */
@@ -354,8 +426,8 @@ button:disabled { opacity: .5; cursor: wait; }
 #filtro-projetos { margin-bottom: .4rem; }
 .filtro-tags .filtro { font-size: .8rem; padding: .25rem .7rem; border-radius: 999px; }
 .filtro-tags .filtro.ativa { border-color: var(--ui-hot); color: var(--ui-hot); }
-.filtro-tags .filtro-dono { color: var(--alerta); }
-.filtro-tags .filtro-dono.ativa { border-color: var(--alerta); color: var(--alerta); }
+.filtro-tags .filtro-astargne { color: var(--alerta); }
+.filtro-tags .filtro-astargne.ativa { border-color: var(--alerta); color: var(--alerta); }
 
 .backlog-projeto { margin-bottom: 2rem; }
 .backlog-projeto-cab { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .75rem; }
@@ -440,7 +512,7 @@ button:disabled { opacity: .5; cursor: wait; }
 /* Esquema de cores por tag (redesenho 20/08/2026) — mesmo idioma
    color-mix() já usado pelas etiquetas de estado (.ok/.alerta/.falha). */
 .etiqueta.tag { text-transform: none; }
-.etiqueta.tag-dono {
+.etiqueta.tag-astargne {
   color: var(--alerta);
   border-color: color-mix(in srgb, var(--alerta) 55%, transparent);
   background: color-mix(in srgb, var(--alerta) 12%, transparent);
@@ -611,7 +683,7 @@ details.item.cru > summary { background: var(--ui-bg); }
 .chip-resumo:hover { border-color: var(--ui-hot); }
 .chip-resumo.hot { background: var(--ui-hot); color: var(--ui-onhot); border-color: var(--ui-hot); font-weight: 600; }
 /* Filtro ativo (21/08/2026): mesmo contorno que .filtro.ativa já usa na aba
-   Backlog — inclusive quando é a tag DONO (some o fundo hot, some o anel). */
+   Backlog — inclusive quando é a tag ASTARGNE (some o fundo hot, some o anel). */
 .chip-resumo.ativa { outline: 2px solid var(--ui-hot); outline-offset: 1px; }
 
 /* Outline do backlog no painel de projeto — <details> por feature */

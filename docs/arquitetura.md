@@ -1,0 +1,416 @@
+# painel-admin — arquitetura (texto de referência)
+
+Texto preservado do `CLAUDE.md` até 01/10/2026 (F3 do
+`../../../PLANO-CONTEXTO-POR-TAREFA.md`), reorganizado em um título por
+arquivo. **Estado atual mora em [`current.md`](current.md)**; regras numeradas
+em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
+[`operacao.md`](operacao.md); o original íntegro em
+[`historico/CLAUDE-ate-2026-10-01.md`](historico/CLAUDE-ate-2026-10-01.md).
+
+**O que neste texto já não vale (adjudicação de 01/10/2026):**
+
+- Os caminhos em crase deste texto são **relativos à raiz do projeto**
+  (`painel-admin/`), não a `docs/`: `docs/00_PLANO.md`, `../CLAUDE.md`,
+  `../../PORTAS.md` etc. foram escritos quando o texto morava em `CLAUDE.md`.
+- "fácil de religar como 4ª aba" (grafo): seria a **5ª** — há quatro abas desde
+  13/09/2026 (Contas).
+- "A aba Backlog (quadro kanban só-leitura)": não é mais quadro multi-projeto
+  desde 21/08/2026; mostra um projeto por vez (§ backlog.js).
+
+- "uma célula por projeto do catálogo — 13 desde 29/09/2026": o catálogo tem
+  **15** projetos desde 12/10/2026 (`SupervisorHandoff` e `CK3BannerLord`
+  entraram, ambos com projeto no Plane) — ver `current.md`.
+- "`docs/00_PLANO.md` e `docs/01_ESTADO.md` — plano e estado real": o
+  `01_ESTADO.md` virou ponteiro; o estado está em `current.md` e o datado de
+  13/09/2026 em `historico/01_ESTADO-ate-2026-10-01.md`.
+- "mock hi-fi do dono em `design_handoff_painel_hud/`": a pasta não existe
+  nesta máquina nem no git do projeto (narrativa datada do reskin de 21/08/2026).
+- "de 29 a 30/09 foi `linear.js`, com o Linear": narrativa datada, verdadeira
+  como história; o Linear não é mais fonte de nada aqui.
+- Os módulos `orquestracao.js`, `orquestracao-core.js` e `publico/orquestracao.js`
+  (primeira fatia, 11/10/2026) foram **removidos em 24/10/2026**: eram cópias
+  divergentes de `orquestrador/politica.js`/`estado.js` que nenhum código vivo
+  importava; o doc da fatia está em `historico/orquestracao-fatia1-ate-2026-10-20.md`.
+- Tag `(DONO)`: desde 01/10/2026 o parser do doc 39 mapeia `DONO` para
+  `ASTARGNE` (mudança em `coletores.js`, não commitada); o texto abaixo não a
+  cita, mas o `PADROES-BACKLOG.md` sim.
+
+## Arquitetura
+
+### servidor.js
+
+HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+`GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
+`?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
+`GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
+enviados ao remoto de UM projeto — só sob demanda, mais pesado que o
+resumo que os cards já usam; 20/08/2026), `/api/producao`,
+`/api/producao/ssh`, `/api/backlog`, `/api/decisoes` (decisões derivadas
+do backlog; idade = criação do work item no Plane, ou `git log -L` no
+markdown do repo congelado, pesada — sob demanda, nunca no polling de 60s;
+aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
+`relacoes.js` — hoje fora da nav, ver abaixo), `POST /api/conversa` (SSE,
+motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
+(aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
+`prontidao`, `canal?carta&projeto`, `modelos`, `consumo`, `legado`; POST
+`simular`, `modelos/validar`, `{modelos,handoff,gates,despacho}/{preparar,confirmar}`,
+`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md);
+as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações)
+e estáticos de `publico/` (dashboard na raiz, chat em `/severino/`).
+
+### orquestrador/
+
+O Orquestrador de Projetos (padrão em `../../ORQUESTRADOR-PROJETOS.md`), um
+módulo por responsabilidade: `politica.js` (contrato opt-in, elegibilidade,
+gramática de comandos), `fila.js` (projeção do Plane, dependências, simulação,
+serviço de perfil/gate/handoff/despacho), `estado.js` (trava, lease,
+touchpoints, recuperação), `modelos.js` (seleção por papel sem fallback e
+flags de CLI), `canal-plane.js`/`perfil-plane.js`/`handoff-plane.js`/`gate-plane.js`
+(protocolos versionados no card: leitura paginada, `PERFIL-IA/v1`, `HANDOFF/v1`,
+`GATE/v1`, escritores restritos a um projeto), `sso.js`/`confirmacoes.js`/`api-*.js`
+(sessão do Cadastro Único por ssh, desafio de confirmação, rotas), `triagem.js`
+e `consulta-c3po.js` (pendências DEV e a ferramenta do motor), `voz-xai.js`,
+`consumo.js`, **`executor-cli.js`** (o executor real: três papéis de IA como
+CLIs descartáveis — `claude -p` / `codex exec` — num worktree `orq/<carta>-<id>`
+fora da árvore principal, comando de aceite do contrato sem shell, ambiente por
+lista branca, timeout que mata o grupo, logs em `~/.local/state/painel-admin/orquestracao/saidas/<tentativa>/`;
+moldes dos papéis em `briefings/`; só é construído com `ORQ_EXECUCAO_HABILITADA=true`)
+e **`canal-legado.js`** (lê `SupervisorHandoff/scripts/estado_canal.py`, python
+só-leitura, um processo por config com cache de 60 s — a prova de equivalência
+do dashboard 7791 pedida por PAINEL-35).
+
+### contas.js
+
+(13/09/2026, Fase 5 do `../../PLANO-CADASTRO-UNICO.md`) —
+administração do **CadastroUnico** (login único do `astargne.com`). A API
+interna do central (`/interno/*`, `127.0.0.1:8790`) só existe no loopback
+**do servidor**, autenticada por `TOKEN_INTERNO` — e **o token nunca sai
+do servidor**: cada ação da aba vira UM `ssh` (`spawn`, sem shell no PC,
+chave `paroquia-vultr`, timeout 15 s) rodando um script fixo lá dentro que
+lê o token com `sudo`, grava um config do `curl` em `mktemp` sob
+`umask 077` (apagado por `trap … EXIT`), aborta com exit 97 se o token
+não veio (`test -s`), e chama o central com `curl --max-time 10 -sS`. O
+PC só vê `{ status, corpo }`. Tabela **fechada** de operações
+(`OPERACOES`: método + rota), `:id` validado como inteiro positivo antes
+de entrar na string, corpo JSON **só pelo stdin** (`curl -d @-`) — dado de
+usuário jamais entra na linha de comando. Falha de ssh/script vira
+`502 {erro:'sem acesso ao servidor'}`; **401 do central também é 502**
+(`… (token interno recusado)`): o bearer nasce no servidor, então 401 só
+significa encanamento quebrado, nunca "usuário sem permissão"; stderr vai
+ao log mesmo com exit 0, redigindo qualquer `Bearer …` por defesa em
+profundidade. Executor injetável (`{ executar }`) e binário injetável
+(`criarExecutorSsh({ binario, timeoutMs, maxSaida })`) —
+`test/contas.test.js` nunca chama ssh de verdade: o encanamento real
+(stdin/EOF/timeout/teto) é provado com `node -e` como binário falso.
+
+### plane.js
+
+(30/09/2026; de 29 a 30/09 foi `linear.js`, com o Linear) — o
+backlog vem do **Plane** (instância própria no Omarchy, workspace
+`astargne`, `https://plane.casa.astargne.com`; a verdade desde a
+migração; `../../PADROES-BACKLOG.md`): API v1 com o token do usuário
+**"painel"** (`PLANE_API_KEY` no `.env`; papel Guest no workspace e em cada
+projeto — lê tudo, e a API devolve 403 a qualquer escrita, conferido de
+fora), e `montarFeatures` (pura, testada) devolve a mesma forma que o parser
+de markdown produzia — módulo = feature (na ordem do `sort_order` do Plane),
+sub-work item = filho, label de tag canônica = chip. A API não diz o módulo
+de um work item: é uma consulta por módulo (~100 consultas no total, ~11 s
+com o único worker do Plane), por isso o cache devolve o dado anterior na
+hora e renova em segundo plano, uma renovação por vez. Falha vira
+`erro_plane` nomeado, nunca lista vazia; a mensagem de erro nunca ecoa o
+token. **Projeto novo no Plane só aparece depois de o usuário "painel"
+entrar nele como Guest.**
+
+### coletores.js
+
+Coletores de estado (git, portas, sondas de produção,
+backlog, **leitura segura de docs modeladores por projeto**),
+**compartilhados**. `RAIZ` é `~/Work` (dois níveis acima) e, desde a
+reorganização de 30/09/2026, todo caminho passa por `dirDoProjeto()` =
+`RAIZ/<area>/<pasta>`; `resolverDentroDaRaiz` só aceita as áreas de
+`AREAS` (`ProjetosPessoais`, `ProjetosCompartilhados`) — **`Exitlag/`
+(empresa) fica fora do alcance de propósito**, por nome direto ou por `..`
+(`test/caminhos.test.js`): as rotas da API e as ferramentas do motor chamam as
+mesmas funções — o motor nunca faz HTTP para o próprio processo.
+
+### motor.js
+
+Claude Agent SDK (`claude-sonnet-5` fixo), persona do
+C-3PO, quatro ferramentas **só-leitura**: `estado_projetos`,
+`estado_producao` (coletores internos), `docs_projeto` (só `.md` da raiz,
+allowlist estrita — mecânica em `coletores.js`) e `fila_orquestracao`
+(projeção do Plane; ver [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md)). Esta última
+mantém a mesma ferramenta MCP e oferece três modos só-leitura: fila com gate,
+triagem DEV das abertas sem gate e pré-checagem DEV/TEST de um card. A resposta
+é limitada a 30 cartas por consulta; para escopo/aceite, o motor deve ler os
+documentos modeladores, não transformar categoria em decisão de produto.
+
+### projetos.js
+
+Catálogo dos projetos: metadados que não dão para derivar
+do disco, incluindo `area` (pasta de `~/Work` onde o projeto mora), o campo
+`plane` (id do projeto no Plane — sem ele o projeto não aparece nas abas de
+backlog; só o `_oldSistemaLoreEngine` usa ainda o campo `backlog`, de
+markdown) e o campo opcional `docs` (arquitetura/objetos/dataFlow
+— só nos projetos que já têm diagrama Mermaid vivo: `_oldSistemaLoreEngine`,
+`Mapa Khorvaire`, `DiscordTranscriber`). **Mantenha em sincronia com o
+`../CLAUDE.md` (mapa de `ProjetosPessoais/`) e com `../../PORTAS.md`**
+quando um projeto nascer, morrer ou mudar de porta.
+
+### relacoes.js
+
+(21/08/2026) — relações estruturadas entre projetos (`de`,
+`para`, `tipo`, `rotulo`) + `NOS_EXTRA` para nós de infra fora do catálogo
+(hoje só `astargne.com`). Espelho estruturado do `../../RELACOES.md` (era a
+seção "Relações entre projetos" do `CLAUDE.md` da raiz até 30/09/2026) —
+**mude os dois juntos**. Alimenta
+`/api/relacoes` e `publico/grafo.js` (aba Grafo) — **ambos fora da nav
+desde o reskin abaixo** (decisão do dono, código intacto no repo, fácil de
+religar como 4ª aba).
+
+### publico/
+
+Dashboard vanilla, reskin **"Industry HUD"** desde 21/08/2026
+(mock hi-fi do dono em `design_handoff_painel_hud/`; tokens/tipografia
+declarados como finais no handoff da época — Barlow/Barlow Condensed/IBM Plex Mono
+vendorizados em `publico/vendor/fonts/`, mesmo princípio zero-CDN do
+Mermaid). Em 12/10/2026, `publico/protocolo.css` sobrepõe o visual das cinco
+abas segundo o protótipo do dono, sem mudar lógica. Cinco abas — **Projetos · Backlog · Decisões · Orquestração · Contas** — mais
+o console do Severino como overlay por ⌘K/Ctrl+K:
+
+#### app.js
+
+Núcleo compartilhado: roteador por hash
+(`#/projetos`·`#/backlog`·`#/decisoes`·`#/orquestracao`·`#/contas`·`#/projeto/<pasta>`), estado
+`projetoSelecionado` **compartilhado entre as abas Projetos e Backlog**
+(a mesma variável que a tira de telemetria, o outline do Backlog e a
+coluna de contexto do painel de projeto leem — `decisoes.js` e
+`contas.js` não a leem), tira de telemetria (uma célula
+por projeto do catálogo — 15 desde 12/10/2026), tema claro/escuro (`data-tema` em `<html>`,
+persistido em `localStorage`), e o console do Severino (`#console-scrim`
+— abre por ⌘K/barra de comando/clique numa decisão, sempre reabre no
+digest).
+
+#### backlog.js
+
+As primitivas recursivas do backlog
+(`desenharNodo`/`placar`/`nosComTag`, independentes de layout) mais duas
+camadas de apresentação: `outlineFeatureDetalhes` (`<details>` por
+feature, usado no painel de projeto) e `desenharBacklogDoProjeto`
+(sempre expandido, grid de 2 colunas — a aba Backlog em si). As duas
+mostram o backlog de **um projeto por vez** (`projetoSelecionado`), não
+mais o quadro kanban multi-projeto de antes.
+
+#### projeto.js
+
+O painel do projeto focado (metade de baixo da aba
+Projetos): cabeçalho + outline do backlog na coluna principal;
+Arquitetura (moldura hachurada + Mermaid real nos 3 projetos que já têm
+diagrama, "sem diagrama ainda" nos outros) + Decisões paradas + Fila de
+jobs (**estado vazio honesto** — não existe sistema de jobs) + Produção
+(sondas + SSH sob demanda) na coluna de 420px. Também define
+`abrirConsoleComDecisao` (chamada por `app.js`/`decisoes.js`).
+
+#### decisoes.js
+
+Aba Decisões: todas as decisões agrupadas por projeto
+(top 3 por contagem abertos, resto em "Outros N projetos" colapsado).
+
+#### contas.js (publico/)
+
+(13/09/2026) — aba Contas: usuários (nome, e-mail, ativo,
+apps como chips; ações permissões/desativar-reativar/redefinir senha),
+convites pendentes (reenviar/revogar) e o formulário Convidar (e-mail,
+nome opcional, checkboxes dos apps com `sso: true` vindos de
+`/api/contas/apps`). Depois de convidar mostra `enviado` e, se `false`,
+o `erro` e o `link` para mandar por outro canal. Desativar e revogar
+pedem `confirm()`. **Sem polling**: busca ao ENTRAR na aba (`rotear`
+detecta a troca de view por `viewAtual`) e após cada ação — o `rotear()`
+de 60 s passando pela mesma view não dispara ssh nenhum.
+
+#### orquestrador.js (publico/) e orquestrador.css
+
+Aba de leitura/simulação do Plane: painel de projetos candidatos, consulta
+C-3PO sob demanda, impedimentos reais, fila filtrável e touchpoints. Recebe
+HTML de referência visual Protocolo (11/10/2026), com a camada Protocolo,
+sem escuta contínua ou ações do mock. Abre o console sem enviar mensagem ou
+acionar microfone. O filtro inicial exibe candidatas com gate; "Todas as
+cartas" revela as demais rejeições. A pré-checagem GET por carta consulta
+relações formais sob demanda sem criar lease ou escrever no Plane. Tópicos:
+Demanda, Conversa no card, Papéis e modelos, Consumo, Tentativas e **Canal
+legado (doc 59)** — este lido só ao abrir o tópico. Leituras pesadas abortam a
+anterior (`AbortController` por tópico); resultado de gate/despacho confirmado
+sobrevive ao re-render (`estado.ultimoResultado`). Ver
+[orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
+
+`GET /api/orquestracao/triagem-dev` é uma leitura pesada, acionada só pelo
+botão da aba ou por pergunta ao C-3PO: classifica folhas abertas sem gate por
+marcadores humanos, dependências formais, declaração de independência e estado.
+A API não infere decisão de produto, não aplica etiquetas e não integra o
+polling da fila. O botão no card abre o console com uma pergunta preenchida,
+mas não a envia: o dono escolhe quando conversar.
+
+#### grafo.js / relacoes.js
+
+Fora da nav (ver acima), arquivos intactos.
+
+#### vendor/mermaid.min.js
+
+`publico/vendor/mermaid.min.js` — Mermaid vendorizado, reaproveitado
+pelos diagramas dos docs e pela Arquitetura do painel de projeto.
+
+#### Console do Severino
+
+Reaproveita `publico/severino/chat.js` (agora
+numa IIFE, expõe só `window.mandarMensagemSeverino`) e `voz.js`
+inteiros — só o container mudou (da faixa lateral fixa da manhã de
+21/08 pro overlay). Abrir por ⌘K manda um "digest" automático (prompt
+fixo pro `/api/conversa` já existente — **nenhuma rota nova pro
+digest**); clicar numa decisão manda o texto dela verbatim e pergunta o
+que trava/o que falta (persona só-leitura: explica e pergunta, nunca
+decide). A página standalone `/severino/` **continua existindo** como
+está (acesso alternativo, sem o chrome do dashboard) — os dois modos
+compartilham a mesma sessão de conversa (`sessionStorage`, por aba do
+navegador) e os mesmos endpoints.
+
+#### Gasto e fila de jobs
+
+Gasto por projeto e "fila de jobs" **não têm fonte de dado real** — o
+painel mostra "—"/estado vazio honesto em vez de inventar (mesma régua
+do `PADROES-GERAIS.md` #8); se um dia existir coleta de custo real, é o
+lugar de plugar.
+
+### docs/00_PLANO.md e docs/01_ESTADO.md
+
+Plano e estado real do Severino,
+trazidos do repo antigo; leia o plano antes de mexer no motor ou na voz.
+
+### docs/02_ABA_BACKLOG.md
+
+A aba Backlog (quadro kanban só-leitura). Desde
+30/09/2026 **o Plane é a verdade** e a aba é projeção (convenção e a tabela
+de projetos em `../../PADROES-BACKLOG.md`); o parser de markdown sobrevive
+só para o doc 39 do `_oldSistemaLoreEngine` congelado. Backlog próprio: o
+projeto **PAINEL** no Plane — todo selo o atualiza NA MESMA ENTREGA.
+
+## Invariantes — texto completo
+
+(É para cá que [`invariants.md`](invariants.md) aponta; seção "O que continua
+inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
+
+- **Sem login, então porta fechada** (reescrita em 06/10/2026, a pedido do
+  dono): escuta só em `127.0.0.1:7777`, nunca em `0.0.0.0`. A única entrada
+  de fora é `https://painel.casa.astargne.com`, pelo Caddy de
+  `~/servicos/borda`, que só encaminha o IP de tailnet do Windows do dono
+  (`100.87.142.59`); qualquer outro nó, o racknerd inclusive, recebe 404.
+  `guarda.js` recusa Host fora da lista (421, contra DNS rebinding) e método
+  que muda estado vindo de outro site (403, `Sec-Fetch-Site`/`Origin`, contra
+  CSRF — que já valia para o loopback antes da borda). Abrir para mais
+  aparelhos é mudar o `remote_ip` do Caddyfile, nunca tirar a restrição.
+- **SSH só-leitura** (`/api/producao/ssh`): apenas `uptime`,
+  `systemctl is-active`, `docker ps`, `df`, `free`, com a chave
+  `~/.ssh/paroquia-vultr`, só sob demanda (botão) — nunca no refresh
+  automático. **Única exceção, delimitada** (13/09/2026, aba Contas): o
+  `ssh` de `contas.js` muda estado — mas só o **banco do CadastroUnico**,
+  só pelas rotas `/interno/*` do central, só pela tabela fechada
+  `OPERACOES`. Nada de `systemctl`, deploy, arquivo ou Caddy por ali: infra
+  continua sendo SSH manual + `validador-deploy`, seguindo
+  `/opt/servidor/LEIA-ME.md`.
+- **O `TOKEN_INTERNO` do CadastroUnico nunca sai do servidor** (decisão do
+  dono, 13/09/2026): não entra em `.env` do painel, não é lido nem logado
+  no PC, não aparece em resposta HTTP. O painel chega ao central **por
+  ssh**, e o script remoto monta o cabeçalho lá dentro. Se um dia alguém
+  propuser "copiar o token pro `.env` local pra simplificar", a resposta é
+  não — é a arquitetura da fatia, não um detalhe.
+- **Ferramentas de IA só-leitura até a fase 3** (`docs/00_PLANO.md`): o motor
+  roda com `tools: []` + allowlist das quatro ferramentas MCP — limitação
+  **estrutural**, não promessa de comportamento.
+- **Voz não fura o canon de deploy**: qualquer ação futura que mude estado no
+  `astargne.com` continua exigindo `validador-deploy` + validação de
+  premissas, como para qualquer agente.
+- **Executor só atrás de todos os portões** (24/10/2026): `criarExecutorCli` só
+  é construído em `servidor.js` com `ORQ_EXECUCAO_HABILITADA=true`; mesmo
+  ligado, cada despacho exige identidade técnica do projeto, contrato válido,
+  agente disponível, perfil `PERFIL-IA/v1` no card, sessão do Cadastro Único e
+  confirmação em duas ações. O executor cria um worktree (`git worktree add -b
+  orq/<carta>-<id>`) fora da árvore principal, lança cada papel sem shell com
+  ambiente construído por lista branca (nenhuma `PLANE_*`, `*_KEY`, `*TOKEN*`),
+  `claude -p --bare --setting-sources project --strict-mcp-config
+  --mcp-config '{"mcpServers":{}}' --permission-mode dontAsk` com `allowedTools`
+  fechada (papéis só-leitura com `--restricted`) ou `codex exec --sandbox
+  read-only|workspace-write --ignore-user-config --ignore-rules --ephemeral`,
+  roda só o comando do contrato (inspeção estática e heurística do
+  `scripts.test`/script: metacaracteres e tokens proibidos recusam — não prova
+  que o conteúdo é seguro), mata o grupo de processos no timeout, capa a saída
+  e devolve `impedido` para qualquer falha de infraestrutura. O que ele não
+  garante: o comando de aceite roda sem sandbox, como o usuário do serviço.
+- **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` da identidade
+  Guest de leitura e, se habilitado, `PLANE_ORQ_WRITE_KEY` de serviço distinta;
+  coberto pelo `.gitignore`). A escrita de perfil exige projeto único, SSO do
+  Cadastro Único e confirmação separada; não amplia as ferramentas do C-3PO.
+  Nenhuma chave aparece no navegador, código, log, commit ou resposta HTTP.
+
+## Origem
+
+(Seção "A fusão (14/08/2026, noite — decisão do dono)" do `CLAUDE.md` antigo.)
+
+O Severino nasceu em 14/08/2026 como projeto **irmão** (`severino/`, porta
+7778), consumindo os endpoints deste painel por HTTP. Na noite do mesmo dia o
+dono **revogou** essa separação: dois processos e duas portas para uma
+ferramenta pessoal única eram cerimônia sem benefício — e o motor fazia HTTP
+para o vizinho para ler dado que é função local. Resultado: UM app na 7777.
+O repo `github.com/gadelhams/severino` está **arquivado** como lápide; código
+e história continuam aqui (`github.com/gadelhams/painel-admin`).
+
+(Do mapa da raiz, não do `CLAUDE.md` antigo:) a persona foi renomeada de
+"Severino" para **C-3PO** em 21/08/2026; rota `/severino/`, pasta
+`publico/severino/` e nomes no código mantêm o nome antigo por decisão
+deliberada — só a persona mudou, não a infraestrutura.
+
+## Fatos trazidos do `01_ESTADO.md` (01/10/2026)
+
+Mecanismos que o estado datado de 13/09/2026 registrava e nenhum outro doc
+vivo tinha; provas e evidências ficaram em
+[`historico/01_ESTADO-ate-2026-10-01.md`](historico/01_ESTADO-ate-2026-10-01.md).
+
+- **Autenticação do motor**: o login do Claude Code já existente na máquina;
+  funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
+- **Só-leitura estrutural** (`motor.js`): `tools: []` + servidor MCP em
+  processo com só as quatro ferramentas de leitura + `allowedTools` nelas +
+  `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
+- **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
+  `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.
+- **Estáticos**: `GET /severino` → 301 `/severino/` (assets relativos dependem
+  da barra); `..` em path-as-is → 404; método errado em `/api/tts` → 405.
+- **ElevenLabs** (`responderTts` em `servidor.js`): upstream
+  `POST api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream` (header
+  `xi-api-key`), `output_format=mp3_44100_128`, modelo
+  `eleven_multilingual_v2`; voice_id default `JBFqnCBsd6RMkjVDRZzb` ("George"),
+  troca por `ELEVENLABS_VOZ_ID` no `.env`. Sem chave → `POST /api/tts` 503 com
+  `motivo` nomeado (`sem-chave-elevenlabs`); `GET /api/tts` é sonda que não
+  gasta caractere; upstream recusando → `elevenlabs-recusou` + status, genérico
+  de propósito; a chave jamais aparece em log, erro ou resposta; cliente que
+  some aborta o upstream (`AbortController`).
+- **Cadeia de voz declarada** (`publico/severino/voz.js`): ElevenLabs →
+  Antônio (voz pt-BR cujo nome contém `antonio` + `natural`; fallback = primeira
+  pt-BR, e o status diz qual) → só texto. A linha `#status-voz` declara a camada
+  ("voz: ElevenLabs" / "voz: Antônio — ElevenLabs sem chave" / "só texto —
+  motivo"). Desde 20/08/2026 há **uma retentativa** antes de cair para o
+  Antônio; `calar()` pausa o áudio e aborta downloads em voo. Degradar
+  declarando, nunca quebrar: erro vira mensagem na UI.
+- **Reconhecimento**: push-to-talk estrito (`continuous: false`, uma captura
+  por clique, segundo clique cancela); hotword/escuta contínua proibidas pelo
+  plano. `corrigirNomesProprios` (20/08/2026) compara o ouvido com o catálogo
+  de `GET /api/projetos` por distância de edição (`SIMILARIDADE_MINIMA = 0.72`),
+  avisa toda troca na conversa e ignora nomes de uma palavra.
+- **Fluidez**: `limparParaFala` tira marcação só da fala; blocos de
+  `MIN_BLOCO = 160` (o primeiro sai na primeira sentença); downloads seguintes
+  baixam enquanto o bloco atual toca.
+- **Aba Contas**: latência real por ação 1,7–3,3 s (um ssh completo) — por
+  isso sem polling e botões travados durante a ação. Testes com mutações
+  nomeadas (12 no backend, 4 no front), todas vermelhas — detalhe no
+  `RELATORIO-F5-CONTAS.md`.
+- **Custo observado** por pergunta com ferramentas (08/2026, Sonnet 5 a preço
+  introdutório): US$ 0,19–0,37.
+- **Botão de mudo da síntese**: não pedido no contrato da fase 2; se doer no
+  uso, é uma linha de decisão no plano.

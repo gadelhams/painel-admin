@@ -76,7 +76,7 @@ function desenharDecisoes() {
 
   if (!visiveis.length) {
     abaDecisoesEl.replaceChildren(
-      el('div', { class: 'decisoes-cabecalho' }, el('h2', { class: 'titulo-secao' }, '0 decisões paradas'), toggle),
+      el('div', { class: 'decisoes-cabecalho' }, el('div', {}, el('p', { class: 'pagina-kicker' }, 'PROTOCOLO · 03 / DECISÕES'), el('h2', { class: 'titulo-secao' }, '0 decisões paradas')), toggle),
       el('p', { class: 'discreto' }, modoFiltroTag === 'aberto' ? 'nenhuma decisão aberta — tudo pronto ou congelado.' : 'nenhuma decisão parada — tudo limpo.'),
     );
     return;
@@ -132,6 +132,7 @@ function desenharDecisoes() {
       el(
         'div',
         {},
+        el('p', { class: 'pagina-kicker' }, 'PROTOCOLO · 03 / DECISÕES'),
         el('h2', { class: 'titulo-secao' }, `${visiveis.length} decisões paradas`),
         el('p', { class: 'kicker' }, `agrupadas por projeto${maisVelhaGeral?.desde ? ` · a mais velha é de ${new Date(maisVelhaGeral.desde).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}`),
       ),

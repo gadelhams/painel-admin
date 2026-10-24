@@ -315,6 +315,7 @@ function desenharContas() {
     el(
       'div',
       {},
+      el('p', { class: 'pagina-kicker' }, 'PROTOCOLO · 05 / ACESSO'),
       el('h2', { class: 'titulo-secao' }, 'Contas'),
       el('p', { class: 'kicker' }, 'cadastro único do astargne.com · cada ação roda no servidor por ssh · o token nunca sai de lá'),
     ),

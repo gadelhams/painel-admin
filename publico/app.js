@@ -286,6 +286,7 @@ const paineis = {
   projetos: document.getElementById('aba-projetos'),
   backlog: document.getElementById('aba-backlog'),
   decisoes: document.getElementById('aba-decisoes'),
+  orquestracao: document.getElementById('aba-orquestracao'),
   contas: document.getElementById('aba-contas'),
 };
 
@@ -331,6 +332,10 @@ function rotear() {
     const entrando = viewAtual !== 'contas';
     mostrarView('contas');
     if (entrando && window.carregarContas) carregarContas();
+  } else if (view === 'orquestracao') {
+    const entrando = viewAtual !== 'orquestracao';
+    mostrarView('orquestracao');
+    if (entrando && window.carregarOrquestracao) window.carregarOrquestracao();
   } else {
     mostrarView('projetos');
   }
@@ -412,6 +417,20 @@ function abrirConsoleComDecisao(decisao) {
     `Decisão parada — ${contexto}:\n"${decisao.texto}"\n\nO que isso trava, e o que você precisa de mim pra destravar? Não decida por mim, só explique e pergunte.`,
   );
 }
+
+// O Protocolo usa a mesma identidade de consulta do C-3PO. Abrir o console
+// não envia mensagem nem aciona microfone: texto/voz exigem gesto do usuário.
+window.abrirConsoleOrquestracao = function abrirConsoleOrquestracao(identificador) {
+  const carta = typeof identificador === 'string' && /^[A-Z][A-Z0-9]*-\d+$/i.test(identificador)
+    ? identificador.toUpperCase() : null;
+  consoleKicker.textContent = carta ? `Orquestração · ${carta} · leitura do Plane` : 'Orquestração · leitura do Plane';
+  desenharChipsSugestao(carta
+    ? [`O que falta para ${carta} ficar READY TO DEV?`, `Quais pendências de ${carta} são decisões de produto?`, `Quais passos técnicos destravam ${carta}?`]
+    : ['quais categorias de pendências se repetem?', 'quais cartas estão impedidas?', 'o que depende de decisão de produto?']);
+  abrirConsole();
+  const entrada = document.getElementById('entrada');
+  if (carta && entrada && !entrada.value.trim()) entrada.value = `O que falta para ${carta} ficar READY TO DEV? Separe pendências técnicas, autorizações e decisões de produto, com evidências do Plane e dos documentos do projeto.`;
+};
 
 abrirConsoleBtn.addEventListener('click', abrirConsoleDigest);
 consoleFechar.addEventListener('click', fecharConsole);

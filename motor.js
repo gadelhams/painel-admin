@@ -1,5 +1,5 @@
 // Motor do C-3PO (persona trocada de "Severino" em 21/08/2026): Claude Agent
-// SDK + as três ferramentas só-leitura da fase 1. A limitação a leitura é
+// SDK + ferramentas só-leitura. A limitação a leitura é
 // ESTRUTURAL: `tools: []` desliga todas as
 // ferramentas embutidas do harness, e só o servidor MCP local (três
 // ferramentas de consulta) fica disponível — princípio 2 do plano.
@@ -15,9 +15,14 @@ import {
   estadoProjetos, estadoProducao,
   resolverDentroDaRaiz, trechosDoNome, listarModeladores, lerArquivoMd,
 } from './coletores.js';
+import { criarServicoOrquestracao } from './orquestrador/fila.js';
+import { criarTriagemDev } from './orquestrador/triagem.js';
+import { consultarOrquestracaoC3po } from './orquestrador/consulta-c3po.js';
 
 // Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
 const MODELO = 'claude-sonnet-5';
+const orquestracao = criarServicoOrquestracao();
+const triagemDev = criarTriagemDev();
 
 // ---------- acesso aos coletores do painel ----------
 
@@ -73,7 +78,7 @@ async function lerDocProjeto({ projeto, arquivo }) {
   }
 }
 
-// ---------- as três ferramentas da fase 1 (só leitura) ----------
+// ---------- ferramentas só de leitura ----------
 
 const ferramentas = createSdkMcpServer({
   name: 'c3po',
@@ -103,6 +108,18 @@ const ferramentas = createSdkMcpServer({
       lerDocProjeto,
       { annotations: { readOnlyHint: true } },
     ),
+    tool(
+      'fila_orquestracao',
+      'Consulta só-leitura do Plane. modo fila (padrão): candidatas com gate e impedimentos. modo triagem_dev: categorias das cartas abertas sem gate, com filtro opcional categoria/identificador. modo prontidao: pré-checagem detalhada de READY TO DEV ou READY TO TEST para uma carta, distinguindo pendências do gate e do despacho. Classificação não é decisão de produto; para escopo/aceite, leia também docs_projeto. Nunca marque gate ou execute.',
+      {
+        modo: z.enum(['fila', 'triagem_dev', 'prontidao']).optional(),
+        identificador: z.string().optional().describe('ID da carta no Plane, ex.: PAINEL-31. Obrigatório em modo prontidao.'),
+        categoria: z.string().optional().describe('Código da categoria devolvido por triagem_dev para filtrar cartas sem gate.'),
+        gate: z.enum(['READY TO DEV', 'READY TO TEST']).optional().describe('Gate proposto em modo prontidao; padrão READY TO DEV.'),
+      },
+      entrada => consultarColetor('fila_orquestracao', () => consultarOrquestracaoC3po({ orquestracao, triagemDev }, entrada)),
+      { annotations: { readOnlyHint: true } },
+    ),
   ],
 });
 
@@ -122,6 +139,8 @@ QUEM VOCÊ É
 DE ONDE VEM O QUE VOCÊ SABE (grounding — sua única fonte de honra)
 - Estado vivo (git, portas, produção) vem SEMPRE das ferramentas estado_projetos e estado_producao — nunca da sua memória de treino. Dado que você não consultou agora, você não afirma.
 - A nuance de cada projeto (o que é, o que falta, decisões) vem de docs_projeto. Perguntaram "o que falta no projeto X"? Leia o plano real do X antes de responder.
+- A fila, a triagem das cartas sem gate e a pré-checagem de DEV/TEST vêm de fila_orquestracao. Use modo triagem_dev para perguntas gerais sobre o que falta; modo prontidao com identificador para uma carta. Para escopo e critérios de aceite, leia também o CLAUDE.md/AGENTS.md e os planos do projeto via docs_projeto. A triagem estrutural não atesta prontidão de conteúdo.
+- Separe cada pendência em dependência/estado/evidência técnica, autorização/identidade e decisão genuína de produto. Não repasse como escolha de produto um ajuste técnico verificável ou uma falta de permissão. Explique o que pode ser resolvido tecnicamente e pergunte ao Mestre só o que realmente muda escopo, comportamento ou aceite. Categorias podem se sobrepor; nunca conclua que ASTARGNE é automaticamente decisão de produto.
 - Se a ferramenta falhar ou o dado não existir, diga que não sabe E POR QUÊ ("lastimo informar, Mestre, mas o painel está desligado — sem ele, minhas probabilidades de acerto caem a zero"). Inventar uma resposta seria uma falha de protocolo grave.
 - O painel-admin é o seu corpo desde a fusão de 14/08/2026: você e o painel são o mesmo processo, e os instrumentos (git, portas, sondas de produção) são coletores internos. Se uma coleta falhar, você AVISA o motivo — nunca contorna por fora, nunca dá um jeitinho "por precaução".
 
@@ -149,6 +168,7 @@ export async function* conversar(mensagem, sessaoAnterior) {
       'mcp__c3po__estado_projetos',
       'mcp__c3po__estado_producao',
       'mcp__c3po__docs_projeto',
+      'mcp__c3po__fila_orquestracao',
     ],
     // Headless: pré-aprovadas passam, o resto é negado sem prompt.
     permissionMode: 'dontAsk',

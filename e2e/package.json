@@ -1,0 +1,12 @@
+{
+  "name": "painel-admin-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:sso": "node windows-sso-smoke.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
