@@ -140,9 +140,11 @@ com teto próprio de 180 s (restart de compose passa dos 15 s do executor comum)
 ambíguo (409, nomes não se misturam), valor para o servidor sem espaço/`#`/`$`/aspas
 (env_file do compose truncaria), nome descoberto só no inventário (trocar exige
 catalogar) e o EmuladorWeb como `foraDoEnv` (o token vive cru em
-`secrets/sso-internal-token` e só muda pelo instalador). Falta, antes de ligar a
-flag: revalidar e anotar o painel como escritor de `.env` no master do servidor
-(§3 do player e os `.bak`), publicado pelo §8. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
+`secrets/sso-internal-token` e só muda pelo instalador). A 2ª rodada do validador
+**APROVOU** (24/10, 13:46 UTC): flag ligada, master do servidor com a nota "Escritor
+de `.env` fora do deploy" (§3) publicada pelo §8. Residuais aceitos: `.bak` fica
+(segredo velho ao lado do novo; `.env.bak-*` no `.gitignore`), restart de compose
+acima de 180 s vira `ROTACAO_INCERTA` falsa. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
 levam valor; a pendência some quando há evento posterior à data do catálogo. O
 bloco **Astargne** da aba Decisões (`publico/decisoes.js`) junta as rotações
 pendentes com os cards abertos `ASTARGNE`/`EMPÍRICA` em quatro grupos — chaves e

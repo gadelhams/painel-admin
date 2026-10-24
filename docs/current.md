@@ -13,8 +13,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   13 projetos no Plane, 15 no catálogo.
 - Abas: **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves**.
   Chaves (24/10): segredos por projeto, só nomes, troca por SSO; no servidor
-  **desligada** (validador REPROVOU a 1ª versão; correções feitas, revalidar
-  antes de ligar). Decisões abre com o bloco "Astargne". A
+  **ligada** (validador APROVOU na 2ª rodada, 24/10; 5 arquivos lidos, 600). Decisões abre com o bloco "Astargne". A
   Orquestração lê a fila, pré-checa gates, registra perfil/gate/handoff com
   identidade técnica (CKBL e PLAYER) só por SSO + confirmação em duas ações,
   e mostra em leitura o canal legado do SupervisorHandoff (doc 59, os dois
