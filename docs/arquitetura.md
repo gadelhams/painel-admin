@@ -110,6 +110,32 @@ profundidade. Executor injetável (`{ executar }`) e binário injetável
 `test/contas.test.js` nunca chama ssh de verdade: o encanamento real
 (stdin/EOF/timeout/teto) é provado com `node -e` como binário falso.
 
+### chaves.js
+
+(24/10/2026, decisão do dono) — a tela **Chaves**: inventário dos segredos por projeto
+e a troca de valor pelo painel, para que o dono rotacione o que vazou sem abrir
+terminal. `CATALOGO` declara, por projeto, o `.env` local (relativo a
+`~/Work/ProjetosPessoais`, com a unit de usuário que reinicia), os caminhos
+candidatos do `.env` no servidor (só `/opt/...`, com a unit do systemd de lá), as
+variáveis conhecidas e a **rotação pendente** (card que a pediu, data, motivo, o que
+fazer depois); `foraDoEnv` é segredo que vive no provedor ou na base — o painel só
+registra que foi rotacionado. Só **nomes** saem do servidor: o inventário local lê os
+arquivos e devolve nomes, presença e modo; o do servidor é UM ssh com script fixo
+montado do catálogo (`sudo test -f` + `grep -oE '^NOME='`), cacheado até a próxima
+leitura. A troca é em duas ações com SSO (`criarConfirmacoesChaves`): o valor viaja
+uma vez, no corpo do `confirmar`, e termina no `.env` local (cópia `.bak` 600,
+escrita atômica 600, `systemctl --user restart` da unit 1 s depois — se a unit for o
+próprio painel, ele reinicia) ou no servidor (valor pelo **stdin** do ssh, `sudo
+python3 -c` fixo que reescreve a linha com o dono e o modo originais e reinicia a
+unit do catálogo; só o arquivo descoberto pelo inventário). A escrita no servidor
+só existe com `CHAVES_SERVIDOR_ESCRITA=true`, depois do APROVADO do
+`validador-deploy`. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
+levam valor; a pendência some quando há evento posterior à data do catálogo. O
+bloco **Astargne** da aba Decisões (`publico/decisoes.js`) junta as rotações
+pendentes com os cards abertos `ASTARGNE`/`EMPÍRICA` em quatro grupos — chaves e
+contas externas, push/deploy/sudo, provas suas, decisões de produto — por etiqueta
+e verbo do título (heurística dita na tela).
+
 ### plane.js
 
 (30/09/2026; de 29 a 30/09 foi `linear.js`, com o Linear) — o
@@ -181,8 +207,8 @@ Dashboard vanilla, reskin **"Industry HUD"** desde 21/08/2026
 (mock hi-fi do dono em `design_handoff_painel_hud/`; tokens/tipografia
 declarados como finais no handoff da época — Barlow/Barlow Condensed/IBM Plex Mono
 vendorizados em `publico/vendor/fonts/`, mesmo princípio zero-CDN do
-Mermaid). Em 12/10/2026, `publico/protocolo.css` sobrepõe o visual das cinco
-abas segundo o protótipo do dono, sem mudar lógica. Cinco abas — **Projetos · Backlog · Decisões · Orquestração · Contas** — mais
+Mermaid). Em 12/10/2026, `publico/protocolo.css` sobrepõe o visual das abas
+segundo o protótipo do dono, sem mudar lógica. Seis abas — **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves** (esta desde 24/10/2026) — mais
 o console do Severino como overlay por ⌘K/Ctrl+K:
 
 #### app.js
@@ -256,6 +282,16 @@ marcadores humanos, dependências formais, declaração de independência e esta
 A API não infere decisão de produto, não aplica etiquetas e não integra o
 polling da fila. O botão no card abre o console com uma pergunta preenchida,
 mas não a envia: o dono escolhe quando conversar.
+
+#### chaves.js (publico/)
+
+(24/10/2026) — aba Chaves: um `<details>` por projeto com o `.env` local e o do
+servidor (arquivo, modo, FROUXO se não for 600), uma linha por variável
+(presença local/servidor, última troca, ROTAÇÃO PENDENTE com card e motivo), botões
+"Trocar aqui" / "Trocar no servidor" / "Marcar como rotacionada" que abrem o
+preparo e um campo `type=password` esvaziado após o envio; "Ler inventário do
+servidor (ssh)" sob demanda; últimas trocas sem valores. Selo da aba = rotações
+pendentes. Carrega ao ENTRAR na aba (`rotear`), sem polling.
 
 #### grafo.js / relacoes.js
 

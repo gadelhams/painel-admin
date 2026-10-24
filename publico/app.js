@@ -288,6 +288,7 @@ const paineis = {
   decisoes: document.getElementById('aba-decisoes'),
   orquestracao: document.getElementById('aba-orquestracao'),
   contas: document.getElementById('aba-contas'),
+  chaves: document.getElementById('aba-chaves'),
 };
 
 // Qual view está na tela agora. A aba Contas precisa saber se está ENTRANDO
@@ -332,6 +333,10 @@ function rotear() {
     const entrando = viewAtual !== 'contas';
     mostrarView('contas');
     if (entrando && window.carregarContas) carregarContas();
+  } else if (view === 'chaves') {
+    const entrando = viewAtual !== 'chaves';
+    mostrarView('chaves');
+    if (entrando && window.carregarChaves) window.carregarChaves();
   } else if (view === 'orquestracao') {
     const entrando = viewAtual !== 'orquestracao';
     mostrarView('orquestracao');

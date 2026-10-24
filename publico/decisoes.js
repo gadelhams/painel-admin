@@ -64,6 +64,49 @@ function linhaDecisaoTabela(d) {
 // Primeiros 3 grupos (por contagem, já ordenados) abertos; o resto colapsa
 // junto num grupo "Outros N projetos" — critério meu, o handoff não dá o
 // número exato de grupos sempre expandidos.
+// Bloco "Astargne" (decisão do dono, 24/10/2026): o que depende dele, separado do que
+// o orquestrador resolve. Classificação por etiqueta e por verbos do título — heurística,
+// dita como tal na tela: "contas externas e chaves" vem do catálogo de chaves (rotações
+// pendentes), "push/deploy/sudo", "provas suas" e "decisões de produto" dos cards abertos
+// com ASTARGNE/EMPÍRICA.
+let chavesPendentesCache = { quando: 0, lista: [] };
+async function lerChavesPendentes() {
+  if (Date.now() - chavesPendentesCache.quando < 60_000) return chavesPendentesCache.lista;
+  try {
+    const r = await fetch('/api/chaves');
+    const dados = await r.json();
+    chavesPendentesCache = { quando: Date.now(), lista: r.ok ? dados.pendentes : [] };
+  } catch { chavesPendentesCache = { quando: Date.now(), lista: [] }; }
+  return chavesPendentesCache.lista;
+}
+const RE_PUSH = /\b(push|deploy|publicar|sudo|instalar|borda|unit de usu)/i;
+const RE_PROVA = /\b(prova|aceite|conferir|conferência|exercitar|retestar|testar|entra no|aprova|convidar|olho humano|rotulad|revisada e aceita|medir|real)\b/i;
+function classificarAstargne(decisoes, chavesPendentes) {
+  const cardsDeChave = new Set(chavesPendentes.map(c => c.card));
+  const grupos = { chaves: [], push: [], provas: [], produto: [] };
+  for (const d of decisoes) {
+    if (d.estado !== 'aberto' || !['ASTARGNE', 'EMPÍRICA'].includes(d.tag)) continue;
+    if (cardsDeChave.has(d.identificador)) grupos.chaves.push(d);
+    else if (RE_PUSH.test(d.texto)) grupos.push.push(d);
+    else if (d.tag === 'EMPÍRICA' || RE_PROVA.test(d.texto)) grupos.provas.push(d);
+    else grupos.produto.push(d);
+  }
+  return grupos;
+}
+function painelAstargne(grupos, chavesPendentes) {
+  const lista = (itens, vazio) => itens.length ? el('ul', {}, ...itens.map(d => el('li', {}, ...(d.url ? [linkIssue(d), ' '] : []), `${tituloDoProjeto(d.projeto)} · ${d.texto.slice(0, 110)}`))) : el('p', { class: 'discreto' }, vazio);
+  const chaves = chavesPendentes.length
+    ? el('ul', {}, ...chavesPendentes.map(c => el('li', {}, el('a', { href: '#/chaves', class: 'id-rastreador' }, c.card), ` ${c.projeto} · `, el('code', {}, c.nome), ` — ${c.motivo}`)))
+    : el('p', { class: 'discreto' }, 'nenhuma rotação pendente.');
+  return el('section', { class: 'astargne-painel', 'aria-label': 'O que depende de Astargne' },
+    el('p', { class: 'pagina-kicker' }, 'ASTARGNE · O QUE DEPENDE DE VOCÊ'),
+    el('h3', {}, `Chaves e contas externas (${chavesPendentes.length})`), chaves,
+    el('h3', {}, `Push, deploy e sudo (${grupos.push.length})`), lista(grupos.push, 'nada esperando push, deploy ou sudo.'),
+    el('h3', {}, `Provas suas (${grupos.provas.length})`), lista(grupos.provas, 'nenhuma prova humana pendente.'),
+    el('h3', {}, `Decisões de produto (${grupos.produto.length})`), lista(grupos.produto, 'nenhuma decisão de produto pendente.'),
+    el('p', { class: 'kicker' }, 'classificação por etiqueta e verbo do título; o resto da aba é o orquestrador quem resolve.'));
+}
+
 function desenharDecisoes() {
   if (!decisoesDisponiveis) {
     abaDecisoesEl.replaceChildren(el('p', { class: 'discreto' }, 'não consegui carregar as decisões agora.'));
@@ -125,6 +168,8 @@ function desenharDecisoes() {
     ));
   }
 
+  const astargneEl = el('div', { class: 'astargne-ancora' });
+  lerChavesPendentes().then(pendentes => { if (astargneEl.isConnected) astargneEl.replaceChildren(painelAstargne(classificarAstargne(dadosDecisoes, pendentes), pendentes)); });
   abaDecisoesEl.replaceChildren(
     el(
       'div',
@@ -138,6 +183,7 @@ function desenharDecisoes() {
       ),
       toggle,
     ),
+    astargneEl,
     ...blocos,
   );
 }

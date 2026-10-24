@@ -18,6 +18,7 @@ Leitura comum, sempre: `docs/current.md` (estado real, datado) e
 | Aba Contas / CadastroUnico (`contas.js`, `publico/contas.js`) | `docs/arquitetura.md` § contas.js + `../../PLANO-CADASTRO-UNICO.md` ("Retomada"); relatório da fatia em `docs/RELATORIO-F5-CONTAS.md` |
 | Backlog / Plane (`plane.js`, aba Backlog, aba Decisões) | `docs/arquitetura.md` § plane.js + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
 | Aba Orquestração (`orquestrador/`, `publico/orquestrador.js`, contrato `.orquestrador.json`, fila, lease, gate/handoff/perfil, executor, canal legado) | `docs/orquestracao-v2-integracao.md` + `../ORQUESTRADOR-PROJETOS.md`; escrita só por identidade técnica com SSO e confirmação; despacho desligado sem `ORQ_EXECUCAO_HABILITADA` (variáveis em `docs/operacao.md`) |
+| Aba Chaves (`chaves.js`, `publico/chaves.js`) e bloco "Astargne" da aba Decisões (`publico/decisoes.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
 | Aba Backlog — desenho e história (parser do doc 39) | `docs/02_ABA_BACKLOG.md` |
 | Motor, persona ou voz do C-3PO (`motor.js`, `publico/severino/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § Severino por voz |
 | Subir, reiniciar, ver log | `docs/operacao.md` § Como roda |
@@ -46,5 +47,6 @@ de forma genérica — a estrutura destes arquivos é também dado do produto.
 - Backlog = projeto **PAINEL** no Plane (`../../PADROES-BACKLOG.md`); todo
   selo o atualiza na mesma entrega. Projeto novo no catálogo: `projetos.js` +
   `../CLAUDE.md` + `../../PORTAS.md` juntos.
-- Commit e push só com pedido de Astargne; revise `git status`/`git diff`
+- Commit e push autorizados em caráter permanente (24/10/2026) com o aceite
+  do orquestrador; deploy só com `validador-deploy` APROVADO. Revise `git status`/`git diff`
   antes do `git add`, nunca `-A`.

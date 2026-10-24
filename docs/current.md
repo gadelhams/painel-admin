@@ -11,7 +11,9 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   origem conferidos em `guarda.js`.
 - Backlog lido do **Plane** (`127.0.0.1:8095`, Guest "painel", só leitura):
   13 projetos no Plane, 15 no catálogo.
-- Abas: **Projetos · Backlog · Decisões · Orquestração · Contas**. A
+- Abas: **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves**.
+  Chaves (24/10): segredos por projeto, só nomes, troca por SSO (no servidor
+  só após `validador-deploy`); Decisões abre com o bloco "Astargne". A
   Orquestração lê a fila, pré-checa gates, registra perfil/gate/handoff com
   identidade técnica (CKBL e PLAYER) só por SSO + confirmação em duas ações,
   e mostra em leitura o canal legado do SupervisorHandoff (doc 59, os dois
@@ -28,7 +30,6 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo de assinatura** (PAINEL-40): sem fonte verificável, "indisponível".
 - **Fase 3 do C-3PO** (ações): motor só-leitura, sem suíte (LLM sempre mock).
-- Contas sem o selo do primeiro convite real; prova humana da voz pendente.
 
 ## Portão e repositório
 

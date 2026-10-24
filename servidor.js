@@ -34,6 +34,7 @@ import { criarLeitorCanalLegado } from './orquestrador/canal-legado.js';
 import { criarEscritorEstadoPlane } from './orquestrador/estado-plane.js';
 import { criarVigilia } from './orquestrador/vigilia.js';
 import { criarApiVigilia, criarConfirmacoesVigilia } from './orquestrador/api-vigilia.js';
+import { criarServicoChaves, criarConfirmacoesChaves, criarApiChaves } from './chaves.js';
 import { criarClientePlane } from './plane.js';
 import { PROJETOS } from './projetos.js';
 
@@ -122,6 +123,10 @@ const apiGate = criarApiGate({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesGate({ servico: orquestracao }) });
 // Com o executor desligado a rota falha fechada; ligado, continua atrás de SSO e confirmação.
 const apiVigilia = criarApiVigilia({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesVigilia({ vigilia }) });
+// Chaves: inventário só de nomes; troca em duas ações com SSO; escrita no servidor só com
+// CHAVES_SERVIDOR_ESCRITA=true depois do APROVADO do validador-deploy.
+const chaves = criarServicoChaves();
+const apiChaves = criarApiChaves({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesChaves({ servico: chaves }) });
 const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) });
 const apiVoz = criarApiVoz({ autorizar: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
@@ -464,6 +469,18 @@ const servidor = http.createServer(async (req, res) => {
       }
     } else if (pathname.startsWith('/api/orquestracao')) {
       responderJson(res, { erro: 'escrita e execução indisponíveis nesta etapa' }, 405);
+    } else if (pathname === '/api/chaves' && req.method === 'GET') {
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, await chaves.inventario());
+    } else if (pathname === '/api/chaves/servidor' && req.method === 'GET') {
+      res.setHeader('cache-control', 'no-store');
+      try { responderJson(res, await chaves.lerServidor()); } catch (erro) { responderJson(res, { erro: erro.message }, 502); }
+    } else if ((pathname === '/api/chaves/preparar' || pathname === '/api/chaves/confirmar') && req.method === 'POST') {
+      const { status, corpo } = await apiChaves(req, pathname, lerCorpo);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
+    } else if (pathname.startsWith('/api/chaves')) {
+      responderJson(res, { erro: 'operação indisponível' }, 405);
     } else if (pathname === '/api/relacoes') {
       responderJson(res, await catalogoRelacoes());
     } else if (pathname.startsWith('/api/contas/')) {

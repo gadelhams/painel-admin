@@ -78,3 +78,15 @@
 .orq-vigilia-projeto { border-top: 1px solid var(--linha, #444); padding-top: .6rem; margin-top: .8rem; }
 .orq-vigilia-projeto h4 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
 .orq-vigilia-diario { margin: 0; padding-left: 1.1rem; font-family: var(--mono, monospace); font-size: .8rem; max-height: 14rem; overflow: auto; }
+
+/* Aba Chaves: linhas como as decisões; pendência em destaque. */
+.chaves-linha { display: grid; grid-template-columns: 1.4fr 1fr 1.6fr auto; gap: .6rem; padding: .5rem 0; border-top: 1px solid var(--linha, #444); align-items: start; }
+.chaves-pendente { background: color-mix(in srgb, var(--acento, #e0a800) 12%, transparent); }
+.chaves-rotacao strong { color: var(--acento, #e0a800); letter-spacing: .04em; }
+.chaves-form { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .3rem; }
+.chaves-form input { flex: 1 1 16rem; font-family: var(--mono, monospace); }
+.chaves-eventos { margin: 0; padding-left: 1.1rem; font-family: var(--mono, monospace); font-size: .8rem; }
+.astargne-painel { border: 1px solid var(--acento, #e0a800); padding: .8rem 1rem; margin: .8rem 0 1.2rem; }
+.astargne-painel h3 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
+.astargne-painel ul { margin: 0; padding-left: 1.1rem; }
+@media (max-width: 720px) { .chaves-linha { grid-template-columns: 1fr; } }

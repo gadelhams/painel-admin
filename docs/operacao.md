@@ -58,6 +58,7 @@ no settings do usuário). O gatilho
 | `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER; projeto novo exige a entrada em `servidor.js` na mesma entrega |
 | `XAI_API_KEY` | transcrição de voz (xAI); sem ela a rota responde 503 |
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
+| `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ausente por padrão** até o `validador-deploy` aprovar o mecanismo |
 | `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada, a **vigília** de um projeto (tópico da aba, SSO + confirmação) passa a despachar sozinha dentro dos freios do contrato |
 
 Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
