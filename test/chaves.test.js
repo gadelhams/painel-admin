@@ -13,8 +13,10 @@ const catalogo = [
   { projeto: 'painel-admin', local: { arquivo: 'painel-admin/.env', unit: 'painel-admin', descobrir: true }, chaves: [
     { nome: 'ELEVENLABS_API_KEY', descricao: 'voz' },
     { nome: 'XAI_API_KEY', descricao: 'voz xAI', rotacao: { pendente: true, desde: '2026-10-01', card: 'PAINEL-99', motivo: 'teste', depois: 'nada' } } ] },
-  { projeto: 'CadastroUnico', servidor: { candidatos: ['/opt/conta-astargne/.env', '/opt/conta-astargne/current/.env'], unit: 'conta-astargne' }, chaves: [
-    { nome: 'BREVO_API_KEY', descricao: 'e-mail', rotacao: { pendente: true, desde: '2026-09-30', card: 'CAD-18', motivo: 'colada no chat' } } ],
+  { projeto: 'CadastroUnico', servidor: { candidatos: ['/opt/conta-astargne/.env', '/opt/conta-astargne/current/.env'], unit: 'conta-astargne', aviso: 'queda de 1 a 3 s', descobrir: true }, chaves: [
+    { nome: 'BREVO_API_KEY', descricao: 'e-mail', rotacao: { pendente: true, desde: '2026-09-30', card: 'CAD-18', motivo: 'colada no chat' } },
+    { nome: 'TOKEN_INTERNO', descricao: 'bearer', bloqueado: 'derruba player e fliperama' },
+    { nome: 'DATABASE_URL', descricao: 'pg', depois: 'ALTER USER no Postgres' } ],
     foraDoEnv: [{ nome: 'senha do painel da Brevo', rotacao: { pendente: true, desde: '2026-09-30', card: 'CAD-18b', motivo: 'x' } }] },
 ];
 
@@ -79,7 +81,7 @@ test('troca local: escrita atômica 0600 com cópia .bak, evento sem valor, rein
     assert.deepEqual(inv.pendentes.map(p => p.card).sort(), ['CAD-18', 'CAD-18b'], 'XAI rotacionada deixa de estar pendente');
     await assert.rejects(a.servico.confirmar({ projeto: 'painel-admin', nome: 'XAI_API_KEY', alvo: 'local' }, 'com\nquebra', '1'), /valor inválido/);
     await assert.rejects(a.servico.preparar({ projeto: 'painel-admin', nome: 'ELEVENLABS_API_KEY', alvo: 'servidor' }), /sem \.env no servidor/);
-    await assert.rejects(a.servico.preparar({ projeto: 'CadastroUnico', nome: 'OUTRA', alvo: 'servidor' }), /fora do catálogo/);
+    await assert.rejects(a.servico.preparar({ projeto: 'CadastroUnico', nome: 'OUTRA', alvo: 'servidor' }), /não catalogada/);
   } finally { await a.limpar(); }
 });
 
@@ -102,10 +104,18 @@ test('servidor: inventário por ssh só com nomes; troca exige flag, inventário
     const cad = inv.projetos.find(p => p.projeto === 'CadastroUnico');
     assert.equal(cad.servidor.arquivo, '/opt/conta-astargne/.env');
     assert.equal(cad.chaves[0].servidor, 'presente');
+    assert.equal(cad.chaves.find(c => c.nome === 'TOKEN_INTERNO').bloqueado, 'derruba player e fliperama');
     assert.match(a.chamadasSsh[0].args.at(-1), /sudo test -f '\/opt\/conta-astargne\/\.env'/);
     assert.match(a.chamadasSsh[0].args.at(-1), /grep -oE '\^\[A-Za-z_\]\[A-Za-z0-9_\]\*='/);
     const dados = await a.servico.preparar({ projeto: 'CadastroUnico', nome: 'BREVO_API_KEY', alvo: 'servidor' });
     assert.equal(dados.unit, 'conta-astargne');
+    assert.match(dados.aviso, /Efeito do reinício: queda de 1 a 3 s/);
+    // validador-deploy 24/10: bloqueado, descoberta e valor perigoso para compose não passam
+    await assert.rejects(a.servico.preparar({ projeto: 'CadastroUnico', nome: 'TOKEN_INTERNO', alvo: 'servidor' }), e => e.status === 422 && /bloqueada/.test(e.message));
+    await assert.rejects(a.servico.preparar({ projeto: 'CadastroUnico', nome: 'OUTRA_DESCOBERTA', alvo: 'servidor' }), e => e.status === 422 && /catalogue/.test(e.message));
+    assert.equal((await a.servico.preparar({ projeto: 'CadastroUnico', nome: 'DATABASE_URL', alvo: 'servidor' })).depois, 'ALTER USER no Postgres');
+    await assert.rejects(a.servico.confirmar({ projeto: 'CadastroUnico', nome: 'BREVO_API_KEY', alvo: 'servidor' }, 'tem #comentario', '1'), e => e.status === 422);
+    await assert.rejects(a.servico.confirmar({ projeto: 'CadastroUnico', nome: 'BREVO_API_KEY', alvo: 'servidor' }, 'tem espaco', '1'), e => e.status === 422);
     const r = await a.servico.confirmar({ projeto: 'CadastroUnico', nome: 'BREVO_API_KEY', alvo: 'servidor' }, 'xkeysib-nova', '1');
     assert.deepEqual(r, { ok: true, alvo: 'servidor', arquivo: '/opt/conta-astargne/.env', reiniciou: true });
     assert.equal(a.chamadasSsh.at(-1).stdin, 'xkeysib-nova');
@@ -151,4 +161,42 @@ test('front: aba Chaves e bloco Astargne existem, sem innerHTML, e a rota de cha
   assert.match(chaves, /type: 'password'/);
   assert.match(decisoes, /ASTARGNE · O QUE DEPENDE DE VOCÊ/);
   assert.match(app, /view === 'chaves'/);
+});
+
+test('servidor: dois candidatos existindo é ambíguo — nomes não se misturam e a troca para em 409', async () => {
+  const ssh = async () => ({ codigo: 0, stdout: 'ARQ CadastroUnico|/opt/conta-astargne/.env|600\nVAR BREVO_API_KEY\nARQ CadastroUnico|/opt/conta-astargne/current/.env|644\nVAR SO_DO_SEGUNDO\n', stderr: '' });
+  const a = await ambiente({ ssh, escritaServidor: true });
+  try {
+    const inv = await a.servico.lerServidor();
+    const cad = inv.projetos.find(p => p.projeto === 'CadastroUnico');
+    assert.equal(cad.servidor.ambiguo, true);
+    assert.deepEqual(cad.servidor.nomes, ['BREVO_API_KEY']);
+    assert.deepEqual(cad.servidor.outros, ['/opt/conta-astargne/current/.env']);
+    await assert.rejects(a.servico.preparar({ projeto: 'CadastroUnico', nome: 'BREVO_API_KEY', alvo: 'servidor' }), e => e.status === 409 && /mais de um/.test(e.message));
+  } finally { await a.limpar(); }
+});
+
+test('script remoto (python3 real): umask 077, preserva `export`, .bak 600, tmp exclusivo, sem aspas simples', async (t) => {
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const run = promisify(execFile);
+  try { await run('python3', ['--version']); } catch { t.skip('sem python3'); return; }
+  const a = await ambiente({ escritaServidor: true });
+  try {
+    const script = a.servico.scriptTrocaServidor('/opt/conta-astargne/.env', 'BREVO_API_KEY', 'conta-astargne');
+    const py = /^sudo python3 -c '([^']+)' /.exec(script)[1];
+    assert.equal(py.includes("'"), false);
+    const arq = path.join(a.raiz, 'remoto.env');
+    await fs.writeFile(arq, 'A=1\nexport BREVO_API_KEY=velha\nB=2\n', { mode: 0o600 });
+    // umask 022 como o sudo do servidor: o script tem de impor 077 sozinho; valor pelo stdin
+    const { spawn } = await import('node:child_process');
+    await new Promise((res, rej) => { const f = spawn('sh', ['-c', 'umask 022; exec python3 -c "$1" "$2" BREVO_API_KEY', 'sh', py, arq]); f.stdin.end('nova-xyz\n'); f.on('close', c => c === 0 ? res() : rej(new Error(`saida ${c}`))); });
+    assert.equal(await fs.readFile(arq, 'utf8'), 'A=1\nexport BREVO_API_KEY=nova-xyz\nB=2\n');
+    const nomes = await fs.readdir(a.raiz);
+    const bak = nomes.filter(n => n.startsWith('remoto.env.bak-'));
+    assert.ok(bak.length >= 1, 'cópia .bak existe');
+    for (const b of bak) assert.equal(((await fs.stat(path.join(a.raiz, b))).mode & 0o777), 0o600);
+    assert.equal(((await fs.stat(arq)).mode & 0o777), 0o600);
+    assert.equal(nomes.some(n => n.includes('.tmp-')), false, 'tmp não sobra');
+  } finally { await a.limpar(); }
 });

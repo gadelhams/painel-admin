@@ -12,17 +12,17 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - Backlog lido do **Plane** (`127.0.0.1:8095`, Guest "painel", só leitura):
   13 projetos no Plane, 15 no catálogo.
 - Abas: **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves**.
-  Chaves (24/10): segredos por projeto, só nomes, troca por SSO; Decisões
-  abre com o bloco "Astargne". A
+  Chaves (24/10): segredos por projeto, só nomes, troca por SSO; no servidor
+  **desligada** (validador REPROVOU a 1ª versão; correções feitas, revalidar
+  antes de ligar). Decisões abre com o bloco "Astargne". A
   Orquestração lê a fila, pré-checa gates, registra perfil/gate/handoff com
   identidade técnica (CKBL e PLAYER) só por SSO + confirmação em duas ações,
   e mostra em leitura o canal legado do SupervisorHandoff (doc 59, os dois
   configs) — [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
 - Portão de despacho **desligado**: `ORQ_EXECUCAO_HABILITADA` ausente do
-  `.env`. O executor real (`orquestrador/executor-cli.js`) existe e está
-  provado com CLIs falsas; só nasce com a variável. **Vigília** (tópico da
-  aba): varredura automática por projeto, todas desligadas; só o PLAYER
-  declara o bloco. 24/10: 13 projetos, 418 cartas, PLAYER-38 única elegível.
+  `.env`. Executor real provado com CLIs falsas; só nasce com a variável.
+  **Vigília**: varredura automática por projeto, todas desligadas; só o
+  PLAYER declara o bloco. 24/10: 13 projetos, 418 cartas, PLAYER-38 única elegível.
 
 ## O que falta
 
@@ -33,10 +33,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 141 testes + `check-docs` 0 erros (24/10); Playwright 11/11.
-- Commit `b7d59fb` (24/10) fecha a entrega do Orquestrador; rollback = `dba9618`
-  (painel sem a aba). Sem push.
-- Auditoria de 24/10 aplicada: `orquestracao*.js` legados removidos,
-  `Depende de:` em lista, filtro `cancelled`, trava fora do I/O do Plane,
-  renovação de lease não pegajosa, resultado do executor persistido antes do
-  Plane, releitura das etiquetas antes do PATCH, 409 do Plane = idempotência.
+- `npm test`: 149 testes + `check-docs` 0 erros (24/10); Playwright 11/11.
+- Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` publicada no GitHub.
+- Auditoria de 24/10 aplicada: legados removidos, trava fora do I/O do Plane,
+  lease não pegajoso, resultado do executor persistido antes do Plane,
+  releitura das etiquetas antes do PATCH, 409 do Plane = idempotência.

@@ -129,7 +129,20 @@ próprio painel, ele reinicia) ou no servidor (valor pelo **stdin** do ssh, `sud
 python3 -c` fixo que reescreve a linha com o dono e o modo originais e reinicia a
 unit do catálogo; só o arquivo descoberto pelo inventário). A escrita no servidor
 só existe com `CHAVES_SERVIDOR_ESCRITA=true`, depois do APROVADO do
-`validador-deploy`. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
+`validador-deploy`. O validador **REPROVOU** a 1ª versão (24/10/2026) e o código já
+traz a correção mínima pedida: `bloqueado` (TOKEN_INTERNO do central e os
+SSO_*TOKEN* que dependem dele — trocar um sozinho derruba player e fliperama),
+`depois` obrigatório fora da rotação (DATABASE_URL do player: `ALTER USER` + mesma
+troca no `.env` local, porque o deploy recria o do servidor), `servidor.aviso` por
+unit no preparo (compose do filosofia/ragpt derruba conversas/jogo), ssh da troca
+com teto próprio de 180 s (restart de compose passa dos 15 s do executor comum),
+`os.umask(0o077)` e `.tmp` exclusivo no python remoto, dois candidatos existentes =
+ambíguo (409, nomes não se misturam), valor para o servidor sem espaço/`#`/`$`/aspas
+(env_file do compose truncaria), nome descoberto só no inventário (trocar exige
+catalogar) e o EmuladorWeb como `foraDoEnv` (o token vive cru em
+`secrets/sso-internal-token` e só muda pelo instalador). Falta, antes de ligar a
+flag: revalidar e anotar o painel como escritor de `.env` no master do servidor
+(§3 do player e os `.bak`), publicado pelo §8. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
 levam valor; a pendência some quando há evento posterior à data do catálogo. O
 bloco **Astargne** da aba Decisões (`publico/decisoes.js`) junta as rotações
 pendentes com os cards abertos `ASTARGNE`/`EMPÍRICA` em quatro grupos — chaves e

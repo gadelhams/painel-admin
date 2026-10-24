@@ -35,7 +35,7 @@ function linhaChave(projeto, c, alvoPadrao) {
   if (c.servidor !== null && c.servidor !== undefined) estados.push(`servidor: ${c.servidor}`);
   const acoes = el('div', { class: 'chaves-acoes' });
   for (const alvo of ['local', 'servidor']) {
-    if (c[alvo] === null || c[alvo] === undefined) continue;
+    if (c[alvo] === null || c[alvo] === undefined || c.bloqueado) continue;
     const b = el('button', { type: 'button', class: 'orq-acao' }, alvo === 'local' ? 'Trocar aqui' : 'Trocar no servidor');
     b.addEventListener('click', () => abrirTroca(projeto, c.nome, alvo, acoes));
     acoes.append(b);
@@ -49,6 +49,8 @@ function linhaChave(projeto, c, alvoPadrao) {
     el('div', { class: 'chaves-nome' }, el('code', {}, c.nome), c.descricao ? el('span', { class: 'kicker' }, ` ${c.descricao}`) : ''),
     el('div', { class: 'chaves-estado' }, estados.join(' · ') || '—', c.ultimaTroca ? ` · trocada em ${new Date(c.ultimaTroca).toLocaleString('pt-BR')}` : ''),
     rot ? el('div', { class: 'chaves-rotacao' }, el('strong', {}, 'ROTAÇÃO PENDENTE'), ` — ${rot.motivo} (${rot.card}, desde ${rot.desde})`, rot.depois ? el('div', { class: 'kicker' }, `depois: ${rot.depois}`) : '') : '',
+    c.bloqueado ? el('div', { class: 'kicker chaves-bloqueado' }, `troca fora do painel: ${c.bloqueado}`) : '',
+    c.depois ? el('div', { class: 'kicker' }, `toda troca exige depois: ${c.depois}`) : '',
     acoes);
 }
 
@@ -61,7 +63,7 @@ async function abrirTroca(projeto, nome, alvo, alvoEl) {
   const r = await pedirChaves('POST', '/api/chaves/preparar', { projeto, nome, alvo });
   if (!r.ok) { status.textContent = r.status === 401 ? `${r.dados.erro} Abra https://astargne.com/login e volte a esta aba.` : (r.dados.erro ?? `falha HTTP ${r.status}`); return; }
   preparoChaves = r.dados;
-  status.textContent = r.dados.aviso;
+  status.textContent = r.dados.depois ? `${r.dados.aviso} Depois: ${r.dados.depois}` : r.dados.aviso;
   const entrada = alvo === 'fora' ? null : el('input', { type: 'password', autocomplete: 'off', spellcheck: 'false', 'aria-label': `novo valor de ${nome}`, placeholder: 'novo valor (não é exibido nem guardado na tela)', maxlength: '4096' });
   const confirmar = el('button', { type: 'button', class: 'orq-acao' }, alvo === 'fora' ? 'Confirmar: já rotacionei no provedor' : 'Confirmar troca');
   confirmar.addEventListener('click', async () => {

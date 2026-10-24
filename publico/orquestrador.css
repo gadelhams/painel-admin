@@ -90,3 +90,4 @@
 .astargne-painel h3 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
 .astargne-painel ul { margin: 0; padding-left: 1.1rem; }
 @media (max-width: 720px) { .chaves-linha { grid-template-columns: 1fr; } }
+.chaves-bloqueado { color: var(--cor-aviso, #b26a00); }

@@ -24,7 +24,12 @@ const ARQUIVO_SERVIDOR = /^\/opt\/[a-z0-9-]+(\/[a-z0-9_.-]+)*\/[a-z0-9_.-]*\.env
 // Catálogo: o que cada projeto guarda e onde. `rotacao` nomeia o card que pediu a troca e
 // a data a partir da qual um evento de troca a satisfaz; `descobrir` lista também os nomes
 // que o arquivo tiver além dos catalogados. `foraDoEnv` é segredo que o painel não troca
-// (vive no provedor ou na base), só registra a rotação quando o dono a fizer.
+// (vive no provedor ou na base), só registra a rotação quando o dono a fizer. `bloqueado`
+// é segredo catalogado que o painel mostra mas NÃO troca (validador-deploy 24/10/2026:
+// TOKEN_INTERNO dessincroniza player e emulador; o token do emulador só muda pelo
+// instalador). `depois` fora de `rotacao` é o passo obrigatório após QUALQUER troca.
+// `servidor.aviso` nomeia o que o `systemctl restart` derruba. Nome descoberto
+// (`descobrir`) só aparece no inventário: trocar exige catalogar.
 export const CATALOGO = Object.freeze([
   { projeto: 'painel-admin', local: { arquivo: 'painel-admin/.env', unit: 'painel-admin' }, chaves: [
     { nome: 'ELEVENLABS_API_KEY', descricao: 'voz do C-3PO (ElevenLabs)' },
@@ -39,39 +44,44 @@ export const CATALOGO = Object.freeze([
     { nome: 'YOUTUBE_MUSIC_COOKIE', descricao: 'cookie da conta YouTube Music usada pelo proxy' },
   ] },
   { projeto: 'ProjetoConversaComDeus', local: { arquivo: 'ProjetoConversaComDeus/filosofia/.env', descobrir: true },
-    servidor: { candidatos: ['/opt/filosofia/.env'], unit: 'filosofia' }, chaves: [
+    servidor: { candidatos: ['/opt/filosofia/.env'], unit: 'filosofia', aviso: 'docker compose down/up: conversas em andamento (SSE) caem; pode levar mais de 15 s' }, chaves: [
       { nome: 'ANTHROPIC_API_KEY', descricao: 'Claude do livro de diálogos',
         rotacao: { pendente: true, desde: '2026-09-30', card: 'FILO-9', motivo: 'ficou exposta no OneDrive antes da migração', depois: 'revogar a antiga no console da Anthropic' } },
       { nome: 'GEMINI_API_KEY', descricao: 'Gemini (se ainda em uso)',
         rotacao: { pendente: true, desde: '2026-09-30', card: 'FILO-9', motivo: 'ficou exposta no OneDrive antes da migração', depois: 'revogar a antiga no Google AI Studio' } },
-      { nome: 'SSO_TOKEN_INTERNO', descricao: 'token interno do Cadastro Único (nasce lá; trocar junto com o central)' },
+      { nome: 'SSO_TOKEN_INTERNO', descricao: 'token interno do Cadastro Único (nasce lá; trocar junto com o central)', bloqueado: 'troca encadeada com o TOKEN_INTERNO do central — fora do painel até existir aceitação de dois tokens' },
       { nome: 'ADMIN_PASSWORD', descricao: 'senha do admin local do livro' },
     ] },
   { projeto: 'CadastroUnico', local: { arquivo: 'CadastroUnico/.env' },
-    servidor: { candidatos: ['/opt/conta-astargne/.env', '/opt/conta-astargne/current/.env'], unit: 'conta-astargne' }, chaves: [
-      { nome: 'TOKEN_INTERNO', descricao: 'bearer das rotas /interno/* — nunca sai do servidor; trocar exige trocar SSO_*TOKEN* em filosofia, player e emulador na mesma janela' },
+    servidor: { candidatos: ['/opt/conta-astargne/.env', '/opt/conta-astargne/current/.env'], unit: 'conta-astargne', aviso: '1 a 3 s de queda da raiz astargne.com, do player e do fliperama' }, chaves: [
+      { nome: 'TOKEN_INTERNO', descricao: 'bearer das rotas /interno/* — nunca sai do servidor',
+        bloqueado: 'trocar aqui derruba player (503) e fliperama até alguém rodar o instalador do EmuladorWeb; só com troca encadeada ou aceitação de dois tokens no central' },
       { nome: 'BREVO_API_KEY', descricao: 'e-mail transacional (convites, redefinição de senha)',
         rotacao: { pendente: true, desde: '2026-09-30', card: 'CAD-18', motivo: 'colada num chat em 09/2026', depois: 'revogar a antiga no painel da Brevo' } },
     ] },
   { projeto: 'PlayerForM3UList', local: { arquivo: 'PlayerForM3UList/server/.env' },
-    servidor: { candidatos: ['/opt/player-for-m3u-list/current/.env', '/opt/player-for-m3u-list/current/server/.env', '/opt/player-for-m3u-list/.env'], unit: 'player-for-m3u-list' }, chaves: [
-      { nome: 'SSO_INTERNAL_TOKEN', descricao: 'token interno do Cadastro Único (nasce lá)' },
-      { nome: 'DATABASE_URL', descricao: 'Postgres do player (senha embutida na URL)' },
+    servidor: { candidatos: ['/opt/player-for-m3u-list/current/.env', '/opt/player-for-m3u-list/current/server/.env', '/opt/player-for-m3u-list/.env'], unit: 'player-for-m3u-list',
+      aviso: 'streams em andamento (/api/proxy) cortam; o deploy do player RECRIA o server/.env a partir do .env local desta máquina — toda troca no servidor precisa da mesma troca aqui, senão o próximo deploy a reverte em silêncio' }, chaves: [
+      { nome: 'SSO_INTERNAL_TOKEN', descricao: 'token interno do Cadastro Único (nasce lá)', bloqueado: 'copiado do central pelo deploy; muda só junto com o TOKEN_INTERNO' },
+      { nome: 'DATABASE_URL', descricao: 'Postgres do player (senha embutida na URL)',
+        depois: 'ALTER USER com a mesma senha no Postgres do container player-m3u-postgres (senão o pool falha e o player cai) e a mesma troca no server/.env local, senão o próximo deploy reverte' },
     ], foraDoEnv: [
       { nome: 'credencial do provedor IPTV (na URL da playlist)', descricao: 'vive na playlist cadastrada no app, não em .env',
         rotacao: { pendente: true, desde: '2026-09-12', card: 'PLAYER-16', motivo: 'exposta na internet entre 11 e 12/09/2026', depois: 'trocar a senha no provedor e recadastrar a playlist no app' } },
     ] },
-  { projeto: 'EmuladorWeb', servidor: { candidatos: ['/opt/emuladorweb/current/.env', '/opt/emuladorweb/shared/.env', '/opt/emuladorweb/.env'], unit: 'emuladorweb', descobrir: true }, chaves: [
-    { nome: 'SSO_INTERNAL_TOKEN', descricao: 'token interno do Cadastro Único (nasce lá)' },
+  // Sem .env: o token vive cru em /opt/emuladorweb/secrets/sso-internal-token (SSO_INTERNAL_TOKEN_FILE)
+  // e só muda pelo deploy/instalar-no-servidor.sh — que reinstala o Caddyfile inteiro (armadilha 4.11).
+  { projeto: 'EmuladorWeb', foraDoEnv: [
+    { nome: 'SSO_INTERNAL_TOKEN (arquivo secrets/sso-internal-token)', descricao: 'token interno do Cadastro Único; troca só pelo instalador do EmuladorWeb, junto com o central' },
   ] },
-  { projeto: 'RagPTdoZero', servidor: { candidatos: ['/opt/ragpt/.env'], unit: 'ragpt', descobrir: true }, chaves: [] },
-  { projeto: 'Anya', servidor: { candidatos: ['/opt/anya/instancia/segredos.env'], unit: 'anya', descobrir: true }, chaves: [] },
+  { projeto: 'RagPTdoZero', servidor: { candidatos: ['/opt/ragpt/.env'], unit: 'ragpt', descobrir: true, aviso: 'docker compose down/up: login/char/map e MariaDB reiniciam — jogadores desconectados' }, chaves: [] },
+  { projeto: 'Anya', servidor: { candidatos: ['/opt/anya/instancia/segredos.env'], unit: 'anya', descobrir: true, aviso: 'reinício da Anya' }, chaves: [] },
 ]);
 
 export function validarCatalogo(catalogo = CATALOGO) {
   const erros = [];
   for (const p of catalogo) {
-    if (!p.local && !p.servidor) erros.push(`${p.projeto}: sem local nem servidor`);
+    if (!p.local && !p.servidor && !(p.foraDoEnv?.length)) erros.push(`${p.projeto}: sem local, servidor nem segredo fora do .env`);
     if (p.local && (path.isAbsolute(p.local.arquivo) || p.local.arquivo.includes('..'))) erros.push(`${p.projeto}: arquivo local deve ser relativo à raiz`);
     if (p.local?.unit && !UNIT.test(p.local.unit)) erros.push(`${p.projeto}: unit local inválida`);
     if (p.servidor) {
@@ -90,10 +100,19 @@ function nomesDoTexto(texto) {
   return texto.split('\n').map(l => /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(l)?.[1]).filter(Boolean);
 }
 
+// `systemctl restart` de unit compose (filosofia, ragpt) passa com folga dos 15 s do
+// executor comum: a troca usa um ssh com teto próprio, senão o painel mata o ssh com o
+// arquivo já reescrito e o restart em curso (ROTACAO_INCERTA falsa).
+const TIMEOUT_TROCA_MS = 180_000;
+
 export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
   diretorioEstado = path.join(os.homedir(), '.local', 'state', 'painel-admin'),
-  executar = criarExecutorSsh(), spawn = spawnPadrao, agora = Date.now,
+  executar: executarOpcional = null, executarTroca = null, spawn = spawnPadrao, agora = Date.now,
   escritaServidorHabilitada = process.env.CHAVES_SERVIDOR_ESCRITA?.trim() === 'true', log = console.error } = {}) {
+  // Teste injeta um só `executar` falso e ele vale para as duas chamadas; em produção
+  // inventário e troca têm tetos distintos.
+  const executar = executarOpcional ?? criarExecutorSsh();
+  const trocaSsh = executarTroca ?? executarOpcional ?? criarExecutorSsh({ timeoutMs: TIMEOUT_TROCA_MS });
   const erros = validarCatalogo(catalogo);
   if (erros.length) throw new Error(`catálogo de chaves inválido: ${erros.join('; ')}`);
   const eventos = path.join(diretorioEstado, 'chaves.jsonl');
@@ -131,9 +150,9 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
           local = { arquivo: p.local.arquivo, unit: p.local.unit ?? null, existe: true, modo: modo.toString(8), nomes: nomesDoTexto(texto), permissaoFrouxa: (modo & 0o077) !== 0 };
         } catch (e) { local = { arquivo: p.local.arquivo, unit: p.local.unit ?? null, existe: false, motivo: e.code === 'ENOENT' ? 'arquivo ausente' : 'ilegível', nomes: [] }; }
       }
-      const servidor = p.servidor ? { unit: p.servidor.unit, candidatos: p.servidor.candidatos,
+      const servidor = p.servidor ? { unit: p.servidor.unit, candidatos: p.servidor.candidatos, aviso: p.servidor.aviso ?? null,
         ...(inventarioServidorCache?.arquivos?.[p.projeto] ?? { lido: false }) } : null;
-      const chaves = (p.chaves ?? []).map(c => ({ nome: c.nome, descricao: c.descricao ?? '',
+      const chaves = (p.chaves ?? []).map(c => ({ nome: c.nome, descricao: c.descricao ?? '', bloqueado: c.bloqueado ?? null, depois: c.depois ?? null,
         local: local ? (local.nomes.includes(c.nome) ? 'presente' : 'ausente') : null,
         servidor: servidor ? (servidor.lido ? (servidor.nomes?.includes(c.nome) ? 'presente' : 'ausente') : 'não lido') : null,
         rotacao: pendenciaDe(c, p.projeto, historico),
@@ -166,7 +185,12 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
     let atual = null;
     for (const linha of r.stdout.split('\n')) {
       const arq = /^ARQ ([^|]+)\|([^|]+)\|(\d+)$/.exec(linha);
-      if (arq) { atual = { arquivo: arq[2], modo: arq[3], nomes: [], lido: true, permissaoFrouxa: (parseInt(arq[3], 8) & 0o077) !== 0 }; arquivos[arq[1]] = arquivos[arq[1]] ?? atual; if (arquivos[arq[1]] !== atual) atual = arquivos[arq[1]]; continue; }
+      if (arq) {
+        // Dois candidatos existindo é ambiguidade, não concatenação: a tela mostraria
+        // variáveis de um arquivo como se fossem do outro e a troca escreveria no errado.
+        if (arquivos[arq[1]]) { arquivos[arq[1]].ambiguo = true; arquivos[arq[1]].outros = [...(arquivos[arq[1]].outros ?? []), arq[2]]; atual = null; continue; }
+        atual = { arquivo: arq[2], modo: arq[3], nomes: [], lido: true, permissaoFrouxa: (parseInt(arq[3], 8) & 0o077) !== 0 }; arquivos[arq[1]] = atual; continue;
+      }
       const v = /^VAR ([A-Za-z_][A-Za-z0-9_]*)$/.exec(linha);
       if (v && atual) atual.nomes.push(v[1]);
     }
@@ -183,20 +207,25 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
       return { p, c, alvo };
     }
     if (!NOME.test(nome ?? '')) throw new ErroAcesso('nome de variável inválido', 422);
-    const c = (p.chaves ?? []).find(x => x.nome === nome) ?? ((p[alvo]?.descobrir) ? { nome, descoberta: true } : null);
-    if (!c) throw new ErroAcesso('variável fora do catálogo deste projeto', 422);
+    const c = (p.chaves ?? []).find(x => x.nome === nome);
+    if (!c) throw new ErroAcesso((p[alvo]?.descobrir) ? 'variável descoberta, não catalogada: catalogue-a em chaves.js antes de trocar' : 'variável fora do catálogo deste projeto', 422);
+    if (c.bloqueado) throw new ErroAcesso(`troca bloqueada pelo painel: ${c.bloqueado}`, 422);
     if (alvo === 'local' && !p.local) throw new ErroAcesso('projeto sem .env local catalogado', 422);
     if (alvo === 'servidor') {
       if (!p.servidor) throw new ErroAcesso('projeto sem .env no servidor catalogado', 422);
       if (!escritaServidorHabilitada) throw new ErroAcesso('troca no servidor desligada: aguarda APROVADO do validador-deploy (CHAVES_SERVIDOR_ESCRITA)', 503);
       const lido = inventarioServidorCache?.arquivos?.[projeto];
       if (!lido?.arquivo) throw new ErroAcesso('leia o inventário do servidor antes de trocar (o arquivo real precisa ser conhecido)', 409);
+      if (lido.ambiguo) throw new ErroAcesso('mais de um arquivo candidato existe no servidor; resolva lá antes de trocar', 409);
     }
     return { p, c, alvo };
   }
 
-  function validarValor(valor) {
+  function validarValor(valor, alvo) {
     if (typeof valor !== 'string' || !valor.length || valor.length > 4096 || /[\r\n\0]/.test(valor)) throw new ErroAcesso('valor inválido (1 a 4096 caracteres, sem quebra de linha)', 422);
+    // No servidor o valor vai sem aspas para env_file/interpolação do compose: ` #` vira
+    // comentário e `$` interpola — o serviço subiria com segredo truncado, sem erro.
+    if (alvo === 'servidor' && /[\s#$'"\\]/.test(valor)) throw new ErroAcesso('valor para o servidor não pode ter espaço, #, $, aspas ou barra invertida', 422);
   }
 
   function reescrever(texto, nome, valor) {
@@ -228,14 +257,14 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
   // Script fixo no servidor: python3 (sem aspas simples dentro) recebe o VALOR pelo stdin e
   // arquivo/nome/unit como argumentos já validados por regex; cópia .bak, escrita atômica
   // com o dono e 600 originais, depois `systemctl restart` da unit do catálogo.
-  const PYTHON_REMOTO = 'import sys,os,shutil,time\narq,nome=sys.argv[1],sys.argv[2]\nvalor=sys.stdin.read().rstrip("\\n")\nif not valor or "\\n" in valor or "\\r" in valor: sys.exit(97)\nst=os.stat(arq)\ntexto=open(arq,encoding="utf-8").read()\nlinhas=texto.split("\\n")\nif linhas and linhas[-1]=="": linhas.pop()\nfor i,l in enumerate(linhas):\n  if l.startswith(nome+"="): linhas[i]=nome+"="+valor; break\nelse: linhas.append(nome+"="+valor)\nshutil.copy2(arq, arq+".bak-"+time.strftime("%Y%m%d%H%M%S"))\ntmp=arq+".tmp"\nfd=os.open(tmp, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600)\nos.write(fd, ("\\n".join(linhas)+"\\n").encode("utf-8"))\nos.close(fd)\nos.chown(tmp, st.st_uid, st.st_gid)\nos.chmod(tmp, 0o600)\nos.replace(tmp, arq)\nprint("OK")';
+  const PYTHON_REMOTO = 'import sys,os,shutil,time\nos.umask(0o077)\narq,nome=sys.argv[1],sys.argv[2]\nvalor=sys.stdin.read().rstrip("\\n")\nif not valor or "\\n" in valor or "\\r" in valor: sys.exit(97)\nst=os.stat(arq)\ntexto=open(arq,encoding="utf-8").read()\nlinhas=texto.split("\\n")\nif linhas and linhas[-1]=="": linhas.pop()\nfor i,l in enumerate(linhas):\n  pref="export " if l.startswith("export "+nome+"=") else ""\n  if pref or l.startswith(nome+"="): linhas[i]=pref+nome+"="+valor; break\nelse: linhas.append(nome+"="+valor)\nshutil.copy2(arq, arq+".bak-"+time.strftime("%Y%m%d%H%M%S"))\ntmp=arq+".tmp-"+str(os.getpid())\nfd=os.open(tmp, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600)\nos.write(fd, ("\\n".join(linhas)+"\\n").encode("utf-8"))\nos.close(fd)\nos.chown(tmp, st.st_uid, st.st_gid)\nos.chmod(tmp, 0o600)\nos.replace(tmp, arq)\nprint("OK")';
   function scriptTrocaServidor(arquivo, nome, unit) {
     if (!ARQUIVO_SERVIDOR.test(arquivo) || !NOME.test(nome) || !UNIT.test(unit)) throw new ErroAcesso('alvo do servidor inválido', 422);
     return `sudo python3 -c '${PYTHON_REMOTO}' '${arquivo}' '${nome}' && sudo systemctl restart '${unit}' && echo REINICIADO`;
   }
   async function trocarServidor(p, nome, valor, usuarioId) {
     const arquivo = inventarioServidorCache.arquivos[p.projeto].arquivo;
-    const r = await executar(['-i', CHAVE_SSH, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', DESTINO_SSH, scriptTrocaServidor(arquivo, nome, p.servidor.unit)], valor);
+    const r = await trocaSsh(['-i', CHAVE_SSH, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', DESTINO_SSH, scriptTrocaServidor(arquivo, nome, p.servidor.unit)], valor);
     if (r.codigo !== 0 || !r.stdout.includes('OK')) {
       await anotar({ tipo: 'ROTACAO_INCERTA', projeto: p.projeto, nome, alvo: 'servidor', usuarioId, codigo: r.codigo });
       throw new Error('troca no servidor não confirmada; conferir o arquivo e o serviço antes de repetir');
@@ -248,9 +277,9 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
     const { p, c } = entrada(projeto, nome, alvo);
     const arquivo = alvo === 'local' ? p.local.arquivo : alvo === 'servidor' ? inventarioServidorCache.arquivos[projeto].arquivo : null;
     return { projeto, nome, alvo, arquivo, unit: alvo === 'local' ? p.local.unit ?? null : alvo === 'servidor' ? p.servidor.unit : null, descricao: c.descricao ?? '',
-      depois: c.rotacao?.depois ?? null,
+      depois: [c.depois, c.rotacao?.depois].filter(Boolean).join(' · ') || null,
       aviso: alvo === 'fora' ? 'Confirmar só registra que você rotacionou este segredo no provedor; nada é escrito aqui.'
-        : `Confirmar grava o valor novo em ${arquivo} (cópia .bak ao lado, 600) e reinicia ${alvo === 'local' ? p.local.unit ?? 'nenhum serviço' : p.servidor.unit}. O valor não aparece em log nem resposta.` };
+        : `Confirmar grava o valor novo em ${arquivo} (cópia .bak ao lado, 600) e reinicia ${alvo === 'local' ? p.local.unit ?? 'nenhum serviço' : p.servidor.unit}.${alvo === 'servidor' && p.servidor.aviso ? ` Efeito do reinício: ${p.servidor.aviso}.` : ''} O valor não aparece em log nem resposta.` };
   }
 
   async function confirmar({ projeto, nome, alvo }, valor, usuarioId) {
@@ -260,7 +289,7 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
       await anotar({ tipo: 'ROTACIONADA', projeto, nome, alvo: 'fora', usuarioId });
       return { ok: true, alvo: 'fora' };
     }
-    validarValor(valor);
+    validarValor(valor, alvo);
     return alvo === 'local' ? trocarLocal(p, nome, valor, usuarioId) : trocarServidor(p, nome, valor, usuarioId);
   }
 
