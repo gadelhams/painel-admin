@@ -408,4 +408,6 @@ decisão do dono. A suíte legada ficou verde no Omarchy (PAINEL-36).
 
 Portão: `npm test` 133/133, docs 14/0/0, Playwright 11/11; smoke em 7787 com
 fila (13/418, PLAYER-38 elegível, execução `false`), legado 200, despacho sem
-SSO 403, HTML 200. Sem commit, sem deploy, sem CLI paga.
+SSO 403, HTML 200. Commit `b7d59fb` no painel e `93473fc` no SupervisorHandoff
+(autorizados pelo dono em 24/10; rollback do painel = `dba9618`). Sem push,
+sem deploy, sem CLI paga.

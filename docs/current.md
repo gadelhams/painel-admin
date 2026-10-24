@@ -29,12 +29,12 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - **Fase 3 do C-3PO** (ações): motor com quatro ferramentas só-leitura e sem
   suíte (LLM sempre mock se entrar).
 - Aba Contas sem o selo do primeiro convite real; prova humana da voz pendente.
-- Árvore **sem commit** desde 06/10 (orquestrador inteiro): commit é pedido
-  do dono.
 
 ## Portão e repositório
 
 - `npm test`: 133 testes + `check-docs` 0 erros (24/10); Playwright 11/11.
+- Commit `b7d59fb` (24/10) fecha a entrega do Orquestrador; rollback = `dba9618`
+  (painel sem a aba). Sem push.
 - Auditoria de 24/10 aplicada: `orquestracao*.js` legados removidos,
   `Depende de:` em lista, filtro `cancelled`, trava fora do I/O do Plane,
   renovação de lease não pegajosa, resultado do executor persistido antes do
