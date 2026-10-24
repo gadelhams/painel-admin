@@ -110,6 +110,13 @@ profundidade. Executor injetável (`{ executar }`) e binário injetável
 `test/contas.test.js` nunca chama ssh de verdade: o encanamento real
 (stdin/EOF/timeout/teto) é provado com `node -e` como binário falso.
 
+
+Papéis por app (24/10/2026, ADR-0006 do central): `/api/contas/apps` traz
+`papeis` e `papelPadrao` por app; o editor de permissões e o convite mostram,
+por app, uma seleção "sem acesso / papéis" e mandam `apps: [{app, papel}]`; os
+chips mostram "App · Papel". Central antigo (sem papéis) cai no comportamento
+anterior: checkbox entra/não entra. O backend do painel não muda (o corpo
+passa pelo stdin do ssh como sempre).
 ### chaves.js
 
 (24/10/2026, decisão do dono) — a tela **Chaves**: inventário dos segredos por projeto

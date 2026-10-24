@@ -95,3 +95,4 @@
 .astargne-painel ul { margin: 0; padding-left: 1.1rem; }
 @media (max-width: 720px) { .chaves-linha { grid-template-columns: 1fr; } }
 .chaves-bloqueado { color: var(--cor-aviso, #b26a00); }
+.contas-select { margin-left: .3rem; }

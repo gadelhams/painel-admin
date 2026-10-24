@@ -115,25 +115,52 @@ function nomeDoApp(id) {
   return appsSso.find((a) => a.id === id)?.nome ?? id;
 }
 
-function chipsApps(ids) {
-  if (!ids.length) return el('span', { class: 'discreto' }, 'nenhum app');
-  return el('span', { class: 'chips-resumo' }, ...ids.map((id) => el('span', { class: 'chip-app', title: id }, nomeDoApp(id))));
+// Papéis por app (decisão do dono, 24/10/2026; ADR-0006 do central): o central
+// manda, por app, `papeis` e `papelPadrao`; aqui cada app vira uma seleção
+// "sem acesso / <papéis>". Central antigo (sem papéis) cai no comportamento
+// de antes: entra / não entra.
+function nomeDoPapel(appId, papelId) {
+  return appsSso.find((a) => a.id === appId)?.papeis?.find((p) => p.id === papelId)?.nome ?? papelId;
 }
 
-function checkboxesApps(marcados, prefixo) {
+// `permissoes` ([{app, papel}]) quando o central já tem papéis; senão `apps` (ids).
+function permissoesDe(objeto) {
+  if (Array.isArray(objeto.permissoes)) return objeto.permissoes;
+  return (objeto.apps ?? []).map((app) => ({ app, papel: null }));
+}
+
+function chipsApps(permissoes) {
+  if (!permissoes.length) return el('span', { class: 'discreto' }, 'nenhum app');
+  return el('span', { class: 'chips-resumo' }, ...permissoes.map(({ app, papel }) =>
+    el('span', { class: 'chip-app', title: `${app}${papel ? `:${papel}` : ''}` }, nomeDoApp(app), papel ? ` · ${nomeDoPapel(app, papel)}` : '')));
+}
+
+function seletoresApps(marcados, prefixo) {
+  const atual = new Map(marcados.map((p) => [p.app, p.papel]));
   return el(
     'div',
     { class: 'contas-checkboxes' },
     ...appsSso.map((app) => {
-      const caixa = el('input', { type: 'checkbox', name: `${prefixo}-apps`, value: app.id });
-      if (marcados.includes(app.id)) caixa.checked = true;
-      return el('label', { class: 'contas-checkbox' }, caixa, ` ${app.nome} `, el('code', {}, app.id));
+      const papeis = app.papeis ?? [];
+      if (!papeis.length) {
+        const caixa = el('input', { type: 'checkbox', name: `${prefixo}-apps`, value: app.id });
+        if (atual.has(app.id)) caixa.checked = true;
+        return el('label', { class: 'contas-checkbox' }, caixa, ` ${app.nome} `, el('code', {}, app.id));
+      }
+      const sel = el('select', { name: `${prefixo}-papel`, 'data-app': app.id, class: 'contas-select' },
+        el('option', { value: '' }, 'sem acesso'),
+        ...papeis.map((pp) => el('option', { value: pp.id, title: pp.descricao }, `${pp.nome}${pp.id === app.papelPadrao ? ' (padrão)' : ''}`)));
+      sel.value = atual.get(app.id) ?? '';
+      return el('label', { class: 'contas-checkbox' }, `${app.nome} `, el('code', {}, app.id), ' ', sel);
     }),
   );
 }
 
+// Devolve `[{app, papel}]` para apps com papéis e ids puros para os sem (central antigo).
 function appsMarcados(container, prefixo) {
-  return [...container.querySelectorAll(`input[name="${prefixo}-apps"]:checked`)].map((c) => c.value);
+  const comPapel = [...container.querySelectorAll(`select[name="${prefixo}-papel"]`)].filter((s) => s.value).map((s) => ({ app: s.dataset.app, papel: s.value }));
+  const semPapel = [...container.querySelectorAll(`input[name="${prefixo}-apps"]:checked`)].map((c) => c.value);
+  return [...comPapel, ...semPapel];
 }
 
 function botaoAcao(rotulo, aoClicar, extra = {}) {
@@ -147,9 +174,9 @@ function botaoAcao(rotulo, aoClicar, extra = {}) {
 
 function editorPermissoes(u) {
   const caixa = el('div', { class: 'contas-editor' });
-  const checks = checkboxesApps(u.apps, `u${u.id}`);
+  const checks = seletoresApps(permissoesDe(u), `u${u.id}`);
   caixa.append(
-    el('p', { class: 'kicker' }, 'permissões por app (só apps com SSO)'),
+    el('p', { class: 'kicker' }, 'permissão e papel por app (só apps com SSO); o app aplica o papel'),
     checks,
     el(
       'div',
@@ -199,7 +226,7 @@ function linhaUsuario(u) {
       el('div', { class: 'conta-email' }, u.email),
       el('div', { class: 'conta-meta' }, `#${u.id} · desde ${dataCurta(u.criado_em)}`),
     ),
-    el('div', { class: 'conta-apps' }, chipsApps(u.apps)),
+    el('div', { class: 'conta-apps' }, chipsApps(permissoesDe(u))),
     acoes,
   );
   if (usuarioEditando === u.id) linha.append(editorPermissoes(u));
@@ -219,7 +246,7 @@ function linhaConvite(c) {
       el('div', { class: 'conta-email' }, c.email),
       el('div', { class: 'conta-meta' }, `#${c.id} · criado ${dataCurta(c.criado_em)} · expira ${expiraEm(c.expira_em)} (${dataCurta(c.expira_em)})`),
     ),
-    el('div', { class: 'conta-apps' }, chipsApps(c.apps)),
+    el('div', { class: 'conta-apps' }, chipsApps(permissoesDe(c))),
     el(
       'div',
       { class: 'contas-acoes' },
@@ -267,7 +294,7 @@ function resultadoConvite(c) {
 function formularioConvidar() {
   const email = el('input', { type: 'email', name: 'email', required: '', placeholder: 'email@exemplo.com', autocomplete: 'off', class: 'contas-campo' });
   const nome = el('input', { type: 'text', name: 'nome', placeholder: 'nome (opcional)', maxlength: '100', autocomplete: 'off', class: 'contas-campo' });
-  const checks = checkboxesApps([], 'novo');
+  const checks = seletoresApps([], 'novo');
   const enviar = el('button', { type: 'submit', class: 'botao-contas destaque' }, 'convidar');
   if (acaoEmCurso) enviar.disabled = true;
 
@@ -281,7 +308,7 @@ function formularioConvidar() {
     el('p', { class: 'discreto' }, 'Cria o convite e manda o e-mail. A pessoa escolhe a senha no link, que expira (o prazo é o do central; a data aparece no resultado).'),
     el('label', { class: 'contas-rotulo' }, 'e-mail', email),
     el('label', { class: 'contas-rotulo' }, 'nome', nome),
-    el('div', { class: 'contas-rotulo' }, 'apps', checks),
+    el('div', { class: 'contas-rotulo' }, 'apps e papéis', checks),
     el('div', { class: 'contas-acoes' }, enviar),
   );
   form.addEventListener('submit', async (e) => {
