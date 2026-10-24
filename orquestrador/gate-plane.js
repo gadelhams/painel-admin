@@ -58,16 +58,20 @@ export function criarEscritorGatePlane({ chave, projetoPermitido, autorEsperado,
     if (!r.ok) throw new Error(`Plane recusou alteração do gate (HTTP ${r.status})`);
     return r.json();
   }
-  return async ({ projetoId, cartaId, gate, html, chaveIdempotencia, versaoCarta }) => {
-    if (projetoId !== projetoPermitido || !UUID.test(cartaId ?? '') || !UUID.test(chaveIdempotencia ?? '') || !GATES.has(gate)) {
+  // `remover` (vigília): troca READY TO DEV por READY TO TEST na mesma escrita, com recibo —
+  // a única troca de gate sem decisão humana, e só depois de uma tentativa concluída.
+  return async ({ projetoId, cartaId, gate, html, chaveIdempotencia, versaoCarta, remover = null }) => {
+    if (projetoId !== projetoPermitido || !UUID.test(cartaId ?? '') || !UUID.test(chaveIdempotencia ?? '') || !GATES.has(gate) ||
+        (remover !== null && (!GATES.has(remover) || remover === gate))) {
       throw new Error('gate fora do escopo da identidade de escrita');
     }
     const carta = await pedir(`work-items/${cartaId}/?expand=labels`);
     if (carta.id !== cartaId || carta.updated_at !== versaoCarta || !Array.isArray(carta.labels)) {
       throw new Error('carta mudou ou leitura de etiquetas inválida');
     }
-    if (carta.labels.some(x => GATES.has(x.name))) throw new Error('gate já presente; não alterar automaticamente');
-    const idsExistentes = carta.labels.map(x => x.id);
+    if (carta.labels.some(x => GATES.has(x.name) && x.name !== remover)) throw new Error('gate já presente; não alterar automaticamente');
+    if (remover && !carta.labels.some(x => x.name === remover)) throw new Error(`gate ${remover} a trocar não está na carta`);
+    const idsExistentes = carta.labels.filter(x => x.name !== remover).map(x => x.id);
     if (idsExistentes.some(x => !UUID.test(x ?? ''))) throw new Error('etiquetas da carta ilegíveis');
     const catalogo = await pedir('labels/?per_page=100');
     if (!Array.isArray(catalogo.results) || catalogo.next_page_results) throw new Error('catálogo de etiquetas incompleto');
@@ -81,7 +85,7 @@ export function criarEscritorGatePlane({ chave, projetoPermitido, autorEsperado,
     // externo entre a leitura e agora seria apagada em silêncio. Releitura imediata; o
     // recibo já gravado faz deste um estado incerto para conferência humana.
     const releitura = await pedir(`work-items/${cartaId}/?expand=labels`);
-    const idsAgora = (releitura.labels ?? []).map(x => x.id).sort();
+    const idsAgora = (releitura.labels ?? []).filter(x => x.name !== remover).map(x => x.id).sort();
     if (JSON.stringify(idsAgora) !== JSON.stringify([...idsExistentes].sort())) {
       throw new Error('etiquetas mudaram durante a aplicação; recibo gravado sem etiqueta — conferir o card');
     }

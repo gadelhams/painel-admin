@@ -411,3 +411,24 @@ fila (13/418, PLAYER-38 elegível, execução `false`), legado 200, despacho sem
 SSO 403, HTML 200. Commit `b7d59fb` no painel e `93473fc` no SupervisorHandoff
 (autorizados pelo dono em 24/10; rollback do painel = `dba9618`). Sem push,
 sem deploy, sem CLI paga.
+
+## Vigília (24/10/2026)
+
+Definição do dono, depois do fecho: o Painel não fica ocioso — um projeto
+ligado é varrido a cada dois minutos e a próxima carta elegível é despachada
+sem clique na carta. Implementada em `orquestrador/vigilia.js` sobre o mesmo
+`iniciarDespacho` e os mesmos portões; o que muda é a confirmação, por projeto
+(`api-vigilia.js`, SSO + duas ações, tópico "Vigília" na aba). Decisões
+aprovadas: avanço READY TO DEV → READY TO TEST (troca de etiqueta com recibo,
+`gate-plane.js` ganhou `remover`) → Done (`estado-plane.js`, grupo `completed`,
+tirando a etiqueta); perfil padrão por papel no contrato (`vigilia.perfilPadrao`,
+`politica.js` valida o bloco); freios 1 por vez / 2 por carta / 6 por dia /
+pausa de 60 min no limite de uso; toggle persistido e diário em
+`vigilia/<projeto>.json|.jsonl`. Só o PLAYER declara o bloco (perfil
+Claude/OpenAI/Claude, o validado no smoke SSO). Bug latente achado pelo teste
+da vigília e corrigido: `avaliarCarta` comparava prazos com a função
+`Date.now` em vez do instante, então lease ativo nunca aparecia como "ativo"
+(a UI dizia "revisão"); o serviço agora recebe o relógio. Portão: `npm test`
+141/141, docs 0 erros, Playwright 11/11; smoke em porta temporária: PLAYER com
+limites e impedimento "executor desligado", preparar sem SSO 403, fila
+inalterada. Carta PAINEL-44 absorve a substância do C-0014 do SupervisorHandoff.

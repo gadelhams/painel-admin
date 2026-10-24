@@ -73,3 +73,8 @@
 .orq-legado-canal h4 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
 .orq-legado-canal ul { margin: 0; padding-left: 1.1rem; font-family: var(--mono, monospace); font-size: .8rem; }
 .orq-legado-cards { max-height: 14rem; overflow: auto; }
+
+/* Vigília: um cartão por projeto, diário denso. */
+.orq-vigilia-projeto { border-top: 1px solid var(--linha, #444); padding-top: .6rem; margin-top: .8rem; }
+.orq-vigilia-projeto h4 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
+.orq-vigilia-diario { margin: 0; padding-left: 1.1rem; font-family: var(--mono, monospace); font-size: .8rem; max-height: 14rem; overflow: auto; }

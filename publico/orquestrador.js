@@ -40,6 +40,7 @@
     if (nome === 'modelos') carregarModelos();
     if (nome === 'consumo') carregarConsumo();
     if (nome === 'legado') carregarLegado();
+    if (nome === 'vigilia') carregarVigilia();
   }
 
   function renderProjetos() {
@@ -630,6 +631,71 @@
     }
   }
 
+  // Vigília: estado por projeto e o toggle em duas ações (preparar → confirmar), como os
+  // demais privilégios. Lido só ao abrir o tópico ou no botão.
+  async function carregarVigilia() {
+    const status = $('orq-vigilia-status');
+    const alvo = $('orq-vigilia');
+    status.textContent = 'Lendo o estado da vigília…';
+    try {
+      const dados = await json('/api/orquestracao/vigilia', { signal: sinal('vigilia') });
+      alvo.replaceChildren();
+      for (const p of dados.projetos) {
+        const caixa = criar('article', '', 'orq-vigilia-projeto');
+        const situacao = p.pausadaAte ? `pausada até ${new Date(p.pausadaAte).toLocaleTimeString('pt-BR')} (${p.motivoPausa ?? 'motivo não informado'})` : p.ligada ? 'ligada' : 'desligada';
+        caixa.append(criar('h3', `${p.nome} · ${situacao}`));
+        if (p.limites) {
+          caixa.append(criar('p', `Freios: 1 tentativa por vez · ${p.limites.maxTentativasPorCarta} por carta · ${p.tentativasHoje}/${p.limites.tetoPorDia} hoje · pausa de ${p.limites.pausaPorLimiteMinutos} min no limite de uso · comando de aceite ${p.limites.comando}`));
+          caixa.append(criar('p', `Perfil padrão: ${Object.entries(p.perfilPadrao).map(([papel, e]) => `${papel.replaceAll('_', ' ')} ${e.provedor}/${e.modelo}/${e.esforco}`).join(' · ')}`, 'orq-ajuda'));
+        }
+        if (p.impedimentos.length) caixa.append(criar('p', `Impedimentos: ${p.impedimentos.join('; ')}`, 'orq-ajuda'));
+        caixa.append(criar('p', `Última varredura: ${p.ultimaVarredura ? new Date(p.ultimaVarredura).toLocaleTimeString('pt-BR') : 'nenhuma desde o início do processo'} · próxima carta: ${p.proximaCarta ?? '—'}${p.motivoOciosa ? ` · ${p.motivoOciosa}` : ''}`));
+        if (!p.impedimentos.length || p.ligada) {
+          const botao = criar('button', p.ligada ? 'Preparar desligamento' : 'Preparar vigília', 'orq-acao');
+          botao.type = 'button';
+          botao.addEventListener('click', () => prepararVigilia(p.projetoId, !p.ligada, caixa));
+          caixa.append(botao);
+        }
+        const lista = criar('ul', '', 'orq-vigilia-diario');
+        for (const e of p.diario) lista.append(criar('li', `${e.quando ? new Date(e.quando).toLocaleString('pt-BR') : '?'} · ${e.tipo}${e.carta ? ` · ${e.carta}` : ''}${e.resultado ? ` · ${e.resultado}` : ''}${e.para ? ` · ${e.de} → ${e.para}` : ''}${e.motivo ? ` · ${e.motivo}` : ''}`));
+        if (!p.diario.length) lista.append(criar('li', 'Sem eventos.'));
+        caixa.append(criar('h4', 'Diário'), lista);
+        alvo.append(caixa);
+      }
+      if (!dados.projetos.length) alvo.append(criar('p', 'Nenhum projeto com contrato local.', 'orq-ajuda'));
+      status.textContent = `Varredura a cada ${dados.intervaloSegundos} s · lido às ${new Date(dados.atualizadoEm).toLocaleTimeString('pt-BR')}. ${dados.observacao}`;
+    } catch (erro) { if (!abortado(erro)) status.textContent = `Vigília indisponível: ${erro.message}`; }
+  }
+
+  async function prepararVigilia(projeto, ligar, alvo) {
+    alvo.querySelectorAll('.orq-confirmacao, .orq-preparo').forEach(n => n.remove());
+    const status = criar('p', 'Verificando sessão, contrato e executor…', 'orq-preparo');
+    alvo.append(status);
+    try {
+      const dados = await json('/api/orquestracao/vigilia/preparar', { method: 'POST',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify({ projeto, ligar }) });
+      const caixa = criar('div', '', 'orq-confirmacao');
+      const botao = criar('button', ligar ? 'Confirmar: ligar vigília' : 'Confirmar: desligar vigília', 'orq-acao');
+      botao.type = 'button';
+      botao.addEventListener('click', async () => {
+        botao.disabled = true;
+        status.textContent = ligar ? 'Ligando…' : 'Desligando…';
+        try {
+          const r = await json('/api/orquestracao/vigilia/confirmar', { method: 'POST',
+            headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmacaoId: dados.confirmacaoId }) });
+          status.textContent = `${r.nome}: vigília ${r.ligada ? 'ligada' : 'desligada'}.`;
+          await carregarVigilia();
+        } catch (erro) { status.textContent = erro.message; }
+      });
+      caixa.append(criar('strong', `${dados.nome} · ${ligar ? 'ligar' : 'desligar'}`), criar('p', dados.aviso),
+        criar('p', `Expira em ${new Date(dados.expiraEm).toLocaleTimeString('pt-BR')}.${dados.jaEstava ? ' A vigília já está neste estado.' : ''}`), botao);
+      alvo.append(caixa);
+      status.textContent = 'Confira e confirme em uma segunda ação.';
+    } catch (erro) {
+      status.textContent = erro.status === 401 ? `${erro.message} Abra https://astargne.com/login e volte a esta aba.` : erro.message;
+    }
+  }
+
   // Canal legado (doc 59): lido só quando o tópico abre ou no botão — nunca no polling de 60 s.
   async function carregarLegado() {
     const status = $('orq-legado-status');
@@ -753,6 +819,7 @@
   $('orq-triagem-carregar').addEventListener('click', carregarTriagem);
   $('orq-atualizar').addEventListener('click', carregar);
   $('orq-legado-atualizar').addEventListener('click', carregarLegado);
+  $('orq-vigilia-atualizar').addEventListener('click', carregarVigilia);
   $('orq-validar-modelos').addEventListener('click', validarProposta);
   $('orq-preparar-modelos').addEventListener('click', prepararPerfil);
   $('orq-handoff-preparar').addEventListener('click', prepararHandoff);

@@ -67,6 +67,18 @@ ou deploy para cumprir esta matriz.
 | X06 | Dependências | `package-lock.json` sem `node_modules` | `npm ci --ignore-scripts --no-audit --no-fund` no worktree; npm ausente → `impedido` | `executor-cli.test.js` |
 | X07 | Primeira execução paga | Com o "vai" do dono: `ORQ_EXECUCAO_HABILITADA=true`, carta descartável com perfil e gate, confirmar | Worktree, logs em `saidas/<tentativa>/`, dois handoffs no card, resultado e custo na evidência; comandos do projeto piloto só os do contrato | **pendente** — decisão do dono |
 
+## Vigília (24/10/2026)
+
+| ID | Cenário | Passos | Resultado esperado | Prova automática |
+|---|---|---|---|---|
+| V01 | Contrato com bloco `vigilia` | Perfil padrão fora do contrato, teto 0, comando inexistente | Contrato recusado com o campo nomeado; sem bloco, vigília indisponível | `vigilia.test.js` |
+| V02 | Desligada / ligar sem executor | Varrer; preparar com executor desligado | Nada despacha; 422 "executor desligado"; toggle persiste em disco | `vigilia.test.js` |
+| V03 | Carta DEV em Todo, sem perfil | Ligar e varrer | Todo → In Progress, `PERFIL-IA/v1` padrão gravado, tentativa, `READY TO DEV` → `READY TO TEST` com recibo; na varredura seguinte, teste aprovado → Done | `vigilia.test.js` |
+| V04 | Uma por vez | Lease ativo em carta do projeto | Varredura não despacha ("tentativa em curso") | `vigilia.test.js` |
+| V05 | Freios | Duas rejeições; teto diário; limite de uso | Carta esgotada; teto segura até passar 24 h; pausa pelo prazo do contrato e retoma | `vigilia.test.js` |
+| V06 | Toggle por SSO | preparar/confirmar sem sessão, payload extra, sessão alheia | 401/422/403; só `{projeto, ligar}` e `{confirmacaoId}` | `vigilia.test.js` |
+| V07 | Primeira vigília real | Com `ORQ_EXECUCAO_HABILITADA=true`, ligar o PLAYER no tópico | PLAYER-38 despachada sem clique na carta; avanço de gate visível no Plane | **pendente** — decisão do dono |
+
 ## Canal legado (doc 59)
 
 | ID | Cenário | Passos | Resultado esperado | Prova automática |

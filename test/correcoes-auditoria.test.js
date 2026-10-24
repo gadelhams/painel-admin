@@ -63,6 +63,16 @@ test('anotação legada (DONO: …) e (ASTARGNE, …) na descrição são decis�
   assert.equal(avaliarCarta({ ...cartaBase, description_html: '<p>(DONOR list)</p>' }, { contrato }).elegivel, true);
 });
 
+test('lease ativo é motivo e situação "ativo"; vencido não-real é "expirado" (mutação: agora = Date.now sem parênteses)', () => {
+  const ativo = { agente: 'Claude', expiraEm: new Date(Date.now() + 60_000).toISOString(), modoReal: true };
+  const r = avaliarCarta(cartaBase, { contrato, lease: ativo });
+  assert.equal(r.leaseSituacao, 'ativo');
+  assert.match(r.motivos.join(' '), /lease ativo de Claude/);
+  const vencido = { ...ativo, modoReal: false, expiraEm: new Date(Date.now() - 60_000).toISOString() };
+  assert.equal(avaliarCarta(cartaBase, { contrato, lease: vencido }).leaseSituacao, 'expirado');
+  assert.equal(avaliarCarta(cartaBase, { contrato, lease: { ...vencido, modoReal: true } }).leaseSituacao, 'revisão');
+});
+
 test('estado operacional ilegível impede marcar gate (mutação: erroEstado ignorado em avaliarProntidaoGate)', () => {
   const r = avaliarProntidaoGate({ ...cartaBase, labels: [] }, { gate: 'READY TO DEV', erroEstado: 'lease ou touchpoints' });
   assert.equal(r.pronta, false);

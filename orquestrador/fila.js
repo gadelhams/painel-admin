@@ -114,7 +114,7 @@ export function dependenciasDaCarta(carta, relacoes, cartasPorId) {
 
 export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = criarEstadoOrquestracao({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }),
   escritorPerfil = null, escritorHandoff = null, escritorGate = null, projetoEscrita = null, autorEscrita = null,
-  identidadesEscrita = {}, executor = null, execucaoHabilitada = false } = {}) {
+  identidadesEscrita = {}, executor = null, execucaoHabilitada = false, agora = Date.now } = {}) {
   const identidades = new Map(Object.entries(identidadesEscrita));
   // Compatibilidade com os consumidores da API anterior, de projeto único.
   if (projetoEscrita && autorEscrita) {
@@ -133,7 +133,7 @@ export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = cria
     return criarClientePlane({ chave });
   }
 
-  async function fila({ preavaliarId = null, preavaliarGate = null, ignorarLeaseId = null } = {}) {
+  async function fila({ preavaliarId = null, preavaliarGate = null, ignorarLeaseId = null, preavaliarSemGate = null } = {}) {
     const consulta = cliente();
     const catalogo = new Map(PROJETOS.filter(p => p.plane).map(p => [p.plane, p]));
     const projetos = (await todas(consulta, '/projects/')).filter(p => catalogo.has(p.id));
@@ -162,7 +162,7 @@ export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = cria
       try { [lease, historico] = await Promise.all([estado.lerLease(c.id), estado.lerHistorico(c.id)]); }
       catch { lease = null; historico = []; erroEstado = 'lease ou touchpoints'; }
       const avaliacao = avaliarCarta(c, { contrato, errosContrato: erros, dependencias,
-        lease: c.id === ignorarLeaseId ? null : lease, historico, erroEstado });
+        lease: c.id === ignorarLeaseId ? null : lease, historico, erroEstado, agora: agora() });
       let provenienciaGate = null;
       if (avaliacao.gate) {
         const autorId = identidade(c.projetoId)?.autorEscrita;
@@ -186,12 +186,15 @@ export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = cria
       const preavaliacao = c.id === preavaliarId ? avaliarCarta({
         ...c,
         labels: [...(c.labels ?? []).filter(l => !['READY TO DEV', 'READY TO TEST'].includes(l.name)), { name: preavaliarGate }],
-      }, { contrato, errosContrato: erros, dependencias, lease, historico, erroEstado }) : null;
-      const preavaliacaoGate = c.id === preavaliarId ? avaliarProntidaoGate(c,
-        { gate: preavaliarGate, dependencias, lease, erroEstado }) : null;
+      }, { contrato, errosContrato: erros, dependencias, lease, historico, erroEstado, agora: agora() }) : null;
+      // `preavaliarSemGate`: a vigília troca READY TO DEV por READY TO TEST, então avalia a
+      // prontidão do novo gate como se o anterior já não estivesse na carta.
+      const preavaliacaoGate = c.id === preavaliarId ? avaliarProntidaoGate(preavaliarSemGate
+        ? { ...c, labels: (c.labels ?? []).filter(l => l.name !== preavaliarSemGate) } : c,
+        { gate: preavaliarGate, dependencias, lease: c.id === ignorarLeaseId ? null : lease, erroEstado }) : null;
       return {
         id: c.id, identificador: `${c.sigla}-${c.sequence_id}`, titulo: c.name,
-        projeto: c.projetoNome, projetoId: c.projetoId, estado: c.state?.name ?? '?', url: `${WEB}/${c.sigla}-${c.sequence_id}/`,
+        projeto: c.projetoNome, projetoId: c.projetoId, estado: c.state?.name ?? '?', estadoGrupo: c.state?.group ?? null, url: `${WEB}/${c.sigla}-${c.sequence_id}/`,
         atualizadoEm: c.updated_at, labels, dependencias, provenienciaGate, ...avaliacao,
         comandos: avaliacao.elegivel ? contrato.comandos.map(x => x.id) : [],
         ...(preavaliacao ? { preavaliacao: { gate: preavaliarGate, pendencias: preavaliacao.motivos, tecnicamentePronta: preavaliacao.elegivel } } : {}),
@@ -383,27 +386,30 @@ export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = cria
       { projetoId: projetoDaCarta, cartaId, autorId }) : [] };
   }
 
-  async function validarGate(cartaId, proposta) {
+  async function validarGate(cartaId, proposta, substituir = null) {
     const entrada = validarPropostaGate(proposta);
-    const dados = await fila({ preavaliarId: cartaId, preavaliarGate: entrada.gate });
+    if (substituir !== null && (!['READY TO DEV', 'READY TO TEST'].includes(substituir) || substituir === entrada.gate)) throw new Error('troca de gate inválida');
+    const dados = await fila({ preavaliarId: cartaId, preavaliarGate: entrada.gate, preavaliarSemGate: substituir, ignorarLeaseId: substituir ? cartaId : null });
     const item = dados.itens.find(x => x.id === cartaId);
     if (!item) throw new Error('carta não encontrada no Plane');
     if (!identidade(item.projetoId)?.escritorGate || !identidade(item.projetoId)?.autorEscrita) {
       throw new Error('identidade de escrita restrita indisponível para este projeto');
     }
-    if (!item.preavaliacaoGate.pronta || item.preavaliacaoGate.gatesAtuais.length) {
+    const gatesAtuais = item.preavaliacaoGate.gatesAtuais.filter(g => g !== substituir);
+    if (substituir && !item.labels.includes(substituir)) throw new Error(`gate ${substituir} a trocar não está na carta`);
+    if (!item.preavaliacaoGate.pronta || gatesAtuais.length) {
       throw new Error(['gate não pode ser aplicado', ...item.preavaliacaoGate.motivos,
-        ...(item.preavaliacaoGate.gatesAtuais.length ? ['gate já presente'] : [])].join('; '));
+        ...(gatesAtuais.length ? ['gate já presente'] : [])].join('; '));
     }
-    return { carta: item.identificador, projetoId: item.projetoId, versaoCarta: item.atualizadoEm,
+    return { carta: item.identificador, projetoId: item.projetoId, versaoCarta: item.atualizadoEm, substituir,
       proposta: entrada, aviso: 'Confirmar marcará o gate no Plane com evidência; não criará lease nem execução.' };
   }
 
-  async function registrarGate(cartaId, proposta, versaoCarta, chaveIdempotencia) {
+  async function registrarGate(cartaId, proposta, versaoCarta, chaveIdempotencia, substituir = null) {
     if (!identidades.size) throw recusa('identidade de escrita restrita não configurada');
     // As varreduras completas da fila ficam FORA da trava: ela protege metadado local e a
     // escrita no card, não segundos de I/O no Plane que fariam outra confirmação desistir.
-    const dados = await validarGate(cartaId, proposta).catch(e => { throw recusa(e.message); });
+    const dados = await validarGate(cartaId, proposta, substituir).catch(e => { throw recusa(e.message); });
     if (dados.versaoCarta !== versaoCarta) throw recusa('carta mudou; recarregue antes de marcar gate');
     const escrita = identidade(dados.projetoId);
     if (!escrita?.escritorGate || !escrita?.autorEscrita) throw recusa('projeto fora do escopo de escrita');
@@ -429,9 +435,9 @@ export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = cria
       }
       const cartaAtual = await cliente()(`/projects/${dados.projetoId}/work-items/${cartaId}/`);
       if (cartaAtual.updated_at !== versaoCarta) throw recusa('carta mudou; recarregue antes de marcar gate');
-      await estado.registrarEvento({ tipo: 'GATE_PENDENTE', cartaId, chaveIdempotencia, gate: dados.proposta.gate });
+      await estado.registrarEvento({ tipo: 'GATE_PENDENTE', cartaId, chaveIdempotencia, gate: dados.proposta.gate, substituir });
       const resultado = await escrita.escritorGate({ projetoId: dados.projetoId, cartaId, chaveIdempotencia,
-        versaoCarta, gate: dados.proposta.gate, html });
+        versaoCarta, gate: dados.proposta.gate, html, remover: substituir });
       await estado.registrarEvento({ tipo: 'GATE_APLICADO', cartaId, chaveIdempotencia,
         gate: dados.proposta.gate, comentarioId: resultado.comentarioId });
       return { carta: dados.carta, gate: dados.proposta.gate, aplicado: true, duplicado: false,
@@ -562,7 +568,25 @@ export function criarServicoOrquestracao({ consultar, raiz = RAIZ, estado = cria
     });
   }
 
+  // Vigília: Todo → In Progress ao começar a codar; In Progress → Done quando o teste é
+  // aprovado (tirando READY TO TEST). Um evento local antes e um depois, como os outros escritores.
+  async function mudarEstado(cartaId, projetoId, grupo, versaoCarta, removerEtiqueta = null) {
+    const escrita = identidade(projetoId);
+    if (!escrita?.escritorEstado || !escrita?.autorEscrita) throw recusa('identidade de escrita de estado indisponível para este projeto');
+    return estado.comTrava(async () => {
+      await estado.registrarEvento({ tipo: 'ESTADO_PENDENTE', cartaId, grupo, removerEtiqueta });
+      const resultado = await escrita.escritorEstado({ projetoId, cartaId, grupo, versaoCarta, removerEtiqueta });
+      await estado.registrarEvento({ tipo: 'ESTADO_ALTERADO', cartaId, grupo, estadoNome: resultado.estadoNome, removerEtiqueta });
+      return resultado;
+    });
+  }
+
+  async function contrato(projetoId) {
+    return contratoDoProjeto(PROJETOS.find(p => p.plane === projetoId), raiz);
+  }
+
   return { fila, simular, preavaliar, canal, modelos, validarModelos, registrarModelos,
     validarHandoff, registrarHandoff, validarGate, registrarGate, validarDespacho, iniciarDespacho,
+    mudarEstado, contrato, podeDespachar, lerHistorico: cartaId => estado.lerHistorico(cartaId),
     recuperarInterrupcoes: () => estado.recuperarInterrupcoes() };
 }

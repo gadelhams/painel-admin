@@ -31,6 +31,9 @@ import { criarApiGate, criarConfirmacoesGate } from './orquestrador/api-gate.js'
 import { criarApiDespacho, criarConfirmacoesDespacho } from './orquestrador/api-despacho.js';
 import { criarExecutorCli } from './orquestrador/executor-cli.js';
 import { criarLeitorCanalLegado } from './orquestrador/canal-legado.js';
+import { criarEscritorEstadoPlane } from './orquestrador/estado-plane.js';
+import { criarVigilia } from './orquestrador/vigilia.js';
+import { criarApiVigilia, criarConfirmacoesVigilia } from './orquestrador/api-vigilia.js';
 import { criarClientePlane } from './plane.js';
 import { PROJETOS } from './projetos.js';
 
@@ -81,6 +84,7 @@ for (const { sufixo, pasta } of [{ sufixo: '', pasta: 'CK3BannerLord' },
       escritorPerfil: criarEscritorPerfilPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
       escritorHandoff: criarEscritorHandoffPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
       escritorGate: criarEscritorGatePlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
+      escritorEstado: criarEscritorEstadoPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
     };
     chavesUsadas.add(chave);
   } catch { console.error(`[orquestracao] identidade ${pasta} inválida; escrita desativada para o projeto`); }
@@ -99,6 +103,11 @@ const orquestracao = criarServicoOrquestracao({ identidadesEscrita, executor, ex
 // Lease deixado por queda entre RESULTADO e sua remoção é reconciliado no arranque
 // (só metadado local; lease ainda válido de outro processo nunca é tomado).
 orquestracao.recuperarInterrupcoes().catch(e => console.error('[orquestracao] reconciliação no arranque falhou:', e.message));
+// Vigília: só despacha com executor ligado e projeto ligado pelo dono (SSO + confirmação);
+// o laço existe sempre, para a aba mostrar estado e diário.
+const vigilia = criarVigilia({ servico: orquestracao, diretorioEstado: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao'),
+  registrarLog: mensagem => console.error(mensagem) });
+vigilia.iniciar();
 const triagemDev = criarTriagemDev();
 const lerConsumoIas = criarLeitorConsumo();
 const lerCanalLegado = criarLeitorCanalLegado();
@@ -112,6 +121,7 @@ const apiHandoff = criarApiHandoff({ autorizar: autorizarPrivilegiado,
 const apiGate = criarApiGate({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesGate({ servico: orquestracao }) });
 // Com o executor desligado a rota falha fechada; ligado, continua atrás de SSO e confirmação.
+const apiVigilia = criarApiVigilia({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesVigilia({ vigilia }) });
 const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) });
 const apiVoz = criarApiVoz({ autorizar: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
@@ -430,6 +440,13 @@ const servidor = http.createServer(async (req, res) => {
       responderJson(res, corpo, status);
     } else if (pathname === '/api/orquestracao/consumo' && req.method === 'GET') {
       responderJson(res, await lerConsumoIas());
+    } else if (pathname === '/api/orquestracao/vigilia' && req.method === 'GET') {
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, await vigilia.estadoDaVigilia());
+    } else if ((pathname === '/api/orquestracao/vigilia/preparar' || pathname === '/api/orquestracao/vigilia/confirmar') && req.method === 'POST') {
+      const { status, corpo } = await apiVigilia(req, pathname, lerCorpo);
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, corpo, status);
     } else if (pathname === '/api/orquestracao/legado' && req.method === 'GET') {
       res.setHeader('cache-control', 'no-store');
       responderJson(res, await lerCanalLegado());

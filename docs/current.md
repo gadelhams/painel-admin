@@ -18,21 +18,21 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   configs) — [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
 - Portão de despacho **desligado**: `ORQ_EXECUCAO_HABILITADA` ausente do
   `.env`. O executor real (`orquestrador/executor-cli.js`) existe e está
-  provado com CLIs falsas; só nasce com a variável. Leitura na 7787 em
-  24/10: 13 projetos, 418 cartas, PLAYER-38 única elegível, execução `false`.
+  provado com CLIs falsas; só nasce com a variável. **Vigília** (tópico da
+  aba): varredura automática por projeto, todas desligadas; só o PLAYER
+  declara o bloco. 24/10: 13 projetos, 418 cartas, PLAYER-38 única elegível.
 
 ## O que falta
 
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo de assinatura** (PAINEL-40): sem fonte verificável, "indisponível".
-- **Fase 3 do C-3PO** (ações): motor com quatro ferramentas só-leitura e sem
-  suíte (LLM sempre mock se entrar).
-- Aba Contas sem o selo do primeiro convite real; prova humana da voz pendente.
+- **Fase 3 do C-3PO** (ações): motor só-leitura, sem suíte (LLM sempre mock).
+- Contas sem o selo do primeiro convite real; prova humana da voz pendente.
 
 ## Portão e repositório
 
-- `npm test`: 133 testes + `check-docs` 0 erros (24/10); Playwright 11/11.
+- `npm test`: 141 testes + `check-docs` 0 erros (24/10); Playwright 11/11.
 - Commit `b7d59fb` (24/10) fecha a entrega do Orquestrador; rollback = `dba9618`
   (painel sem a aba). Sem push.
 - Auditoria de 24/10 aplicada: `orquestracao*.js` legados removidos,

@@ -1,3 +1,5 @@
+import { PAPEIS, validarSelecoes } from './modelos.js';
+
 const GATES = ['READY TO DEV', 'READY TO TEST'];
 const BLOQUEIOS = ['ASTARGNE', 'BLOQUEADA', 'CONGELADA', 'SEM ESCOPO', 'PÓS-PLAYTEST'];
 // Substring, não palavra inteira: `deployment.mjs` e `dockerize.mjs` são tão proibidos
@@ -45,7 +47,38 @@ export function validarContrato(valor, projectId) {
   ) || new Set(valor.agentes.map(a => a?.id)).size !== valor.agentes.length ||
     new Set(valor.agentes.map(a => `${a?.provedor}/${a?.modelo}`)).size !== valor.agentes.length
   ) erros.push('agentes/modelos/esforço inválidos');
+  if (!erros.length) erros.push(...errosDaVigilia(valor));
   return erros;
+}
+
+// Vigília (24/10/2026, decisão do dono): varredura automática do projeto. O bloco é opcional
+// e só vale com todos os freios declarados ou nos padrões; sem ele o projeto não entra em
+// vigília. `perfilPadrao` é o perfil gravado no card quando a carta não tem PERFIL-IA/v1.
+export const VIGILIA_PADRAO = Object.freeze({ maxTentativasPorCarta: 2, tetoPorDia: 6, pausaPorLimiteMinutos: 60 });
+const LIMITES_VIGILIA = { maxTentativasPorCarta: [1, 5], tetoPorDia: [1, 50], pausaPorLimiteMinutos: [5, 1440] };
+
+export function errosDaVigilia(contrato) {
+  const v = contrato?.vigilia;
+  if (v === undefined) return [];
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return ['vigilia: bloco inválido'];
+  const erros = [];
+  try { validarSelecoes(contrato, v.perfilPadrao); } catch (e) { erros.push(`vigilia.perfilPadrao: ${e.message}`); }
+  for (const [chave, [min, max]] of Object.entries(LIMITES_VIGILIA)) {
+    if (v[chave] !== undefined && !(Number.isInteger(v[chave]) && v[chave] >= min && v[chave] <= max)) erros.push(`vigilia.${chave} fora de ${min}..${max}`);
+  }
+  if (v.comando !== undefined && !contrato.comandos?.some(c => c.id === v.comando)) erros.push('vigilia.comando não está nos comandos do contrato');
+  const extras = Object.keys(v).filter(k => !['perfilPadrao', 'comando', ...Object.keys(LIMITES_VIGILIA)].includes(k));
+  if (extras.length) erros.push(`vigilia: campos desconhecidos ${extras.join(', ')}`);
+  return erros;
+}
+
+// Configuração efetiva (padrões aplicados) ou null quando o contrato não declara vigília.
+export function configuracaoVigilia(contrato) {
+  if (!contrato?.vigilia || errosDaVigilia(contrato).length) return null;
+  const v = contrato.vigilia;
+  return Object.freeze({ ...VIGILIA_PADRAO, ...Object.fromEntries(Object.keys(LIMITES_VIGILIA).filter(k => v[k] !== undefined).map(k => [k, v[k]])),
+    comando: v.comando ?? contrato.comandos[0].id,
+    perfilPadrao: Object.freeze(Object.fromEntries(PAPEIS.map(p => [p, { provedor: v.perfilPadrao[p].provedor, modelo: v.perfilPadrao[p].modelo, esforco: v.perfilPadrao[p].esforco }]))) });
 }
 
 export function comandoPermitido(contrato, id) {
@@ -80,6 +113,8 @@ export function avaliarProntidaoGate(carta, { gate, dependencias = [], lease = n
   return { pronta: motivos.length === 0, motivos, gate, gatesAtuais };
 }
 
+// `agora` é um instante (número), não a função: com `Date.now` sem parênteses toda comparação
+// de prazo dava falso e um lease ativo aparecia como 'revisão' sem motivo (achado de 24/10/2026).
 export function avaliarCarta(carta, { contrato, errosContrato = [], dependencias = [], lease = null, historico = [], erroEstado = null, agora = Date.now() } = {}) {
   const motivos = [];
   const nomes = (carta.labels ?? []).map(l => typeof l === 'string' ? l : l.name).filter(Boolean);

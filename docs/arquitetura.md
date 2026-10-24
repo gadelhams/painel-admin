@@ -75,9 +75,16 @@ CLIs descartáveis — `claude -p` / `codex exec` — num worktree `orq/<carta>-
 fora da árvore principal, comando de aceite do contrato sem shell, ambiente por
 lista branca, timeout que mata o grupo, logs em `~/.local/state/painel-admin/orquestracao/saidas/<tentativa>/`;
 moldes dos papéis em `briefings/`; só é construído com `ORQ_EXECUCAO_HABILITADA=true`)
-e **`canal-legado.js`** (lê `SupervisorHandoff/scripts/estado_canal.py`, python
+**`canal-legado.js`** (lê `SupervisorHandoff/scripts/estado_canal.py`, python
 só-leitura, um processo por config com cache de 60 s — a prova de equivalência
-do dashboard 7791 pedida por PAINEL-35).
+do dashboard 7791 pedida por PAINEL-35), **`vigilia.js`** + **`api-vigilia.js`**
+(varredura automática por projeto: a cada dois minutos escolhe a primeira carta
+elegível do projeto ligado, muda Todo → In Progress, grava o perfil padrão do
+contrato se faltar, chama `iniciarDespacho` e, em `concluido`, troca `READY TO
+DEV` por `READY TO TEST` com recibo ou leva `READY TO TEST` a Done; freios por
+contrato, estado e diário em `vigilia/<projeto>.json|.jsonl`; ligar/desligar
+por SSO em duas ações) e **`estado-plane.js`** (PATCH de estado do card pelo
+grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
 
 ### contas.js
 
@@ -237,8 +244,8 @@ sem escuta contínua ou ações do mock. Abre o console sem enviar mensagem ou
 acionar microfone. O filtro inicial exibe candidatas com gate; "Todas as
 cartas" revela as demais rejeições. A pré-checagem GET por carta consulta
 relações formais sob demanda sem criar lease ou escrever no Plane. Tópicos:
-Demanda, Conversa no card, Papéis e modelos, Consumo, Tentativas e **Canal
-legado (doc 59)** — este lido só ao abrir o tópico. Leituras pesadas abortam a
+Demanda, Conversa no card, Papéis e modelos, Consumo, Tentativas, **Canal
+legado (doc 59)** e **Vigília** — estes dois lidos só ao abrir o tópico. Leituras pesadas abortam a
 anterior (`AbortController` por tópico); resultado de gate/despacho confirmado
 sobrevive ao re-render (`estado.ultimoResultado`). Ver
 [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
