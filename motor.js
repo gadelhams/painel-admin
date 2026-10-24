@@ -18,11 +18,15 @@ import {
 import { criarServicoOrquestracao } from './orquestrador/fila.js';
 import { criarTriagemDev } from './orquestrador/triagem.js';
 import { consultarOrquestracaoC3po } from './orquestrador/consulta-c3po.js';
+import { resumirDecisoes } from './decisoes-c3po.js';
+import { criarServicoChaves } from './chaves.js';
 
 // Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
 const MODELO = 'claude-sonnet-5';
 const orquestracao = criarServicoOrquestracao();
 const triagemDev = criarTriagemDev();
+// Só o inventário (nomes e pendências de rotação); nunca preparar/confirmar.
+const chaves = criarServicoChaves();
 
 // ---------- acesso aos coletores do painel ----------
 
@@ -120,6 +124,17 @@ const ferramentas = createSdkMcpServer({
       entrada => consultarColetor('fila_orquestracao', () => consultarOrquestracaoC3po({ orquestracao, triagemDev }, entrada)),
       { annotations: { readOnlyHint: true } },
     ),
+    tool(
+      'decisoes',
+      'Decisões paradas de todos os projetos (a mesma leitura da aba Decisões e do bloco "Astargne"): o que depende do Mestre (chaves, push/deploy, provas, produto), cadeias BLOQUEADAS que uma decisão dele destrava, bloqueios por terceiros, rotações já registradas, pós-playtest e sem escopo. Projetos congelados ficam de fora. Use para discutir dependências e prioridades; o vínculo entre cards vem do detalhe da etiqueta, não é grafo formal. Só leitura.',
+      {
+        foco: z.string().optional().describe('Pasta exata de um projeto (ex.: "CadastroUnico") ou um card (ex.: "CAD-1") para restringir.'),
+      },
+      entrada => consultarColetor('decisoes', async () => resumirDecisoes({
+        decisoes: await decisoesDoBacklog(), projetos: await estadoProjetos().then(r => r.projetos ?? r).catch(() => []),
+        chaves: await chaves.inventario().catch(() => ({ pendentes: [], rotacoesFeitas: [] })), foco: entrada?.foco ?? null })),
+      { annotations: { readOnlyHint: true } },
+    ),
   ],
 });
 
@@ -169,6 +184,7 @@ export async function* conversar(mensagem, sessaoAnterior) {
       'mcp__c3po__estado_producao',
       'mcp__c3po__docs_projeto',
       'mcp__c3po__fila_orquestracao',
+      'mcp__c3po__decisoes',
     ],
     // Headless: pré-aprovadas passam, o resto é negado sem prompt.
     permissionMode: 'dontAsk',

@@ -200,6 +200,14 @@ triagem DEV das abertas sem gate e pré-checagem DEV/TEST de um card. A resposta
 é limitada a 30 cartas por consulta; para escopo/aceite, o motor deve ler os
 documentos modeladores, não transformar categoria em decisão de produto.
 
+
+Ferramenta `decisoes` (24/10/2026, pedido do dono): `decisoes-c3po.js` dá ao
+C-3PO a mesma leitura da aba Decisões e do bloco "Astargne" — grupos
+`dono_*` (chaves, push/deploy, provas, produto), `bloqueada_pelo_dono` (cadeias
+que uma decisão dele destrava), `bloqueada_por_terceiro`, `rotacao_registrada`
+(já feita na aba Chaves, card a fechar), pós-playtest e sem escopo; projetos
+`congelado` ficam de fora. Só leitura (inventário de chaves sem valores); o
+vínculo entre cards vem do detalhe da etiqueta, não de um grafo formal.
 ### projetos.js
 
 Catálogo dos projetos: metadados que não dão para derivar
