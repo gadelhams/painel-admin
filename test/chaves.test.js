@@ -188,15 +188,36 @@ test('script remoto (python3 real): umask 077, preserva `export`, .bak 600, tmp 
     assert.equal(py.includes("'"), false);
     const arq = path.join(a.raiz, 'remoto.env');
     await fs.writeFile(arq, 'A=1\nexport BREVO_API_KEY=velha\nB=2\n', { mode: 0o600 });
+    await fs.writeFile(`${arq}.bak-20260101000000-1`, 'A=0\n', { mode: 0o600 });
+    await fs.writeFile(path.join(a.raiz, 'outro.env.bak-20260101000000-1'), 'X=0\n', { mode: 0o600 });
     // umask 022 como o sudo do servidor: o script tem de impor 077 sozinho; valor pelo stdin
     const { spawn } = await import('node:child_process');
     await new Promise((res, rej) => { const f = spawn('sh', ['-c', 'umask 022; exec python3 -c "$1" "$2" BREVO_API_KEY', 'sh', py, arq]); f.stdin.end('nova-xyz\n'); f.on('close', c => c === 0 ? res() : rej(new Error(`saida ${c}`))); });
     assert.equal(await fs.readFile(arq, 'utf8'), 'A=1\nexport BREVO_API_KEY=nova-xyz\nB=2\n');
     const nomes = await fs.readdir(a.raiz);
     const bak = nomes.filter(n => n.startsWith('remoto.env.bak-'));
-    assert.ok(bak.length >= 1, 'cópia .bak existe');
+    assert.equal(bak.length, 1, 'fica só o .bak da troca atual; o antigo some');
+    assert.notEqual(bak[0], 'remoto.env.bak-20260101000000-1');
+    assert.ok(nomes.includes('outro.env.bak-20260101000000-1'), 'bak de OUTRO arquivo não é tocado');
     for (const b of bak) assert.equal(((await fs.stat(path.join(a.raiz, b))).mode & 0o777), 0o600);
     assert.equal(((await fs.stat(arq)).mode & 0o777), 0o600);
     assert.equal(nomes.some(n => n.includes('.tmp-')), false, 'tmp não sobra');
+  } finally { await a.limpar(); }
+});
+
+test('troca local: só o .bak da troca atual sobrevive; .bak de outro arquivo fica', async () => {
+  const a = await ambiente();
+  try {
+    const env = path.join(a.raiz, 'painel-admin', '.env');
+    await fs.writeFile(path.join(a.raiz, 'painel-admin', '.env.local.bak-2026'), 'Z=0\n', { mode: 0o600 });
+    await a.servico.confirmar({ projeto: 'painel-admin', nome: 'ELEVENLABS_API_KEY', alvo: 'local' }, 'um', '1');
+    a.avancar(1000);
+    await a.servico.confirmar({ projeto: 'painel-admin', nome: 'ELEVENLABS_API_KEY', alvo: 'local' }, 'dois', '1');
+    const nomes = await fs.readdir(path.join(a.raiz, 'painel-admin'));
+    const baks = nomes.filter(n => n.startsWith('.env.bak-'));
+    assert.equal(baks.length, 1);
+    assert.match(await fs.readFile(path.join(a.raiz, 'painel-admin', baks[0]), 'utf8'), /ELEVENLABS_API_KEY=um/, 'o .bak guarda o estado imediatamente anterior');
+    assert.match(await fs.readFile(env, 'utf8'), /ELEVENLABS_API_KEY=dois/);
+    assert.ok(nomes.includes('.env.local.bak-2026'));
   } finally { await a.limpar(); }
 });

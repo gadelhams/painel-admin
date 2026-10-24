@@ -142,9 +142,10 @@ ambíguo (409, nomes não se misturam), valor para o servidor sem espaço/`#`/`$
 catalogar) e o EmuladorWeb como `foraDoEnv` (o token vive cru em
 `secrets/sso-internal-token` e só muda pelo instalador). A 2ª rodada do validador
 **APROVOU** (24/10, 13:46 UTC): flag ligada, master do servidor com a nota "Escritor
-de `.env` fora do deploy" (§3) publicada pelo §8. Residuais aceitos: `.bak` fica
-(segredo velho ao lado do novo; `.env.bak-*` no `.gitignore`), restart de compose
-acima de 180 s vira `ROTACAO_INCERTA` falsa. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
+de `.env` fora do deploy" (§3) publicada pelo §8. Retenção (decisão do dono,
+24/10): fica **só o `.bak` da troca atual**, local e no servidor — a troca seguinte
+apaga os anteriores do mesmo arquivo (`.env.bak-*` também no `.gitignore`).
+Residual aceito: restart de compose acima de 180 s vira `ROTACAO_INCERTA` falsa. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
 levam valor; a pendência some quando há evento posterior à data do catálogo. O
 bloco **Astargne** da aba Decisões (`publico/decisoes.js`) junta as rotações
 pendentes com os cards abertos `ASTARGNE`/`EMPÍRICA` em quatro grupos — chaves e

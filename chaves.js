@@ -236,6 +236,17 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
     return `${linhas.join('\n')}\n`;
   }
 
+  // Retenção decidida pelo dono (24/10/2026): fica só o `.bak` da troca atual — um
+  // ponto de retorno; o segredo anterior a ele já foi revogado no provedor.
+  async function apagarBaksAntigos(arquivo, manter) {
+    const dir = path.dirname(arquivo);
+    const prefixo = `${path.basename(arquivo)}.bak-`;
+    for (const nome of await fs.readdir(dir)) {
+      const caminho = path.join(dir, nome);
+      if (nome.startsWith(prefixo) && caminho !== manter) await fs.rm(caminho, { force: true });
+    }
+  }
+
   async function trocarLocal(p, nome, valor, usuarioId) {
     const arquivo = caminhoLocal(p);
     let texto = '';
@@ -245,6 +256,7 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
     const temporario = `${arquivo}.${randomUUID()}.tmp`;
     await fs.writeFile(temporario, reescrever(texto, nome, valor), { mode: 0o600, flag: 'wx' });
     await fs.rename(temporario, arquivo);
+    await apagarBaksAntigos(arquivo, `${arquivo}.bak-${carimbo}`);
     await anotar({ tipo: 'ROTACIONADA', projeto: p.projeto, nome, alvo: 'local', usuarioId, unit: p.local.unit ?? null });
     // Reinício depois da resposta: se a unit for o próprio painel, o processo morre — por
     // isso o atraso, e a resposta já diz que o serviço vai reiniciar.
@@ -257,7 +269,7 @@ export function criarServicoChaves({ catalogo = CATALOGO, raiz = RAIZ,
   // Script fixo no servidor: python3 (sem aspas simples dentro) recebe o VALOR pelo stdin e
   // arquivo/nome/unit como argumentos já validados por regex; cópia .bak, escrita atômica
   // com o dono e 600 originais, depois `systemctl restart` da unit do catálogo.
-  const PYTHON_REMOTO = 'import sys,os,shutil,time\nos.umask(0o077)\narq,nome=sys.argv[1],sys.argv[2]\nvalor=sys.stdin.read().rstrip("\\n")\nif not valor or "\\n" in valor or "\\r" in valor: sys.exit(97)\nst=os.stat(arq)\ntexto=open(arq,encoding="utf-8").read()\nlinhas=texto.split("\\n")\nif linhas and linhas[-1]=="": linhas.pop()\nfor i,l in enumerate(linhas):\n  pref="export " if l.startswith("export "+nome+"=") else ""\n  if pref or l.startswith(nome+"="): linhas[i]=pref+nome+"="+valor; break\nelse: linhas.append(nome+"="+valor)\nshutil.copy2(arq, arq+".bak-"+time.strftime("%Y%m%d%H%M%S")+"-"+str(os.getpid()))\ntmp=arq+".tmp-"+str(os.getpid())\nfd=os.open(tmp, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600)\nos.write(fd, ("\\n".join(linhas)+"\\n").encode("utf-8"))\nos.close(fd)\nos.chown(tmp, st.st_uid, st.st_gid)\nos.chmod(tmp, 0o600)\nos.replace(tmp, arq)\nprint("OK")';
+  const PYTHON_REMOTO = 'import sys,os,shutil,time,glob\nos.umask(0o077)\narq,nome=sys.argv[1],sys.argv[2]\nvalor=sys.stdin.read().rstrip("\\n")\nif not valor or "\\n" in valor or "\\r" in valor: sys.exit(97)\nst=os.stat(arq)\ntexto=open(arq,encoding="utf-8").read()\nlinhas=texto.split("\\n")\nif linhas and linhas[-1]=="": linhas.pop()\nfor i,l in enumerate(linhas):\n  pref="export " if l.startswith("export "+nome+"=") else ""\n  if pref or l.startswith(nome+"="): linhas[i]=pref+nome+"="+valor; break\nelse: linhas.append(nome+"="+valor)\nbak=arq+".bak-"+time.strftime("%Y%m%d%H%M%S")+"-"+str(os.getpid())\nshutil.copy2(arq, bak)\ntmp=arq+".tmp-"+str(os.getpid())\nfd=os.open(tmp, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600)\nos.write(fd, ("\\n".join(linhas)+"\\n").encode("utf-8"))\nos.close(fd)\nos.chown(tmp, st.st_uid, st.st_gid)\nos.chmod(tmp, 0o600)\nos.replace(tmp, arq)\nfor velho in glob.glob(glob.escape(arq)+".bak-*"):\n  if velho!=bak: os.remove(velho)\nprint("OK")';
   function scriptTrocaServidor(arquivo, nome, unit) {
     if (!ARQUIVO_SERVIDOR.test(arquivo) || !NOME.test(nome) || !UNIT.test(unit)) throw new ErroAcesso('alvo do servidor inválido', 422);
     return `sudo python3 -c '${PYTHON_REMOTO}' '${arquivo}' '${nome}' && sudo systemctl restart '${unit}' && echo REINICIADO`;
