@@ -71,12 +71,12 @@ test('pré-checagem de carta separa gate de despacho e exige identificador', asy
   await assert.rejects(() => consultarOrquestracaoC3po(base, { modo: 'prontidao' }), /identificador obrigatório/);
 });
 
-test('integração mantém as quatro ferramentas MCP somente de leitura e não envia consulta ao abrir', async () => {
+test('integração mantém as cinco ferramentas MCP somente de leitura e não envia consulta ao abrir', async () => {
   const motor = await fs.readFile(new URL('../motor.js', import.meta.url), 'utf8');
   const app = await fs.readFile(new URL('../publico/app.js', import.meta.url), 'utf8');
   const ui = await fs.readFile(new URL('../publico/orquestrador.js', import.meta.url), 'utf8');
   assert.match(motor, /tools: \[\]/);
-  assert.equal((motor.match(/readOnlyHint: true/g) ?? []).length, 4);
+  assert.equal((motor.match(/readOnlyHint: true/g) ?? []).length, 5);
   assert.match(motor, /consultarOrquestracaoC3po/);
   assert.match(ui, /Discutir pendências com C-3PO/);
   assert.match(ui, /abrirConsoleOrquestracao\?\.\(c\.identificador\)/);
