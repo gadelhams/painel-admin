@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check-docs v1.4 (02/10/2026; v1 de 30/09) — portão de documentação do padrão de contexto
+// check-docs v1.5 (02/10/2026; v1 de 30/09) — portão de documentação do padrão de contexto
 // por tarefa (~/Work/PADROES-CONTEXTO.md). Cópia canônica: ~/Work/ferramentas/.
 // Cada repo leva uma cópia (scripts/check-docs.mjs) e a liga ao seu portão.
 //
@@ -83,7 +83,10 @@ export async function verificar(raiz = process.cwd()) {
       const alvo = decodeURIComponent(m[1].split('#')[0]); // links com %20
       if (!alvo || /^[a-z]+:/i.test(alvo)) continue;
       const abs = resolve(raiz, dirname(f), alvo);
-      if (!existsSync(abs)) erros.push(`${f}: link quebrado → ${alvo}`);
+      // Fora do repositório (../../PADROES-X.md) só precisa existir — e no CI o
+      // workspace da raiz não está no checkout: lá é aviso, não erro.
+      const fora = relative(raiz, abs).startsWith('..');
+      if (!existsSync(abs)) (fora && process.env.CI ? avisos : erros).push(`${f}: ${fora && process.env.CI ? 'link para fora do repositório não conferível no CI' : 'link quebrado'} → ${alvo}`);
       else referenciados.add(relative(raiz, abs).split(sep).join('/'));
     }
     if (f === 'AGENTS.md') {
@@ -91,7 +94,7 @@ export async function verificar(raiz = process.cwd()) {
         const rota = m[1];
         if (!RE_ROTA.test(rota)) continue;
         const abs = resolve(raiz, rota);
-        if (!existsSync(abs)) erros.push(`AGENTS.md: rota em crase não existe → ${rota}`);
+        if (!existsSync(abs)) (rota.startsWith('../') && process.env.CI ? avisos : erros).push(`AGENTS.md: ${rota.startsWith('../') && process.env.CI ? 'rota para fora do repositório não conferível no CI' : 'rota em crase não existe'} → ${rota}`);
         else if (!rota.startsWith('../')) referenciados.add(relative(raiz, abs).split(sep).join('/'));
       }
     }
