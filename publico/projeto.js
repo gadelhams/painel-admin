@@ -149,7 +149,13 @@ function secaoModeladores(pasta, modeladores) {
         : el('div', {}, ...renderizarMarkdown(dados.conteudo)));
       if (window.mermaid) mermaid.run();
     });
-    return el('div', { class: 'doc-item' }, botao, corpo);
+    const item = el('div', { class: 'doc-item' }, botao, corpo);
+    // Documento pedido pela aba Docs: abre e rola até ele assim que montar.
+    if (window.abrirDocPedido && window.abrirDocPedido === caminho) {
+      window.abrirDocPedido = null;
+      queueMicrotask(() => { botao.click(); item.scrollIntoView?.({ block: 'start' }); });
+    }
+    return item;
   });
   return el('div', { class: 'doc-lista' }, ...linhas);
 }

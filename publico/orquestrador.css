@@ -96,3 +96,7 @@
 @media (max-width: 720px) { .chaves-linha { grid-template-columns: 1fr; } }
 .chaves-bloqueado { color: var(--cor-aviso, #b26a00); }
 .contas-select { margin-left: .3rem; }
+.docs-links { margin: .3rem 0 .5rem; font-size: .85rem; }
+.docs-sinais { margin: 0; padding-left: 1.1rem; }
+.docs-sinal.gravidade-alta .chip-app { border-color: var(--cor-erro, #c0392b); }
+.docs-sinal.gravidade-media .chip-app { border-color: var(--cor-aviso, #b26a00); }

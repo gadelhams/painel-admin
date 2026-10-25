@@ -165,6 +165,26 @@ padrão; estado lembrado em `localStorage`), ignora projetos com `congelado: tru
 no catálogo (`projetos.js`, propagado por `coletores.js`) e lista à parte as
 rotações já registradas.
 
+### alinhamento.js
+
+(25/10/2026, decisão do dono) — rotina de **alinhamento código ⇄ Plane ⇄
+painel**: mede a dívida em vez de deixá-la crescer em silêncio. A cada 30 min
+(e em `GET /api/alinhamento?agora=1`) varre cada projeto não congelado e emite
+sinais: `fio_longo` (card com ≥ 8 comentários desde o último `COMPACTADO/v1`,
+regra do `../../PADROES-BACKLOG.md` § Compactação), `selado_sem_compactar`
+(Done/Cancelled depois de 25/10 com comentário e sem a marca),
+`current_atras` (`docs/current.md` datado > 7 dias antes do último commit),
+`cita_fechado` (linha do `current.md` trata como pendente um card já
+Done/Cancelled — menção histórica "X selada" não conta), `sem_push`,
+`atras_remoto`, `check_docs` (portão do projeto com erro), `sem_current`,
+`catalogo` (pasta ausente). Fios só se remedem para cartas cujo `updatedAt`
+mudou (cache em `~/.local/state/painel-admin/alinhamento.json`); a varredura
+inteira leva ~45 s com 450 cartas. Devolve também onde mora a documentação
+**funcional / arquitetural / técnica / contrato** de cada projeto (primeiro
+candidato existente por tipo). Só leitura: quem corrige é o orquestrador no
+fecho. Consumidores: aba Docs (`publico/docs.js`) e a ferramenta
+`alinhamento` do C-3PO.
+
 ### plane.js
 
 (30/09/2026; de 29 a 30/09 foi `linear.js`, com o Linear) — o
@@ -319,6 +339,16 @@ marcadores humanos, dependências formais, declaração de independência e esta
 A API não infere decisão de produto, não aplica etiquetas e não integra o
 polling da fila. O botão no card abre o console com uma pergunta preenchida,
 mas não a envia: o dono escolhe quando conversar.
+
+#### docs.js (publico/)
+
+Aba **Docs** (25/10/2026): a documentação de cada projeto separada dos cards
+(o Plane é só desenvolvimento) e, no topo, a dívida de alinhamento da rotina
+(`GET /api/alinhamento`; botão "Varrer agora"). Por projeto: links para os
+docs funcional/arquitetural/técnico/contrato, que abrem na página do projeto
+(`#/projeto/<pasta>?arquivo=<caminho>` — `app.js` lê o parâmetro e
+`projeto.js` abre o documento ao montar) e a lista de sinais com link para o
+card. Selo na aba = total de sinais.
 
 #### chaves.js (publico/)
 

@@ -53,6 +53,7 @@
     <button class="aba" data-aba="orquestracao" type="button">Orquestração</button>
     <button class="aba" data-aba="contas" type="button">Contas</button>
     <button class="aba" data-aba="chaves" type="button">Chaves <span class="selo-contagem" id="selo-chaves">—</span></button>
+    <button class="aba" data-aba="docs" type="button">Docs <span class="selo-contagem" id="selo-docs">—</span></button>
     <span class="contrato-backlog">o Plane é a verdade · o quadro é projeção</span>
   </nav>
 
@@ -94,6 +95,7 @@
          ação, nunca no polling de 60s. -->
     <!-- Aba Chaves (24/10/2026): inventário dos segredos por projeto, só nomes; troca em duas ações com SSO. -->
     <section id="aba-chaves" class="chaves" hidden aria-label="Chaves e segredos por projeto"></section>
+    <section id="aba-docs" class="docs" hidden aria-label="Documentação e alinhamento por projeto"></section>
     <div id="aba-contas" hidden>
       <p class="discreto">abra a aba para carregar as contas do servidor.</p>
     </div>
@@ -180,6 +182,7 @@
   <script src="decisoes.js"></script>
   <script src="contas.js"></script>
   <script src="chaves.js"></script>
+  <script src="docs.js"></script>
   <script src="orquestrador.js?v=20261022-3campos"></script>
   <script src="projeto.js"></script>
   <!-- voz.js antes: define o global Voz que chat.js consome (mesmo contrato

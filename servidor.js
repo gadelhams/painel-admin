@@ -35,6 +35,7 @@ import { criarEscritorEstadoPlane } from './orquestrador/estado-plane.js';
 import { criarVigilia } from './orquestrador/vigilia.js';
 import { criarApiVigilia, criarConfirmacoesVigilia } from './orquestrador/api-vigilia.js';
 import { criarServicoChaves, criarConfirmacoesChaves, criarApiChaves } from './chaves.js';
+import { criarAlinhamento } from './alinhamento.js';
 import { criarClientePlane } from './plane.js';
 import { PROJETOS } from './projetos.js';
 
@@ -126,6 +127,8 @@ const apiVigilia = criarApiVigilia({ autorizar: autorizarPrivilegiado, confirmac
 // Chaves: inventário só de nomes; troca em duas ações com SSO; escrita no servidor só com
 // CHAVES_SERVIDOR_ESCRITA=true depois do APROVADO do validador-deploy.
 const chaves = criarServicoChaves();
+const alinhamento = criarAlinhamento();
+alinhamento.iniciar();
 const apiChaves = criarApiChaves({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesChaves({ servico: chaves }) });
 const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) });
@@ -455,6 +458,12 @@ const servidor = http.createServer(async (req, res) => {
     } else if (pathname === '/api/orquestracao/legado' && req.method === 'GET') {
       res.setHeader('cache-control', 'no-store');
       responderJson(res, await lerCanalLegado());
+    } else if (pathname === '/api/alinhamento' && req.method === 'GET') {
+      // Rotina de alinhamento código ⇄ Plane ⇄ painel (alinhamento.js): varre
+      // a cada 30 min em segundo plano; `?agora=1` força uma varredura.
+      res.setHeader('cache-control', 'no-store');
+      try { responderJson(res, await alinhamento.ler({ forcar: url.searchParams.get('agora') === '1' })); }
+      catch (erro) { responderJson(res, { erro: erro.message }, 503); }
     } else if (pathname === '/api/diagnostico/voz' && req.method === 'POST') {
       // Diagnóstico da voz do C-3PO (25/10/2026): o navegador manda eventos
       // (motor escolhido, erro do microfone, nível captado, áudio recusado…)

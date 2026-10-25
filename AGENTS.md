@@ -19,6 +19,7 @@ Leitura comum, sempre: `docs/current.md` (estado real, datado) e
 | Backlog / Plane (`plane.js`, aba Backlog, aba Decisões) | `docs/arquitetura.md` § plane.js + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
 | Aba Orquestração (`orquestrador/`, `publico/orquestrador.js`, contrato `.orquestrador.json`, fila, lease, gate/handoff/perfil, executor, canal legado) | `docs/orquestracao-v2-integracao.md` + `../ORQUESTRADOR-PROJETOS.md`; escrita só por identidade técnica com SSO e confirmação; despacho desligado sem `ORQ_EXECUCAO_HABILITADA` (variáveis em `docs/operacao.md`) |
 | Aba Chaves (`chaves.js`, `publico/chaves.js`) e bloco "Astargne" da aba Decisões (`publico/decisoes.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
+| Aba Docs e rotina de alinhamento (`alinhamento.js`, `publico/docs.js`) | `docs/arquitetura.md` § alinhamento.js; regra de compactação em `../../PADROES-BACKLOG.md` |
 | Aba Backlog — desenho e história (parser do doc 39) | `docs/02_ABA_BACKLOG.md` |
 | Motor, persona ou voz do C-3PO (`motor.js`, `publico/severino/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § Severino por voz |
 | Subir, reiniciar, ver log | `docs/operacao.md` § Como roda |

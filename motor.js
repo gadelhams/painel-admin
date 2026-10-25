@@ -20,6 +20,7 @@ import { criarTriagemDev } from './orquestrador/triagem.js';
 import { consultarOrquestracaoC3po } from './orquestrador/consulta-c3po.js';
 import { resumirDecisoes } from './decisoes-c3po.js';
 import { criarServicoChaves } from './chaves.js';
+import { criarAlinhamento } from './alinhamento.js';
 
 // Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
 const MODELO = 'claude-sonnet-5';
@@ -27,6 +28,8 @@ const orquestracao = criarServicoOrquestracao();
 const triagemDev = criarTriagemDev();
 // Só o inventário (nomes e pendências de rotação); nunca preparar/confirmar.
 const chaves = criarServicoChaves();
+// Lê o último resultado da rotina (o servidor é quem varre); sem laço aqui.
+const alinhamento = criarAlinhamento();
 
 // ---------- acesso aos coletores do painel ----------
 
@@ -135,6 +138,13 @@ const ferramentas = createSdkMcpServer({
         chaves: await chaves.inventario().catch(() => ({ pendentes: [], rotacoesFeitas: [] })), foco: entrada?.foco ?? null })),
       { annotations: { readOnlyHint: true } },
     ),
+    tool(
+      'alinhamento',
+      'Dívida de alinhamento código ⇄ Plane ⇄ painel, por projeto (rotina de 30 min do painel): fio de card com 8+ comentários sem COMPACTADO/v1, card selado sem compactar, docs/current.md mais velho que o último commit, doc citando card já fechado, commits sem push, portão de docs vermelho, pasta do catálogo ausente; e onde mora a documentação funcional/arquitetural/técnica de cada projeto. Use para dizer o que está desatualizado e o que o orquestrador deve compactar ou corrigir no próximo fecho. Só leitura; nunca corrige.',
+      { projeto: z.string().optional().describe('Pasta exata de um projeto para restringir.') },
+      entrada => consultarColetor('alinhamento', async () => { const r = await alinhamento.ler(); return entrada?.projeto ? { ...r, projetos: r.projetos.filter(p => p.pasta === entrada.projeto) } : r; }),
+      { annotations: { readOnlyHint: true } },
+    ),
   ],
 });
 
@@ -185,6 +195,7 @@ export async function* conversar(mensagem, sessaoAnterior) {
       'mcp__c3po__docs_projeto',
       'mcp__c3po__fila_orquestracao',
       'mcp__c3po__decisoes',
+      'mcp__c3po__alinhamento',
     ],
     // Headless: pré-aprovadas passam, o resto é negado sem prompt.
     permissionMode: 'dontAsk',

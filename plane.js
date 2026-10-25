@@ -91,6 +91,7 @@ export async function buscarWorkspace(consultar) {
         url: `${WEB}/${SLUG}/browse/${identificador}/`,
         description: w.description_html ?? '',
         createdAt: w.created_at,
+        updatedAt: w.updated_at ?? w.created_at, // alinhamento.js mede fios só de cartas que mudaram
         state: { name: w.state?.name ?? '?', type: TIPO_ESTADO[w.state?.group] ?? 'backlog' },
         labels: { nodes: (w.labels ?? []).map((l) => ({ name: l.name })) },
         project: { id: p.id },

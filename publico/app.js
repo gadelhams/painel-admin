@@ -289,6 +289,7 @@ const paineis = {
   orquestracao: document.getElementById('aba-orquestracao'),
   contas: document.getElementById('aba-contas'),
   chaves: document.getElementById('aba-chaves'),
+  docs: document.getElementById('aba-docs'),
 };
 
 // Qual view está na tela agora. A aba Contas precisa saber se está ENTRANDO
@@ -324,8 +325,13 @@ function rotear() {
   const [, view, param] = location.hash.slice(1).split('/');
   if (view === 'projeto' && param) {
     mostrarView('projetos');
-    const pasta = decodeURIComponent(param);
+    // `#/projeto/<pasta>?arquivo=<caminho>` (aba Docs): abre o documento pedido
+    // depois de a página do projeto montar — projeto.js lê `abrirDocPedido`.
+    const [soPasta, consulta] = param.split('?');
+    const pasta = decodeURIComponent(soPasta);
+    window.abrirDocPedido = consulta ? new URLSearchParams(consulta).get('arquivo') : null;
     if (pasta !== projetoSelecionado) selecionarProjeto(pasta);
+    else if (window.abrirDocPedido && window.abrirDocPedidoAgora) window.abrirDocPedidoAgora();
   } else if (view === 'backlog' || view === 'decisoes') {
     mostrarView(view);
     if (view === 'decisoes' && window.desenharDecisoes) desenharDecisoes();
@@ -337,6 +343,10 @@ function rotear() {
     const entrando = viewAtual !== 'chaves';
     mostrarView('chaves');
     if (entrando && window.carregarChaves) window.carregarChaves();
+  } else if (view === 'docs') {
+    const entrando = viewAtual !== 'docs';
+    mostrarView('docs');
+    if (entrando && window.carregarDocs) window.carregarDocs();
   } else if (view === 'orquestracao') {
     const entrando = viewAtual !== 'orquestracao';
     mostrarView('orquestracao');
