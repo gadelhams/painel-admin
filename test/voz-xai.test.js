@@ -48,3 +48,13 @@ test('leitura limitada rejeita áudio além do teto', async () => {
   req.write(Buffer.alloc(101));
   await assert.rejects(promessa, e => e instanceof ErroAcesso && e.status === 413);
 });
+
+test('transcrição vazia não é erro (trecho curto/ruído); JSON sem campo text continua erro e vai ao log', async () => {
+  const log = [];
+  const resposta = (corpo) => async () => new Response(JSON.stringify(corpo), { status: 200, headers: { 'content-type': 'application/json' } });
+  const vazio = await criarTranscritorXai({ chave: 'k', fetchImpl: resposta({ text: '', duration: 1.2 }), log: m => log.push(m) })(Buffer.alloc(2000, 1), 'audio/webm');
+  assert.equal(vazio.texto, '');
+  await assert.rejects(criarTranscritorXai({ chave: 'k', fetchImpl: resposta({ erro: 'x' }), log: m => log.push(m) })(Buffer.alloc(2000, 1), 'audio/webm'), /transcrição inválida/);
+  assert.match(log.at(-1), /resposta sem texto/);
+  assert.equal(log.some(m => m.includes('k')), false, 'chave nunca no log');
+});

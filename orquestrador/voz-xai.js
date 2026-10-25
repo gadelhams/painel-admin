@@ -22,7 +22,7 @@ export function lerAudio(req, limite = MAX_AUDIO) {
   });
 }
 
-export function criarTranscritorXai({ chave = process.env.XAI_API_KEY, fetchImpl = fetch } = {}) {
+export function criarTranscritorXai({ chave = process.env.XAI_API_KEY, fetchImpl = fetch, log = console.error } = {}) {
   return async (audio, tipo) => {
     const mime = String(tipo ?? '').split(';')[0].toLowerCase();
     const extensao = FORMATOS.get(mime);
@@ -41,11 +41,15 @@ export function criarTranscritorXai({ chave = process.env.XAI_API_KEY, fetchImpl
     } catch { throw new ErroAcesso('transcrição xAI indisponível', 502); }
     if (!resposta.ok) throw new ErroAcesso(`xAI recusou a transcrição (HTTP ${resposta.status})`, 502);
     let dados;
-    try { dados = await resposta.json(); }
-    catch { throw new ErroAcesso('resposta de transcrição inválida', 502); }
-    if (typeof dados.text !== 'string' || !dados.text.trim() || dados.text.length > 8000) {
+    const bruto = await resposta.text();
+    try { dados = JSON.parse(bruto); }
+    catch { log(`[voz-xai] resposta não é JSON (${resposta.headers.get('content-type')}): ${bruto.slice(0, 200)}`); throw new ErroAcesso('resposta de transcrição inválida', 502); }
+    if (typeof dados.text !== 'string' || dados.text.length > 8000) {
+      log(`[voz-xai] resposta sem texto: ${JSON.stringify(dados).slice(0, 200)}`);
       throw new ErroAcesso('resposta de transcrição inválida', 502);
     }
+    // Trecho curto ou só ruído volta com texto vazio: não é erro, é "nada
+    // reconhecido" — o copiloto ignora e o push-to-talk pede de novo.
     return { texto: dados.text.trim(), fonte: 'xAI grok-voice-transcribe-2.0',
       duracaoSegundos: Number.isFinite(dados.duration) ? dados.duration : null,
       observacao: 'Texto proposto; nenhuma ação foi executada ou escrita no Plane.' };
