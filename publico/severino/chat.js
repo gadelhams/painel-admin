@@ -205,6 +205,10 @@ if (!motorEscuta) {
 const modoCopilotoCaixa = document.getElementById('modo-copiloto');
 const rotuloCopiloto = document.getElementById('rotulo-copiloto');
 const statusCopiloto = document.getElementById('status-copiloto');
+const medidorCopiloto = document.createElement('span');
+medidorCopiloto.className = 'kicker';
+medidorCopiloto.style.marginLeft = '.6rem';
+statusCopiloto.after(medidorCopiloto);
 const TEMPO_HIATO_MS = 90_000; // 1min30 sem fala: volta a exigir "C3PO"
 
 if (!motorEscuta) {
@@ -259,6 +263,11 @@ if (!motorEscuta) {
       aoUtterance: tratarUtterance,
       aoCorrecao: (trocas) => adicionarNota('aviso-voz', `corrigi o que ouvi: ${trocas.join(', ')}`),
       aoErro: (motivo) => adicionarNota('aviso-voz', motivo),
+      // Medidor visível (só no motor xAI): diz se o microfone está chegando.
+      aoNivel: (rms, alto, emFala) => {
+        const barras = '▮'.repeat(Math.min(10, Math.round(rms * 100)));
+        medidorCopiloto.textContent = emFala ? 'mic: pausado (C-3PO falando)' : `mic: ${barras || '▯'} ${alto ? 'voz' : ''}`;
+      },
       // Motor do navegador morreu de vez (Brave/Chromium: `network`): troca
       // para a xAI e religa o copiloto no mesmo estado, sem o dono clicar.
       aoFalha: (motivo) => {
@@ -278,6 +287,7 @@ if (!motorEscuta) {
   }
 
   function desligar() {
+    medidorCopiloto.textContent = '';
     modoCopilotoAtivo = false;
     escutaContinua?.parar();
     escutaContinua = null;

@@ -14,6 +14,16 @@
 
 const Voz = (() => {
   const statusVoz = document.getElementById('status-voz');
+  // Diagnóstico no journal do painel (POST /api/diagnostico/voz): o que o
+  // navegador vê e o servidor não. Nunca áudio, nunca o texto da conversa.
+  function diag(evento, dados = {}) {
+    try {
+      const corpo = JSON.stringify({ evento, t: new Date().toISOString(), ua: navigator.userAgent.slice(0, 80), ...dados });
+      if (!navigator.sendBeacon?.('/api/diagnostico/voz', new Blob([corpo], { type: 'application/json' }))) {
+        fetch('/api/diagnostico/voz', { method: 'POST', body: corpo, keepalive: true }).catch(() => {});
+      }
+    } catch { /* diagnóstico nunca atrapalha */ }
+  }
 
   // ---------- Camada 1: ElevenLabs (voz principal) ----------
 
@@ -172,6 +182,7 @@ const Voz = (() => {
         body: JSON.stringify({ texto }),
         signal: abortador.signal,
       });
+      diag('tts-resposta', { status: resposta.status, tipo: resposta.headers.get('content-type') });
       if (!resposta.ok) {
         let motivo = 'ElevenLabs falhou';
         try {
@@ -212,10 +223,17 @@ const Voz = (() => {
           mudarBlocosEmFala(-1);
           resolve();
         };
-        audio.onended = encerrar;
-        audio.onerror = encerrar;
-        audio.play().catch(() => {
+        audio.onended = () => { diag('tts-tocou', { bytes: blob.size }); encerrar(); };
+        audio.onerror = () => {
+          // Blob chegou mas o elemento não tocou (formato/decodificador): sem
+          // declarar, a resposta vira "só texto" sem explicação.
+          diag('tts-audio-erro', { bytes: blob.size, tipo: blob.type, codigo: audio.error?.code ?? null });
+          avisarUmaVez('o navegador não conseguiu tocar o áudio da ElevenLabs — seguindo só no texto');
+          encerrar();
+        };
+        audio.play().catch((erro) => {
           // autoplay bloqueado: declara uma vez e segue só no texto
+          diag('tts-play-recusado', { erro: erro?.name ?? String(erro) });
           avisarUmaVez('o navegador bloqueou o áudio — clique na página e pergunte de novo');
           encerrar();
         });
@@ -471,6 +489,7 @@ const Voz = (() => {
     };
     rec.onerror = (e) => {
       if (e.error === 'aborted') return; // o próprio usuário cancelou no botão
+      diag('navegador-erro', { erro: e.error, modo: 'ptt' });
       aoErro?.(ERROS_RECONHECIMENTO[e.error] ?? `o reconhecimento de voz falhou (${e.error})`);
       if (ERROS_FATAIS.has(e.error)) aoFalha?.(e.error);
     };
@@ -584,6 +603,7 @@ const Voz = (() => {
         // silêncio e cancelamento são normais em escuta contínua — não é erro
         // pra declarar; o onend abaixo já cuida de reabrir sozinho.
         if (e.error === 'no-speech' || e.error === 'aborted') return;
+        diag('navegador-erro', { erro: e.error, modo: 'copiloto' });
         aoErro?.(ERROS_RECONHECIMENTO[e.error] ?? `o reconhecimento de voz falhou (${e.error})`);
         // Fatal: parar de reabrir (era isto que repetia a mesma mensagem a
         // cada reabertura) e avisar o chamador para trocar de motor.
@@ -618,7 +638,7 @@ const Voz = (() => {
   // gatilho "C3PO" só se detecta no texto. O status diz isso ao dono.
   const temGravacao = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
   let xaiDisponivel = null; // null = ainda não perguntou
-  fetch('/api/orquestracao/voz').then((r) => r.json()).then((i) => { xaiDisponivel = Boolean(i.xai); atualizarStatus(); })
+  fetch('/api/orquestracao/voz').then((r) => r.json()).then((i) => { xaiDisponivel = Boolean(i.xai); diag('motores', { reconhecimento: temReconhecimento, gravacao: temGravacao, tipo: TIPO_GRAVACAO, xai: xaiDisponivel, sintese: temSintese, origem: location.origin }); atualizarStatus(); })
     .catch(() => { xaiDisponivel = false; atualizarStatus(); });
 
   const TIPO_GRAVACAO = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
@@ -643,6 +663,9 @@ const Voz = (() => {
   // adaptativo (média móvel do que foi medido em silêncio).
   function criarMedidor(stream) {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Política de autoplay: o contexto pode nascer "suspended" (nível sempre
+    // 0 → nunca detecta fala). Retoma e registra o estado.
+    ctx.resume().then(() => diag('audiocontext', { estado: ctx.state })).catch((e) => diag('audiocontext-erro', { erro: String(e) }));
     const fonte = ctx.createMediaStreamSource(stream);
     const analisador = ctx.createAnalyser();
     analisador.fftSize = 1024;
@@ -711,14 +734,16 @@ const Voz = (() => {
 
   // Copiloto por xAI: um fluxo de microfone aberto; cada trecho de voz vira um
   // blob e uma transcrição. Ignora o que capta enquanto o C-3PO fala.
-  function ouvirContinuoXai({ aoUtterance, aoErro, aoCorrecao } = {}) {
+  function ouvirContinuoXai({ aoUtterance, aoErro, aoCorrecao, aoNivel } = {}) {
     let ativo = true; let stream = null; let medidor = null; let laco = null;
     (async () => {
       try {
         if (!TIPO_GRAVACAO) throw new Error('nenhum formato de áudio compatível neste navegador');
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        diag('copiloto-xai-mic', { faixas: stream.getAudioTracks().map((t) => ({ rotulo: t.label.slice(0, 40), ativa: t.enabled, muda: t.muted, estado: t.readyState })) });
         medidor = criarMedidor(stream);
         let recorder = null; let partes = []; let inicioFala = 0; let altoDesde = 0; let silencioDesde = 0;
+        let amostras = 0; let maximo = 0; let detectadas = 0; let ultimoResumo = Date.now();
         const fechar = async () => {
           const rec = recorder; recorder = null;
           if (!rec) return;
@@ -726,19 +751,25 @@ const Voz = (() => {
           const fim = new Promise((resolve) => { rec.onstop = resolve; });
           rec.stop(); await fim;
           const blob = new Blob(partes, { type: TIPO_GRAVACAO }); partes = [];
+          diag('copiloto-xai-trecho', { ms: duracao, bytes: blob.size, enviado: !(duracao < VAD_MINIMO_FALA_MS || blob.size < 1000 || !ativo) });
           if (duracao < VAD_MINIMO_FALA_MS || blob.size < 1000 || !ativo) return;
           try {
             const texto = await transcreverBlob(blob);
+            diag('copiloto-xai-transcrito', { caracteres: texto.length });
             if (!texto || !ativo) return;
             const { texto: corrigido, trocas } = corrigirNomesProprios(texto);
             if (trocas.length) aoCorrecao?.(trocas);
             aoUtterance?.(corrigido);
-          } catch (erro) { aoErro?.(erro.message); if (/sessão do painel|não está configurada/.test(erro.message)) ativo = false; }
+          } catch (erro) { diag('copiloto-xai-erro', { erro: erro.message }); aoErro?.(erro.message); if (/sessão do painel|não está configurada/.test(erro.message)) ativo = false; }
         };
         laco = setInterval(() => {
           if (!ativo) { clearInterval(laco); if (recorder) fechar(); return; }
           const agora = Date.now();
-          const alto = medidor.falando(medidor.nivel());
+          const rms = medidor.nivel();
+          const alto = medidor.falando(rms);
+          amostras++; if (rms > maximo) maximo = rms; if (alto) detectadas++;
+          if (amostras % 3 === 0) aoNivel?.(rms, alto, blocosEmFala > 0);
+          if (agora - ultimoResumo > 5000) { diag('copiloto-xai-nivel', { maximo: Number(maximo.toFixed(4)), amostras, altas: detectadas, gravando: Boolean(recorder), emFala: blocosEmFala }); ultimoResumo = agora; amostras = 0; maximo = 0; detectadas = 0; }
           if (blocosEmFala > 0) { altoDesde = 0; return; } // eco da própria voz dele
           if (!recorder) {
             if (alto) { altoDesde ||= agora; if (agora - altoDesde >= VAD_INICIO_MS) {
@@ -753,10 +784,11 @@ const Voz = (() => {
         }, 100);
       } catch (erro) {
         ativo = false;
+        diag('copiloto-xai-falha', { erro: erro.name ?? '', msg: String(erro.message).slice(0, 120) });
         aoErro?.(erro.name === 'NotAllowedError' ? ERROS_RECONHECIMENTO['not-allowed'] : erro.message);
       }
     })();
-    return { parar() { ativo = false; clearInterval(laco); medidor?.fechar(); stream?.getTracks().forEach((t) => t.stop()); } };
+    return { parar() { ativo = false; clearInterval(laco); medidor?.fechar(); stream?.getTracks().forEach((t) => t.stop()); diag('copiloto-xai-parou'); } };
   }
 
   // ---------- Status declarado na UI ----------

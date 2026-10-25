@@ -82,6 +82,11 @@ remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
   copiloto por xAI tudo que se fala perto do microfone é transcrito, pago,
   inclusive em espera (o gatilho "C3PO" só se detecta no texto) — o status
   avisa.
+- **Diagnóstico:** o navegador manda eventos da voz (motores, erro do
+  microfone, nível captado a cada 5 s, trechos enviados, áudio recusado) para
+  `POST /api/diagnostico/voz`, que os grava no journal:
+  `journalctl --user -u painel-admin | grep voz-diag`. Sem áudio nem texto da
+  conversa. No copiloto por xAI a tela mostra um medidor "mic: ▮▮▮".
 
 ## Severino por voz, fora de casa (Claude app + Remote Control)
 

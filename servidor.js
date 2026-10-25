@@ -455,6 +455,17 @@ const servidor = http.createServer(async (req, res) => {
     } else if (pathname === '/api/orquestracao/legado' && req.method === 'GET') {
       res.setHeader('cache-control', 'no-store');
       responderJson(res, await lerCanalLegado());
+    } else if (pathname === '/api/diagnostico/voz' && req.method === 'POST') {
+      // Diagnóstico da voz do C-3PO (25/10/2026): o navegador manda eventos
+      // (motor escolhido, erro do microfone, nível captado, áudio recusado…)
+      // e eles vão para o journal, onde o orquestrador lê — sem áudio, sem
+      // segredo, teto de 4 KiB. Sem isso o que falha no navegador do dono é
+      // invisível daqui.
+      try {
+        const corpo = (await lerCorpo(req)).slice(0, 4096);
+        console.error('[voz-diag]', corpo.replace(/[\r\n]+/g, ' '));
+      } catch { /* diagnóstico nunca derruba nada */ }
+      res.writeHead(204); res.end();
     } else if (pathname === '/api/orquestracao/voz' && req.method === 'GET') {
       // Só a presença da transcrição xAI (nunca a chave): o C-3PO decide se
       // pode cair para ela quando o reconhecimento do navegador não existe
