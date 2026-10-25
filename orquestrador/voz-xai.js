@@ -41,9 +41,14 @@ export function criarTranscritorXai({ chave = process.env.XAI_API_KEY, fetchImpl
     } catch { throw new ErroAcesso('transcrição xAI indisponível', 502); }
     if (!resposta.ok) throw new ErroAcesso(`xAI recusou a transcrição (HTTP ${resposta.status})`, 502);
     let dados;
-    const bruto = await resposta.text();
-    try { dados = JSON.parse(bruto); }
-    catch { log(`[voz-xai] resposta não é JSON (${resposta.headers.get('content-type')}): ${bruto.slice(0, 200)}`); throw new ErroAcesso('resposta de transcrição inválida', 502); }
+    try {
+      // `text()` quando existe (Response real) para poder registrar o corpo
+      // de uma resposta que não é JSON; fake de teste pode trazer só `json()`.
+      dados = typeof resposta.text === 'function' ? JSON.parse(await resposta.text()) : await resposta.json();
+    } catch (erro) {
+      log(`[voz-xai] resposta não é JSON (${resposta.headers?.get?.('content-type') ?? '?'}): ${String(erro.message).slice(0, 200)}`);
+      throw new ErroAcesso('resposta de transcrição inválida', 502);
+    }
     if (typeof dados.text !== 'string' || dados.text.length > 8000) {
       log(`[voz-xai] resposta sem texto: ${JSON.stringify(dados).slice(0, 200)}`);
       throw new ErroAcesso('resposta de transcrição inválida', 502);
