@@ -54,7 +54,7 @@ motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 (aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
 `prontidao`, `canal?carta&projeto`, `modelos`, `consumo`, `legado`; POST
 `simular`, `modelos/validar`, `{modelos,handoff,gates,despacho}/{preparar,confirmar}`,
-`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md);
+`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações)
 e estáticos de `publico/` (dashboard na raiz, chat em `/severino/`).
 

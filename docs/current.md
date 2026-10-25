@@ -29,6 +29,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo de assinatura** (PAINEL-40): sem fonte verificável, "indisponível".
 - **Fase 3 do C-3PO** (ações): motor só-leitura, sem suíte (LLM sempre mock).
+  Voz (25/10): cai para gravação + xAI quando o navegador não reconhece.
 
 ## Portão e repositório
 
