@@ -21,6 +21,17 @@ let sessao = sessionStorage.getItem('severino-sessao') || undefined;
 // de push-to-talk depois de cada resposta quando o modo copiloto (mais
 // abaixo no arquivo) está no comando do microfone.
 let modoCopilotoAtivo = false;
+// Motor de escuta (25/10/2026): 'navegador' (Web Speech, serviço do Google —
+// Chrome/Edge) ou 'xai' (gravação + transcrição xAI do painel, para Brave,
+// Chromium sem chaves e Firefox). Começa no navegador quando existe e cai
+// para a xAI no primeiro erro fatal (`network` etc.), sem repetir aviso.
+let motorEscuta = Voz.temReconhecimento ? 'navegador' : (Voz.temGravacao ? 'xai' : null);
+function cairParaXai(motivo) {
+  if (motorEscuta === 'xai' || !Voz.temGravacao) return false;
+  motorEscuta = 'xai';
+  adicionarNota('aviso-voz', `o reconhecimento do navegador não serve aqui (${motivo}); passei a gravar e transcrever pela xAI do painel — exige a sessão do painel e cada frase é transcrição paga`);
+  return true;
+}
 
 function adicionarFala(classe, texto = '') {
   const div = document.createElement('div');
@@ -122,7 +133,7 @@ async function mandarMensagem(mensagem) {
     locutor.concluir(); // fala o rabo do buffer (última sentença sem pontuação)
     pensando.remove();
     enviar.disabled = false;
-    microfone.disabled = modoCopilotoAtivo || !Voz.temReconhecimento;
+    microfone.disabled = modoCopilotoAtivo || !motorEscuta;
     entrada.focus();
   }
 }
@@ -140,7 +151,7 @@ formulario.addEventListener('submit', (e) => {
 // /api/conversa. Sem SpeechRecognition o botão fica desabilitado com motivo
 // visível (title + linha de status que o voz.js preenche).
 
-if (!Voz.temReconhecimento) {
+if (!motorEscuta) {
   microfone.disabled = true;
   microfone.title = 'reconhecimento de voz indisponível neste navegador — use Edge ou Chrome';
 } else {
@@ -154,8 +165,10 @@ if (!Voz.temReconhecimento) {
     }
     Voz.calar(); // senão o mic captura a própria fala do Severino
     microfone.classList.add('ouvindo');
-    entrada.placeholder = 'pode falar, tô ouvindo…';
-    escuta = Voz.ouvir({
+    entrada.placeholder = motorEscuta === 'xai' ? 'pode falar; quando parar, eu transcrevo pela xAI…' : 'pode falar, tô ouvindo…';
+    const ouvir = motorEscuta === 'xai' ? Voz.ouvirXai : Voz.ouvir;
+    escuta = ouvir({
+      aoFalha: (motivo) => cairParaXai(motivo),
       aoParcial: (texto) => { entrada.value = texto; },
       aoFinal: (texto) => {
         entrada.value = '';
@@ -194,7 +207,7 @@ const rotuloCopiloto = document.getElementById('rotulo-copiloto');
 const statusCopiloto = document.getElementById('status-copiloto');
 const TEMPO_HIATO_MS = 90_000; // 1min30 sem fala: volta a exigir "C3PO"
 
-if (!Voz.temReconhecimento) {
+if (!motorEscuta) {
   rotuloCopiloto.hidden = true;
 } else {
   let escutaContinua = null;
@@ -204,11 +217,12 @@ if (!Voz.temReconhecimento) {
 
   function atualizarStatusCopiloto() {
     statusCopiloto.hidden = false;
+    const motor = motorEscuta === 'xai' ? ' (xAI: cada frase é transcrição paga)' : '';
     if (estadoConversa === 'ativa') {
-      statusCopiloto.textContent = 'copiloto: ouvindo, pode falar à vontade';
+      statusCopiloto.textContent = `copiloto: ouvindo, pode falar à vontade${motor}`;
       statusCopiloto.classList.add('ativa');
     } else {
-      statusCopiloto.textContent = 'copiloto: em espera — diga "C3PO" pra retomar';
+      statusCopiloto.textContent = `copiloto: em espera — diga "C3PO" pra retomar${motor}`;
       statusCopiloto.classList.remove('ativa');
     }
   }
@@ -239,11 +253,21 @@ if (!Voz.temReconhecimento) {
     microfone.title = 'desligue o modo copiloto pra usar o push-to-talk';
     estadoConversa = 'dormente';
     atualizarStatusCopiloto();
-    escutaContinua = Voz.ouvirContinuo({
+    const ouvirContinuo = motorEscuta === 'xai' ? Voz.ouvirContinuoXai : Voz.ouvirContinuo;
+    escutaContinua = ouvirContinuo({
       aoParcial: () => {}, // sem eco no campo de texto em modo copiloto: seria ruído constante
       aoUtterance: tratarUtterance,
       aoCorrecao: (trocas) => adicionarNota('aviso-voz', `corrigi o que ouvi: ${trocas.join(', ')}`),
       aoErro: (motivo) => adicionarNota('aviso-voz', motivo),
+      // Motor do navegador morreu de vez (Brave/Chromium: `network`): troca
+      // para a xAI e religa o copiloto no mesmo estado, sem o dono clicar.
+      aoFalha: (motivo) => {
+        escutaContinua = null;
+        if (cairParaXai(motivo)) { ligar(); return; }
+        modoCopilotoCaixa.checked = false;
+        desligar();
+        adicionarNota('aviso-voz', 'copiloto desligado: sem motor de voz neste navegador — use Chrome ou Edge, ou abra o painel logado para usar a xAI');
+      },
     });
     verificadorHiato = setInterval(() => {
       if (estadoConversa === 'ativa' && Date.now() - ultimaAtividade > TEMPO_HIATO_MS) {

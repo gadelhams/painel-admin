@@ -440,7 +440,12 @@ const Voz = (() => {
 
   // Push-to-talk do contrato: UMA captura por clique (continuous: false),
   // encerra sozinha no silêncio — nunca sempre-ouvindo, sem hotword.
-  function ouvir({ aoParcial, aoFinal, aoCorrecao, aoErro, aoFim } = {}) {
+  // Erros que não se resolvem repetindo: o motor do navegador não serve nesta
+  // máquina/navegador (Brave e Chromium sem chaves do Google devolvem
+  // `network` na hora; Firefox nem tem a API). O chamador cai para a xAI.
+  const ERROS_FATAIS = new Set(['network', 'service-not-allowed', 'not-allowed', 'audio-capture', 'language-not-supported']);
+
+  function ouvir({ aoParcial, aoFinal, aoCorrecao, aoErro, aoFim, aoFalha } = {}) {
     const rec = new ClasseReconhecimento();
     rec.lang = 'pt-BR';
     rec.interimResults = true;
@@ -467,6 +472,7 @@ const Voz = (() => {
     rec.onerror = (e) => {
       if (e.error === 'aborted') return; // o próprio usuário cancelou no botão
       aoErro?.(ERROS_RECONHECIMENTO[e.error] ?? `o reconhecimento de voz falhou (${e.error})`);
+      if (ERROS_FATAIS.has(e.error)) aoFalha?.(e.error);
     };
     rec.onend = () => aoFim?.();
     rec.start();
@@ -533,7 +539,7 @@ const Voz = (() => {
   // o navegador a encerra por conta própria (`continuous: true` não garante
   // isso em todo navegador). Ignora o que capta enquanto o Severino está
   // falando (`blocosEmFala`), senão o mic ouve a própria voz dele.
-  function ouvirContinuo({ aoUtterance, aoParcial, aoErro, aoCorrecao } = {}) {
+  function ouvirContinuo({ aoUtterance, aoParcial, aoErro, aoCorrecao, aoFalha } = {}) {
     let ativo = true;
     let rec = null;
     let bufferFinal = '';
@@ -579,6 +585,9 @@ const Voz = (() => {
         // pra declarar; o onend abaixo já cuida de reabrir sozinho.
         if (e.error === 'no-speech' || e.error === 'aborted') return;
         aoErro?.(ERROS_RECONHECIMENTO[e.error] ?? `o reconhecimento de voz falhou (${e.error})`);
+        // Fatal: parar de reabrir (era isto que repetia a mesma mensagem a
+        // cada reabertura) e avisar o chamador para trocar de motor.
+        if (ERROS_FATAIS.has(e.error)) { ativo = false; aoFalha?.(e.error); }
       };
       rec.onend = () => {
         if (ativo) iniciar(); // o navegador encerra a sessão de tempos em tempos: reabre na hora
@@ -597,6 +606,159 @@ const Voz = (() => {
     };
   }
 
+  // ---------- Motor alternativo: gravação + transcrição xAI (25/10/2026) ----------
+  // O reconhecimento do navegador depende do serviço do Google (Chrome/Edge);
+  // no Brave, no Chromium sem chaves e no Firefox ele não existe ou devolve
+  // `network`. O painel já tem transcrição por xAI para a aba Orquestração
+  // (`POST /api/orquestracao/voz/transcrever`, exige a sessão do painel); aqui
+  // ela vira o segundo motor do C-3PO: push-to-talk grava até o silêncio e
+  // transcreve; o copiloto fatia o áudio por detecção de voz (energia) e
+  // transcreve cada fala. Custo: em modo copiloto por xAI TUDO que se fala
+  // perto do microfone é transcrito (pago) — inclusive em espera, porque o
+  // gatilho "C3PO" só se detecta no texto. O status diz isso ao dono.
+  const temGravacao = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+  let xaiDisponivel = null; // null = ainda não perguntou
+  fetch('/api/orquestracao/voz').then((r) => r.json()).then((i) => { xaiDisponivel = Boolean(i.xai); atualizarStatus(); })
+    .catch(() => { xaiDisponivel = false; atualizarStatus(); });
+
+  const TIPO_GRAVACAO = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
+    .find((t) => window.MediaRecorder?.isTypeSupported?.(t)) ?? null;
+  const VAD_LIMIAR_MINIMO = 0.012;    // RMS abaixo disso é silêncio em qualquer microfone
+  const VAD_FATOR_RUIDO = 2.5;        // fala = bem acima do ruído de fundo medido
+  const VAD_INICIO_MS = 250;          // energia alta por este tempo = começou a falar
+  const VAD_SILENCIO_MS = 900;        // igual ao turno do motor do navegador
+  const VAD_MINIMO_FALA_MS = 500;     // menos que isto é estalo, não frase
+  const VAD_MAXIMO_FALA_MS = 30_000;  // corta e manda; a próxima fatia continua
+
+  async function transcreverBlob(blob) {
+    const r = await fetch('/api/orquestracao/voz/transcrever', { method: 'POST', headers: { 'content-type': blob.type }, body: blob });
+    if (r.status === 401) throw new Error('a transcrição xAI exige a sessão do painel: abra o C-3PO por painel.casa.astargne.com, logado no astargne.com');
+    if (r.status === 503) throw new Error('a transcrição xAI não está configurada no painel (XAI_API_KEY)');
+    const dados = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(dados.erro ?? `transcrição falhou (${r.status})`);
+    return String(dados.texto ?? '').trim();
+  }
+
+  // Medidor de energia do microfone: RMS do domínio do tempo, com piso de ruído
+  // adaptativo (média móvel do que foi medido em silêncio).
+  function criarMedidor(stream) {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const fonte = ctx.createMediaStreamSource(stream);
+    const analisador = ctx.createAnalyser();
+    analisador.fftSize = 1024;
+    fonte.connect(analisador);
+    const dados = new Float32Array(analisador.fftSize);
+    let ruido = 0.005;
+    return {
+      nivel() {
+        analisador.getFloatTimeDomainData(dados);
+        let soma = 0;
+        for (let i = 0; i < dados.length; i++) soma += dados[i] * dados[i];
+        return Math.sqrt(soma / dados.length);
+      },
+      falando(rms) {
+        const limiar = Math.max(VAD_LIMIAR_MINIMO, ruido * VAD_FATOR_RUIDO);
+        if (rms < limiar) ruido = ruido * 0.95 + rms * 0.05; // só aprende o ruído no silêncio
+        return rms >= limiar;
+      },
+      fechar() { ctx.close().catch(() => {}); },
+    };
+  }
+
+  // Push-to-talk por xAI: grava até o silêncio depois da fala (ou até o
+  // segundo clique) e transcreve uma vez. Mesmo contrato de `ouvir`.
+  function ouvirXai({ aoParcial, aoFinal, aoCorrecao, aoErro, aoFim } = {}) {
+    let recorder = null; let stream = null; let medidor = null; let cancelado = false;
+    const partes = [];
+    (async () => {
+      try {
+        if (!TIPO_GRAVACAO) throw new Error('nenhum formato de áudio compatível neste navegador');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        medidor = criarMedidor(stream);
+        recorder = new MediaRecorder(stream, { mimeType: TIPO_GRAVACAO });
+        recorder.ondataavailable = (e) => { if (e.data.size) partes.push(e.data); };
+        const fim = new Promise((resolve) => { recorder.onstop = resolve; });
+        recorder.start(250);
+        aoParcial?.('(gravando… pare de falar para eu transcrever)');
+        let falou = false; let silencioDesde = 0; const inicio = Date.now();
+        await new Promise((resolve) => {
+          const laco = setInterval(() => {
+            if (cancelado || recorder.state === 'inactive') { clearInterval(laco); resolve(); return; }
+            const agora = Date.now();
+            if (medidor.falando(medidor.nivel())) { falou = true; silencioDesde = 0; }
+            else if (falou) { silencioDesde ||= agora; if (agora - silencioDesde > VAD_SILENCIO_MS) { clearInterval(laco); resolve(); } }
+            if (agora - inicio > VAD_MAXIMO_FALA_MS + 15_000) { clearInterval(laco); resolve(); } // ninguém falou: desiste
+          }, 100);
+        });
+        if (recorder.state !== 'inactive') recorder.stop();
+        await fim;
+        if (cancelado) return;
+        if (!falou) { aoErro?.('não captei nenhum som, Mestre — clique no microfone e fale de novo'); return; }
+        aoParcial?.('(transcrevendo…)');
+        const texto = await transcreverBlob(new Blob(partes, { type: TIPO_GRAVACAO }));
+        if (!texto) { aoErro?.('a transcrição voltou vazia — tente de novo'); return; }
+        const { texto: corrigido, trocas } = corrigirNomesProprios(texto);
+        if (trocas.length) aoCorrecao?.(trocas);
+        aoFinal?.(corrigido);
+      } catch (erro) {
+        aoErro?.(erro.name === 'NotAllowedError' ? ERROS_RECONHECIMENTO['not-allowed'] : erro.message);
+      } finally {
+        medidor?.fechar(); stream?.getTracks().forEach((t) => t.stop()); aoFim?.();
+      }
+    })();
+    return { parar: () => { cancelado = true; if (recorder && recorder.state !== 'inactive') recorder.stop(); } };
+  }
+
+  // Copiloto por xAI: um fluxo de microfone aberto; cada trecho de voz vira um
+  // blob e uma transcrição. Ignora o que capta enquanto o C-3PO fala.
+  function ouvirContinuoXai({ aoUtterance, aoErro, aoCorrecao } = {}) {
+    let ativo = true; let stream = null; let medidor = null; let laco = null;
+    (async () => {
+      try {
+        if (!TIPO_GRAVACAO) throw new Error('nenhum formato de áudio compatível neste navegador');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        medidor = criarMedidor(stream);
+        let recorder = null; let partes = []; let inicioFala = 0; let altoDesde = 0; let silencioDesde = 0;
+        const fechar = async () => {
+          const rec = recorder; recorder = null;
+          if (!rec) return;
+          const duracao = Date.now() - inicioFala;
+          const fim = new Promise((resolve) => { rec.onstop = resolve; });
+          rec.stop(); await fim;
+          const blob = new Blob(partes, { type: TIPO_GRAVACAO }); partes = [];
+          if (duracao < VAD_MINIMO_FALA_MS || blob.size < 1000 || !ativo) return;
+          try {
+            const texto = await transcreverBlob(blob);
+            if (!texto || !ativo) return;
+            const { texto: corrigido, trocas } = corrigirNomesProprios(texto);
+            if (trocas.length) aoCorrecao?.(trocas);
+            aoUtterance?.(corrigido);
+          } catch (erro) { aoErro?.(erro.message); if (/sessão do painel|não está configurada/.test(erro.message)) ativo = false; }
+        };
+        laco = setInterval(() => {
+          if (!ativo) { clearInterval(laco); if (recorder) fechar(); return; }
+          const agora = Date.now();
+          const alto = medidor.falando(medidor.nivel());
+          if (blocosEmFala > 0) { altoDesde = 0; return; } // eco da própria voz dele
+          if (!recorder) {
+            if (alto) { altoDesde ||= agora; if (agora - altoDesde >= VAD_INICIO_MS) {
+              recorder = new MediaRecorder(stream, { mimeType: TIPO_GRAVACAO });
+              recorder.ondataavailable = (e) => { if (e.data.size) partes.push(e.data); };
+              recorder.start(250); inicioFala = altoDesde; silencioDesde = 0;
+            } } else altoDesde = 0;
+            return;
+          }
+          if (alto) silencioDesde = 0; else silencioDesde ||= agora;
+          if ((silencioDesde && agora - silencioDesde > VAD_SILENCIO_MS) || agora - inicioFala > VAD_MAXIMO_FALA_MS) { altoDesde = 0; fechar(); }
+        }, 100);
+      } catch (erro) {
+        ativo = false;
+        aoErro?.(erro.name === 'NotAllowedError' ? ERROS_RECONHECIMENTO['not-allowed'] : erro.message);
+      }
+    })();
+    return { parar() { ativo = false; clearInterval(laco); medidor?.fechar(); stream?.getTracks().forEach((t) => t.stop()); } };
+  }
+
   // ---------- Status declarado na UI ----------
 
   // A linha de status diz sempre a camada ATIVA e, se houve queda, o motivo:
@@ -604,7 +766,10 @@ const Voz = (() => {
   // (contrato do upgrade).
   function atualizarStatus() {
     const partes = [];
-    if (!temReconhecimento) partes.push('microfone indisponível neste navegador — use Edge ou Chrome');
+    if (!temReconhecimento) {
+      partes.push(temGravacao && xaiDisponivel ? 'microfone: transcrição xAI (este navegador não tem reconhecimento próprio)'
+        : 'microfone indisponível neste navegador — use Edge ou Chrome');
+    }
 
     if (elevenDisponivel === true) {
       partes.push('voz: ElevenLabs');
@@ -628,5 +793,5 @@ const Voz = (() => {
 
   atualizarStatus();
 
-  return { temReconhecimento, temSintese, criarLocutor, calar, ouvir, ouvirContinuo, detectarGatilho };
+  return { temReconhecimento, temGravacao, xaiDisponivel: () => xaiDisponivel, temSintese, criarLocutor, calar, ouvir, ouvirContinuo, ouvirXai, ouvirContinuoXai, detectarGatilho };
 })();

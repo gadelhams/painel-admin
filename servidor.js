@@ -455,6 +455,12 @@ const servidor = http.createServer(async (req, res) => {
     } else if (pathname === '/api/orquestracao/legado' && req.method === 'GET') {
       res.setHeader('cache-control', 'no-store');
       responderJson(res, await lerCanalLegado());
+    } else if (pathname === '/api/orquestracao/voz' && req.method === 'GET') {
+      // Só a presença da transcrição xAI (nunca a chave): o C-3PO decide se
+      // pode cair para ela quando o reconhecimento do navegador não existe
+      // ou não alcança o Google (Brave, Chromium sem chaves, Firefox).
+      res.setHeader('cache-control', 'no-store');
+      responderJson(res, { xai: Boolean(process.env.XAI_API_KEY) });
     } else if (pathname === '/api/orquestracao/voz/transcrever' && req.method === 'POST') {
       const { status, corpo } = await apiVoz(req);
       res.setHeader('cache-control', 'no-store');

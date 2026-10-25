@@ -67,6 +67,22 @@ Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
 worktrees de tentativas ficam para revisão humana — `git -C <projeto> worktree
 remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 
+## Microfone do C-3PO: dois motores (25/10/2026)
+
+- **Navegador** (Web Speech API): Chrome e Edge mandam o áudio ao serviço
+  do Google. Brave e Chromium sem chaves devolvem `network` na hora; Firefox
+  não tem a API. Era a causa do "o reconhecimento de voz precisa de internet"
+  repetido em laço no modo copiloto.
+- **xAI** (gravação + `POST /api/orquestracao/voz/transcrever`): entra
+  sozinho no primeiro erro fatal do navegador ou quando ele não tem
+  reconhecimento (`GET /api/orquestracao/voz` diz se a chave existe). Exige
+  a **sessão do painel** (abrir por `painel.casa.astargne.com`, logado):
+  por `127.0.0.1:7777` a rota responde 401. Push-to-talk grava até o
+  silêncio; o copiloto fatia por detecção de voz (energia). **Custo:** em
+  copiloto por xAI tudo que se fala perto do microfone é transcrito, pago,
+  inclusive em espera (o gatilho "C3PO" só se detecta no texto) — o status
+  avisa.
+
 ## Severino por voz, fora de casa (Claude app + Remote Control)
 
 **CORREÇÃO registrada em 15/08/2026, mesmo dia**: a primeira versão desta
