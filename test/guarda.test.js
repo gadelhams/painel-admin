@@ -12,7 +12,7 @@ test('Host conhecido passa; Host de DNS rebinding é recusado mesmo em GET', () 
   assert.equal(recusa({ metodo: 'GET', host: '127.0.0.1:7777' }), null);
   assert.equal(recusa({ metodo: 'GET', host: 'localhost:7777' }), null);
   assert.equal(recusa({ metodo: 'GET', host: NOME_BORDA }), null);
-  assert.equal(recusa({ metodo: 'GET', host: 'Painel.Casa.Astargne.com' }), null);
+  assert.equal(recusa({ metodo: 'GET', host: 'Painel.Vpn.Astargne.com' }), null);
   assert.equal(recusa({ metodo: 'GET', host: 'atacante.exemplo:7777' })?.status, 421);
   assert.equal(recusa({ metodo: 'GET', host: '127.0.0.1:8000' })?.status, 421);
   assert.equal(recusa({ metodo: 'GET', host: undefined })?.status, 421);
@@ -26,7 +26,7 @@ test('POST da própria página passa, pelo loopback e pela borda', () => {
 
 test('POST de outro site é recusado, por Sec-Fetch-Site ou por Origin', () => {
   assert.equal(recusa(pedido({ secFetchSite: 'cross-site', origem: 'https://atacante.exemplo' }))?.status, 403);
-  assert.equal(recusa(pedido({ secFetchSite: 'same-site', origem: 'https://plane.casa.astargne.com' }))?.status, 403);
+  assert.equal(recusa(pedido({ secFetchSite: 'same-site', origem: 'https://plane.vpn.astargne.com' }))?.status, 403);
   // navegador antigo, sem Sec-Fetch-*: o Origin decide
   assert.equal(recusa(pedido({ origem: 'https://atacante.exemplo' }))?.status, 403);
   assert.equal(recusa(pedido({ origem: 'null' }))?.status, 403);

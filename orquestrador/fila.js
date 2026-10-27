@@ -24,7 +24,7 @@ function recusa(mensagem) {
   return erro;
 }
 const REPOSITORIO = path.resolve(import.meta.dirname, '..');
-const WEB = 'https://plane.casa.astargne.com/astargne/browse';
+const WEB = 'https://plane.vpn.astargne.com/astargne/browse';
 
 async function todas(consultar, url) {
   const itens = [];

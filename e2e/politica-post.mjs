@@ -1,4 +1,4 @@
-export const ORIGEM_PAINEL = 'https://painel.casa.astargne.com';
+export const ORIGEM_PAINEL = 'https://painel.vpn.astargne.com';
 
 const ROTAS_DE_PREPARO = new Set([
   '/api/orquestracao/modelos/validar',

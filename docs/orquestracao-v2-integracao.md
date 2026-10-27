@@ -255,7 +255,7 @@ SSO e preparo com segunda confirmação. A fixture serve apenas os arquivos
 estáticos em loopback, intercepta a API e não acessa o serviço 7777.
 
 O smoke separado para Windows abre um navegador temporário no Cadastro Único,
-espera o login do dono e visita a aba pelo domínio `painel.casa.astargne.com`.
+espera o login do dono e visita a aba pelo domínio `painel.vpn.astargne.com`.
 Ele permite apenas POST de validação/preparo, verifica o botão de confirmação
 sem clicá-lo e relê perfil, lease e tentativa. Não guarda senha, cookie, trace
 ou screenshot da sessão. Não houve registro de perfil, execução de CLI,

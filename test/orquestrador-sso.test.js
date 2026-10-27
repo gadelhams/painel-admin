@@ -13,7 +13,7 @@ const VERSAO = '2026-10-20T08:00:00Z';
 const SELECOES = { orquestracao: { provedor: 'claude', modelo: 'opus', esforco: 'max' } };
 
 const req = (cabecalhos = {}) => ({ method: 'POST', headers: {
-  host: 'painel.casa.astargne.com', origin: 'https://painel.casa.astargne.com',
+  host: 'painel.vpn.astargne.com', origin: 'https://painel.vpn.astargne.com',
   'sec-fetch-site': 'same-origin', 'content-type': 'application/json',
   cookie: `astargne_session=${TOKEN}`, ...cabecalhos,
 } });

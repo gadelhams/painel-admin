@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { criarExecutorSsh } from '../contas.js';
 
-const ORIGEM = 'https://painel.casa.astargne.com';
+const ORIGEM = 'https://painel.vpn.astargne.com';
 const SCRIPT_VERIFICAR = [
   'umask 077',
   'f=$(mktemp /tmp/painel-orq-sso.XXXXXX) || exit 97',
@@ -32,7 +32,7 @@ export function extrairSessao(cabecalho) {
 }
 
 export function recusaOrigemPrivilegiada(req, tiposConteudo = /^application\/json(?:\s*;|$)/i) {
-  if (req.headers.host !== 'painel.casa.astargne.com' || req.headers.origin !== ORIGEM ||
+  if (req.headers.host !== 'painel.vpn.astargne.com' || req.headers.origin !== ORIGEM ||
       req.headers['sec-fetch-site'] !== 'same-origin') return new ErroAcesso('origem privilegiada recusada', 403);
   if (!tiposConteudo.test(req.headers['content-type'] ?? '')) return new ErroAcesso('tipo de conteúdo recusado', 415);
   return null;

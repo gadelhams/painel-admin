@@ -10,7 +10,7 @@ const PAPEIS = ['orquestracao', 'codificacao_testes', 'validacao'];
 const candidato = {
   id: CARTA_PLAYER, identificador: 'PLAYER-38', titulo: 'Proxy de mídia (fixture)',
   projeto: 'PLAYER', projetoId: PROJETO_PLAYER, estado: 'Todo',
-  url: 'https://plane.casa.astargne.com/PLAYER-38/', atualizadoEm: VERSAO,
+  url: 'https://plane.vpn.astargne.com/PLAYER-38/', atualizadoEm: VERSAO,
   labels: ['READY TO DEV'], dependencias: [], elegivel: true, motivos: [], gate: 'READY TO DEV',
   agentesDisponiveis: [{ id: 'Claude', modelo: 'claude-opus-5', esforco: 'max' },
     { id: 'OpenAI', modelo: 'gpt-6-astra', esforco: 'extreme high' }],
@@ -278,12 +278,12 @@ test('espera a API de modelos antes de contar os três papéis', async ({ page }
 });
 
 test('POST externo de fundo é bloqueado sem simular escrita inesperada no Painel', () => {
-  expect(classificarPedido('GET', 'https://painel.casa.astargne.com/api/orquestracao')).toBe('leitura');
-  expect(classificarPedido('POST', 'https://painel.casa.astargne.com/api/orquestracao/modelos/validar')).toBe('preparo-permitido');
-  expect(classificarPedido('POST', 'https://painel.casa.astargne.com/api/orquestracao/modelos/preparar')).toBe('preparo-permitido');
-  expect(classificarPedido('POST', 'https://painel.casa.astargne.com/api/orquestracao/modelos/confirmar')).toBe('bloquear-painel');
-  expect(classificarPedido('POST', 'https://painel.casa.astargne.com/api/orquestracao/despacho/confirmar')).toBe('bloquear-painel');
-  expect(classificarPedido('PATCH', 'https://painel.casa.astargne.com/api/contas/usuarios/1')).toBe('bloquear-painel');
+  expect(classificarPedido('GET', 'https://painel.vpn.astargne.com/api/orquestracao')).toBe('leitura');
+  expect(classificarPedido('POST', 'https://painel.vpn.astargne.com/api/orquestracao/modelos/validar')).toBe('preparo-permitido');
+  expect(classificarPedido('POST', 'https://painel.vpn.astargne.com/api/orquestracao/modelos/preparar')).toBe('preparo-permitido');
+  expect(classificarPedido('POST', 'https://painel.vpn.astargne.com/api/orquestracao/modelos/confirmar')).toBe('bloquear-painel');
+  expect(classificarPedido('POST', 'https://painel.vpn.astargne.com/api/orquestracao/despacho/confirmar')).toBe('bloquear-painel');
+  expect(classificarPedido('PATCH', 'https://painel.vpn.astargne.com/api/contas/usuarios/1')).toBe('bloquear-painel');
   expect(classificarPedido('POST', 'https://astargne.com/api/sessao/renovar')).toBe('bloquear-externo');
   expect(classificarPedido('DELETE', 'https://astargne.com/api/sessao')).toBe('bloquear-externo');
 });

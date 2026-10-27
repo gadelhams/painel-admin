@@ -10,7 +10,7 @@
 //   com Sec-Fetch-Site e Origin, e é isso que se confere. Requisição sem
 //   nenhum dos dois não veio de navegador (curl na própria máquina) e passa.
 
-export const NOME_BORDA = 'painel.casa.astargne.com';
+export const NOME_BORDA = 'painel.vpn.astargne.com';
 
 const METODOS_SEGUROS = new Set(['GET', 'HEAD']);
 

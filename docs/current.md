@@ -7,7 +7,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 - Serviço de usuário do systemd `painel-admin.service` em `127.0.0.1:7777`
   (dashboard em `/`, C-3PO em `/severino/`); do Windows,
-  `https://painel.casa.astargne.com` (borda do tailnet, só o IP dele). Host e
+  `https://painel.vpn.astargne.com` (borda do tailnet, só o IP dele). Host e
   origem conferidos em `guarda.js`.
 - Backlog lido do **Plane** (`127.0.0.1:8095`, Guest "painel", só leitura):
   13 projetos no Plane, 15 no catálogo.

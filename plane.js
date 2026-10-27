@@ -17,7 +17,7 @@
 // `tailscale serve` pelo Caddy de ~/servicos/borda).
 // O link tem de ser o endereço canônico (WEB_URL do Plane): é nele que o
 // navegador do dono tem a sessão; no apelido ts.net o clique cai no login.
-const WEB = 'https://plane.casa.astargne.com';
+const WEB = 'https://plane.vpn.astargne.com';
 const SLUG = 'astargne';
 const API = `${process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095'}/api/v1/workspaces/${SLUG}`;
 
