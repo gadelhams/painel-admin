@@ -2,29 +2,50 @@
 
 import fs from 'node:fs/promises';
 
-// Transcripts chegam a dezenas de MB (o Codex Desktop passa de 50 mil linhas);
-// o Hangar só olha os últimos minutos, então basta a cauda.
+// Transcripts chegam a GB (o Codex Desktop guarda screenshot em base64 na saída
+// da ferramenta: linhas de 5 MB); o Hangar só olha os últimos minutos, então
+// basta a cauda — mas uma cauda fixa enche de imagem e perde as chamadas.
 export const CAUDA_BYTES = 384 * 1024;
+export const CAUDA_TETO = 32 * 1024 * 1024;
+const LINHAS_MINIMAS = 60;
+// Linha maior que isto é saída com imagem: pulada sem decodificar.
+export const LINHA_MAX = 256 * 1024;
 
-export async function lerCauda(arquivo, bytes = CAUDA_BYTES) {
-  const fd = await fs.open(arquivo, 'r');
-  try {
-    const { size } = await fd.stat();
-    const inicio = Math.max(0, size - bytes);
-    const buf = Buffer.alloc(size - inicio);
-    await fd.read(buf, 0, buf.length, inicio);
-    const linhas = buf.toString('utf8').split('\n');
-    if (inicio > 0) linhas.shift(); // primeira linha cortada no meio
-    const objetos = [];
-    for (const linha of linhas) {
-      if (!linha) continue;
+function linhasPequenas(buf, cortada) {
+  const objetos = [];
+  let pos = 0;
+  if (cortada) {
+    const nl = buf.indexOf(0x0a);
+    pos = nl < 0 ? buf.length : nl + 1; // primeira linha cortada no meio
+  }
+  while (pos < buf.length) {
+    let fim = buf.indexOf(0x0a, pos);
+    if (fim < 0) fim = buf.length;
+    if (fim > pos && fim - pos <= LINHA_MAX) {
       try {
-        objetos.push(JSON.parse(linha));
+        objetos.push(JSON.parse(buf.toString('utf8', pos, fim)));
       } catch {
         // linha ainda sendo escrita pela CLI
       }
     }
-    return objetos;
+    pos = fim + 1;
+  }
+  return objetos;
+}
+
+export async function lerCauda(arquivo, bytes = CAUDA_BYTES, teto = CAUDA_TETO) {
+  const fd = await fs.open(arquivo, 'r');
+  try {
+    const { size } = await fd.stat();
+    let janela = bytes;
+    for (;;) {
+      const inicio = Math.max(0, size - janela);
+      const buf = Buffer.alloc(size - inicio);
+      await fd.read(buf, 0, buf.length, inicio);
+      const objetos = linhasPequenas(buf, inicio > 0);
+      if (objetos.length >= LINHAS_MINIMAS || inicio === 0 || janela >= teto) return objetos;
+      janela = Math.min(janela * 2, teto);
+    }
   } finally {
     await fd.close();
   }

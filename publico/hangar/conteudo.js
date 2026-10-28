@@ -34,7 +34,8 @@ function alvoDaAcao(a, n) {
   if (a.tipo === 'consultar') return esc(a.item);
   if (a.tipo === 'cartao') { const c = cartaoDe(n, a.itemPlane); return c ? esc(c[1]) : 'cartão'; }
   if (a.arquivo) return pre + esc(a.arquivo);
-  return esc(a.programa ?? '—');
+  // Arquivo fora do ~/Work (memória, /tmp): o coletor não manda o caminho, só o fato.
+  return a.programa ? esc(a.programa) : (a.tipo === 'ler' || a.tipo === 'editar' ? 'fora do ~/Work' : '—');
 }
 const VERBO = { ler: 'leu', editar: 'editou', testar: 'testou', comando: 'rodou', consultar: 'consultou', cartao: 'cartão' };
 
@@ -76,7 +77,9 @@ export function conteudo(a) {
     return {
       cor: f.cor, olho: `C-3PO · droid ${f.nome}`, titulo: `Droid ${esc(d.rotulo)}<small>${esc(ondeDroid(d))}</small>`,
       fala: d.encerrar ? `O ${d.rotulo} encerrou a sessão e está voltando à fábrica do ${f.nome}.`
-        : `O ${d.rotulo} está ${oQueFaz(d)}, mestre.${carta ? ` Trabalha no cartão ${carta[1]}: ${carta[2]}.` : ' Não sei em qual cartão do Plane: a sessão ainda não tocou nenhum pelo MCP.'}`,
+        : `${d.s.estado === 'aguardando' && !d.passo
+          ? `O ${d.rotulo} terminou o turno e espera a sua resposta na conversa do ${f.nome} (terminal ou editor), mestre. Enquanto você não escrever, ele não faz nada.`
+          : `O ${d.rotulo} está ${oQueFaz(d)}, mestre.`}${carta ? ` O último cartão que tocou foi ${carta[1]}: ${carta[2]}.` : ' Não sei em qual cartão do Plane: a sessão ainda não tocou nenhum pelo MCP.'}`,
       corpo: `<dl class="hg-campos"><dt>IA</dt><dd>${f.nome}</dd><dt>Estado</dt><dd data-estado-droid="${esc(d.id)}"></dd>
         <dt>Projeto</dt><dd>${n ? linkNave(n) : esc(ondeDroid(d))}</dd>
         <dt>Cartão</dt><dd>${carta ? `${esc(carta[1])} · ${esc(carta[2])}` : '—'}</dd>

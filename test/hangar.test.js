@@ -85,9 +85,9 @@ function cenario({ processos = ['claude'], transcripts = () => ({}) } = {}) {
     fs.writeFileSync(path.join(base, 'proc', String(100 + i), 'cmdline'), `/opt/bin/${nome}\0--flag\0`);
   });
   for (const [nome, linhas] of Object.entries(transcripts(raiz))) {
-    const arq = path.join(base, 'claude', nome);
+    const arq = nome.startsWith('codex/') ? path.join(base, nome) : path.join(base, 'claude', nome);
     fs.mkdirSync(path.dirname(arq), { recursive: true });
-    fs.writeFileSync(arq, linhas.map((l) => JSON.stringify(l)).join('\n') + '\n');
+    fs.writeFileSync(arq, linhas.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n') + '\n');
   }
   return {
     raiz,
@@ -160,6 +160,27 @@ test('sessão: MCP do Plane em outro projeto não tira o droid da nave do arquiv
   });
   const { sessoes } = await c.ler(AGORA);
   assert.deepEqual(sessoes.map((s) => [s.id, s.projeto]), [['e', 'alfa'], ['f', 'beta']]);
+});
+
+test('sessão: Codex aberto há dias, com saídas de imagem enormes no fim, ainda vira droid na nave certa', async () => {
+  // Visto em 28/10/2026: a sessão do app desktop nasceu em 23/10 (a pasta é a do
+  // dia em que nasceu) e cada screenshot grava ~5 MB de base64 numa linha só.
+  const imagem = (s) => JSON.stringify({ type: 'response_item', timestamp: em(s), payload: { type: 'custom_tool_call_output', output: 'x'.repeat(300 * 1024) } });
+  const c = cenario({
+    processos: ['codex'],
+    transcripts: (raiz) => ({
+      'codex/2026/10/23/rollout-2026-10-23T09-00-00-01a16aa9-0eb9-7f21-9145-4d947c3f0943.jsonl': [
+        { type: 'session_meta', payload: { cwd: '/home/x/Documents/Codex/2026-10-23/tarefa', source: 'vscode' } },
+        { type: 'response_item', timestamp: em(30), payload: { type: 'custom_tool_call', name: 'exec', input: `tools.exec_command({cmd:"cd ${raiz}/ProjetosPessoais/alfa && rg ${SEGREDO}"})` } },
+        imagem(25), imagem(20), imagem(15), imagem(10),
+      ],
+    }),
+  });
+  const { sessoes } = await c.ler(AGORA);
+  assert.equal(sessoes.length, 1);
+  assert.deepEqual([sessoes[0].ia, sessoes[0].id, sessoes[0].projeto], ['codex', '01a16aa9-0eb9-7f21-9145-4d947c3f0943', 'alfa']);
+  assert.equal(sessoes[0].acoes.at(-1).programa, 'rg');
+  assert.ok(!JSON.stringify(sessoes).includes(SEGREDO));
 });
 
 test('acervo: só os caminhos da lista fixa contam como Oficina', () => {

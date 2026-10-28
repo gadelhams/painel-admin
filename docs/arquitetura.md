@@ -414,7 +414,11 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   portão por IA (o VS Code abre a CLI na pasta-mãe e o app-server do Codex
   hospeda várias conversas); a sessão é o transcript (`~/.claude/projects`,
   `~/.codex/sessions`) com evento nos últimos 15 min — o mtime não basta,
-  a CLI regrava metadados sem timestamp. Projeto = último caminho tocado
+  a CLI regrava metadados sem timestamp. O Codex guarda a sessão na pasta do
+  dia em que ela nasceu e o app desktop a deixa aberta por dias: a árvore
+  inteira é varrida por mtime. A cauda (`transcript-cauda.js`) começa em
+  384 KB e dobra até ter 60 linhas úteis (teto 32 MB); linha acima de 256 KB
+  é saída com screenshot em base64 e é pulada sem decodificar. Projeto = último caminho tocado
   que cai num projeto do catálogo, senão o `cwd`; MCP `plane` dá a carta
   pelo `issue_id`. Sub-sessão "guardian" do Codex e qualquer coisa em
   `Exitlag/` ficam fora.

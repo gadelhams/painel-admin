@@ -57,14 +57,6 @@ async function recentes(dir, desde, profundidade = 1) {
   return achados;
 }
 
-function diasCodex(raizCodex, agora) {
-  return [0, 1].map((d) => {
-    const dia = new Date(agora - d * 86_400_000);
-    const dd = (n) => String(n).padStart(2, '0');
-    return path.join(raizCodex, String(dia.getFullYear()), dd(dia.getMonth() + 1), dd(dia.getDate()));
-  });
-}
-
 function criarAtribuidor({ raiz, projetos }) {
   const dirs = projetos
     .map((p) => ({ pasta: p.pasta, plane: p.plane ?? null, dir: path.join(raiz, p.area, p.pasta) }))
@@ -179,7 +171,9 @@ export async function lerSessoes({
     }
   }
   if (vivas.has('codex')) {
-    const arquivos = (await Promise.all(diasCodex(raizCodex, agora).map((d) => recentes(d, desde)))).flat();
+    // A pasta é a do dia em que a sessão NASCEU (AAAA/MM/DD): uma sessão do app
+    // desktop pode passar dias aberta, então só o mtime decide, nunca a data da pasta.
+    const arquivos = await recentes(raizCodex, desde, 4);
     for (const f of arquivos) {
       const bruta = await lerComMemo(f.arquivo, f, async () => {
         // Primeira linha = session_meta; diz se é sub-sessão (o "guardian" que revisa comandos).
