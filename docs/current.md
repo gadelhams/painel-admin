@@ -26,8 +26,9 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo de assinatura** (PAINEL-40): sem fonte verificável, "indisponível".
-- **Fase 3 do C-3PO** (ações): motor só-leitura. Voz: xAI se o navegador não
-  reconhece; ligação sem gatilho, falar por cima corta.
+- **Fase 3 do C-3PO** (ações): motor só-leitura; a 1ª ação é a mesa de
+  decisão, desenhada e não construída ([plano](plano-mesa-de-decisao.md)).
+  Voz: xAI se o navegador não reconhece; falar por cima corta.
 - **Hangar**: encomenda de nave é só texto de pedido (falta pedido por SSO);
   CSS ainda monolítico (`estilo.css`); Grok sem CLI.
 
