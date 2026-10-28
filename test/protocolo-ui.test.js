@@ -15,7 +15,11 @@ test('Protocolo cobre as sete abas sem trocar IDs nem ações', async () => {
     assert.ok(css.includes(seletor), `${seletor} precisa do visual Protocolo`);
   }
   assert.match(css, /\[data-tema="light"\]/);
-  assert.match(html, /PROTOCOLO · 01 \/ PORTFÓLIO/);
+  assert.match(html, /ADMIN · PROTOCOLO/);
+  assert.ok(html.indexOf('severino/politica-fala.js') < html.indexOf('severino/sessao-voz.js'));
+  assert.ok(html.indexOf('severino/sessao-voz.js') < html.indexOf('severino/locutor.js'));
+  assert.ok(html.indexOf('severino/locutor.js') < html.indexOf('severino/escuta.js'));
+  assert.ok(html.indexOf('severino/escuta.js') < html.indexOf('severino/voz.js'));
   assert.match(html, /PROTOCOLO · ORQUESTRAÇÃO/);
   for (const [indice, secao] of ['02 \/ DEMANDAS', '03 \/ DECISÕES', '05 \/ ACESSO'].entries()) {
     assert.match(scripts[indice], new RegExp(`PROTOCOLO · ${secao}`));

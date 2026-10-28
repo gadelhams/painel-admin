@@ -244,9 +244,9 @@ body {
 #enviar { background: var(--ui-hot); color: var(--ui-onhot); border: 0; border-radius: 0; padding: .4rem 1rem; font-family: var(--font-mono); font-size: 11px; font-weight: 600; cursor: pointer; }
 #enviar:disabled { opacity: .5; cursor: wait; }
 
-.selo-voz, #microfone { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; border: 1px solid var(--ui-line); border-radius: 0; background: none; color: var(--ui-faint); cursor: pointer; }
+.selo-voz, #microfone, #ligar { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; border: 1px solid var(--ui-line); border-radius: 0; background: none; color: var(--ui-faint); cursor: pointer; }
 #microfone:disabled { opacity: .4; cursor: not-allowed; }
-#microfone.ouvindo { background: #7f1d1d; border-color: #dc2626; color: var(--ui-text); animation: severino-pulso 1.2s ease-in-out infinite; }
+#microfone.ouvindo, #ligar.na-linha { background: #7f1d1d; border-color: #dc2626; color: var(--ui-text); animation: severino-pulso 1.2s ease-in-out infinite; }
 @keyframes severino-pulso { 50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, .25); } }
 
 .console-chips { display: flex; flex-wrap: wrap; gap: 6.8px; margin-top: 13.6px; }
@@ -263,7 +263,9 @@ body {
 /* Dormente (cinza, esperando o gatilho) vs ativa (mesmo azul de "em foco"
    que .aba.ativa já usa no resto do painel) */
 #status-copiloto { margin: 0; font-size: .72rem; padding-top: .35rem; color: var(--ui-faint); }
-#status-copiloto.ativa { color: var(--ui-hot); }
+#status-copiloto.ativa, #status-ligacao { color: var(--ui-hot); }
+#status-ligacao { margin: 0; font-size: .72rem; padding-top: .35rem; }
+#formulario.na-linha { box-shadow: inset 0 -2px 0 #dc2626; }
 
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 700; }
 h2 { font-size: 1rem; color: var(--ui-faint); text-transform: uppercase; letter-spacing: .05em; }

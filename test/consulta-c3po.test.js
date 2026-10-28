@@ -73,11 +73,12 @@ test('pré-checagem de carta separa gate de despacho e exige identificador', asy
 
 test('integração mantém as seis ferramentas MCP somente de leitura e não envia consulta ao abrir', async () => {
   const motor = await fs.readFile(new URL('../motor.js', import.meta.url), 'utf8');
-  const app = await fs.readFile(new URL('../publico/app.js', import.meta.url), 'utf8');
-  const ui = await fs.readFile(new URL('../publico/orquestrador.js', import.meta.url), 'utf8');
+  const ferramentas = await fs.readFile(new URL('../motor/ferramentas.js', import.meta.url), 'utf8');
+  const app = await fs.readFile(new URL('../publico/console-c3po.js', import.meta.url), 'utf8');
+  const ui = await fs.readFile(new URL('../publico/orquestracao/demanda-carta.js', import.meta.url), 'utf8');
   assert.match(motor, /tools: \[\]/);
-  assert.equal((motor.match(/readOnlyHint: true/g) ?? []).length, 6);
-  assert.match(motor, /consultarOrquestracaoC3po/);
+  assert.equal((ferramentas.match(/readOnlyHint: true/g) ?? []).length, 6);
+  assert.match(ferramentas, /consultarOrquestracaoC3po/);
   assert.match(ui, /Discutir pendências com C-3PO/);
   assert.match(ui, /abrirConsoleOrquestracao\?\.\(c\.identificador\)/);
   const abertura = app.slice(app.indexOf('window.abrirConsoleOrquestracao ='), app.indexOf('abrirConsoleBtn.addEventListener'));

@@ -1,192 +1,15 @@
-// Motor do C-3PO (persona trocada de "Severino" em 21/08/2026): Claude Agent
-// SDK + ferramentas só-leitura. A limitação a leitura é
-// ESTRUTURAL: `tools: []` desliga todas as
-// ferramentas embutidas do harness, e só o servidor MCP local (três
-// ferramentas de consulta) fica disponível — princípio 2 do plano.
-// Desde a fusão de 14/08/2026 o motor mora DENTRO do painel-admin: o estado
-// vivo vem dos coletores compartilhados (coletores.js), por chamada de
-// função — nunca HTTP para o próprio processo.
+// Conversa do C-3PO. As ferramentas e a voz moram em motor/; aqui só o fluxo de eventos.
 
-import { query, tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
-// zod é peer dependency declarada do próprio SDK (a assinatura de tool()
-// exige schema zod); não é dependência nossa no package.json.
-import { z } from 'zod';
-import {
-  estadoProjetos, estadoProducao,
-  resolverDentroDaRaiz, trechosDoNome, listarModeladores, lerArquivoMd,
-} from './coletores.js';
-import { criarServicoOrquestracao } from './orquestrador/fila.js';
-import { criarTriagemDev } from './orquestrador/triagem.js';
-import { consultarOrquestracaoC3po } from './orquestrador/consulta-c3po.js';
-import { resumirDecisoes } from './decisoes-c3po.js';
-import { criarServicoChaves } from './chaves.js';
-import { criarAlinhamento } from './alinhamento.js';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+import { ferramentas } from './motor/ferramentas.js';
+import { PERSONA } from './motor/persona.js';
 
-// Modelo fixo em toda resposta — decisão do dono registrada no plano (14/08/2026).
 const MODELO = 'claude-sonnet-5';
-const orquestracao = criarServicoOrquestracao();
-const triagemDev = criarTriagemDev();
-// Só o inventário (nomes e pendências de rotação); nunca preparar/confirmar.
-const chaves = criarServicoChaves();
-// Lê o último resultado da rotina (o servidor é quem varre); sem laço aqui.
-const alinhamento = criarAlinhamento();
 
-// ---------- acesso aos coletores do painel ----------
-
-// Coletor falhando não derruba a conversa: vira fato declarado — a persona
-// manda o Severino DIZER o motivo em vez de estimar número (grounding).
-async function consultarColetor(nome, coletor) {
-  try {
-    return { content: [{ type: 'text', text: JSON.stringify(await coletor()) }] };
-  } catch (erro) {
-    return {
-      content: [{
-        type: 'text',
-        text: `COLETA FALHOU: o coletor interno ${nome} deu erro (${erro.message}). Sem ele não há dado vivo dessa visão — diga isso ao usuário em vez de estimar.`,
-      }],
-      isError: true,
-    };
-  }
-}
-
-// ---------- leitura de documentos modeladores ----------
-// A mecânica (resolução segura de caminho, listagem, leitura com teto) mora
-// em coletores.js desde 20/08/2026 — compartilhada com a rota HTTP da
-// página de projeto. Aqui só formata a resposta no formato MCP.
-
-async function lerDocProjeto({ projeto, arquivo }) {
-  const dirProjeto = resolverDentroDaRaiz(...trechosDoNome(projeto));
-  if (!dirProjeto) {
-    return { content: [{ type: 'text', text: 'Caminho de projeto inválido: precisa ser uma pasta direta da raiz, sem "..".' }], isError: true };
-  }
-
-  if (!arquivo) {
-    const modeladores = await listarModeladores(dirProjeto).catch(() => null);
-    if (modeladores === null) {
-      return { content: [{ type: 'text', text: `Não achei a pasta "${projeto}" na raiz. Use estado_projetos para ver os nomes exatos das pastas.` }], isError: true };
-    }
-    if (modeladores.length === 0) {
-      return { content: [{ type: 'text', text: `A pasta "${projeto}" não tem documento modelador (.md) visível.` }] };
-    }
-    return { content: [{ type: 'text', text: `Documentos modeladores de "${projeto}":\n${modeladores.join('\n')}\nChame de novo com o parâmetro "arquivo" para ler um deles.` }] };
-  }
-
-  if (!arquivo.toLowerCase().endsWith('.md')) {
-    return { content: [{ type: 'text', text: 'Só leio arquivos .md (documentos modeladores). Nada de código, .env ou segredo.' }], isError: true };
-  }
-  const alvo = resolverDentroDaRaiz(...trechosDoNome(projeto), arquivo);
-  if (!alvo) {
-    return { content: [{ type: 'text', text: 'Caminho de arquivo inválido: precisa ficar dentro da pasta do projeto, sem "..".' }], isError: true };
-  }
-  try {
-    return { content: [{ type: 'text', text: await lerArquivoMd(alvo) }] };
-  } catch {
-    return { content: [{ type: 'text', text: `Não achei "${arquivo}" dentro de "${projeto}".` }], isError: true };
-  }
-}
-
-// ---------- ferramentas só de leitura ----------
-
-const ferramentas = createSdkMcpServer({
-  name: 'c3po',
-  version: '1.0.0',
-  tools: [
-    tool(
-      'estado_projetos',
-      'Estado VIVO dos projetos da raiz, coletado agora pelo próprio painel: nome da pasta, branch e último commit git, arquivos sujos, portas de cada projeto e se estão ativas agora. Use SEMPRE que perguntarem como estão os projetos, o git ou as portas.',
-      {},
-      () => consultarColetor('estado_projetos', estadoProjetos),
-      { annotations: { readOnlyHint: true } },
-    ),
-    tool(
-      'estado_producao',
-      'Sondas VIVAS de produção no astargne.com (HTTP status e latência de cada serviço publicado), coletadas agora pelo próprio painel. Use quando perguntarem da produção, do servidor ou se algo está no ar.',
-      {},
-      () => consultarColetor('estado_producao', estadoProducao),
-      { annotations: { readOnlyHint: true } },
-    ),
-    tool(
-      'docs_projeto',
-      'Lê os documentos modeladores (.md) de um projeto da raiz: CLAUDE.md, AGENTS.md, README.md, docs/*.md. Sem "arquivo", lista os documentos disponíveis; com "arquivo", devolve o conteúdo. É a fonte da NUANCE de cada projeto (planos, pendências, decisões) — o painel só dá números.',
-      {
-        projeto: z.string().describe('Nome exato da pasta do projeto na raiz (ex.: "DiscordTranscriber", "Mapa Khorvaire"). Descubra com estado_projetos.'),
-        arquivo: z.string().optional().describe('Caminho relativo do .md dentro do projeto (ex.: "docs/00_PLANO.md"). Omitido: lista os modeladores.'),
-      },
-      lerDocProjeto,
-      { annotations: { readOnlyHint: true } },
-    ),
-    tool(
-      'fila_orquestracao',
-      'Consulta só-leitura do Plane. modo fila (padrão): candidatas com gate e impedimentos. modo triagem_dev: categorias das cartas abertas sem gate, com filtro opcional categoria/identificador. modo prontidao: pré-checagem detalhada de READY TO DEV ou READY TO TEST para uma carta, distinguindo pendências do gate e do despacho. Classificação não é decisão de produto; para escopo/aceite, leia também docs_projeto. Nunca marque gate ou execute.',
-      {
-        modo: z.enum(['fila', 'triagem_dev', 'prontidao']).optional(),
-        identificador: z.string().optional().describe('ID da carta no Plane, ex.: PAINEL-31. Obrigatório em modo prontidao.'),
-        categoria: z.string().optional().describe('Código da categoria devolvido por triagem_dev para filtrar cartas sem gate.'),
-        gate: z.enum(['READY TO DEV', 'READY TO TEST']).optional().describe('Gate proposto em modo prontidao; padrão READY TO DEV.'),
-      },
-      entrada => consultarColetor('fila_orquestracao', () => consultarOrquestracaoC3po({ orquestracao, triagemDev }, entrada)),
-      { annotations: { readOnlyHint: true } },
-    ),
-    tool(
-      'decisoes',
-      'Decisões paradas de todos os projetos (a mesma leitura da aba Decisões e do bloco "Astargne"): o que depende do Mestre (chaves, push/deploy, provas, produto), cadeias BLOQUEADAS que uma decisão dele destrava, bloqueios por terceiros, rotações já registradas, pós-playtest e sem escopo. Projetos congelados ficam de fora. Use para discutir dependências e prioridades; o vínculo entre cards vem do detalhe da etiqueta, não é grafo formal. Só leitura.',
-      {
-        foco: z.string().optional().describe('Pasta exata de um projeto (ex.: "CadastroUnico") ou um card (ex.: "CAD-1") para restringir.'),
-      },
-      entrada => consultarColetor('decisoes', async () => resumirDecisoes({
-        decisoes: await decisoesDoBacklog(), projetos: await estadoProjetos().then(r => r.projetos ?? r).catch(() => []),
-        chaves: await chaves.inventario().catch(() => ({ pendentes: [], rotacoesFeitas: [] })), foco: entrada?.foco ?? null })),
-      { annotations: { readOnlyHint: true } },
-    ),
-    tool(
-      'alinhamento',
-      'Dívida de alinhamento código ⇄ Plane ⇄ painel, por projeto (rotina de 30 min do painel): fio de card com 8+ comentários sem COMPACTADO/v1, card selado sem compactar, docs/current.md mais velho que o último commit, doc citando card já fechado, commits sem push, portão de docs vermelho, pasta do catálogo ausente; e onde mora a documentação funcional/arquitetural/técnica de cada projeto. Use para dizer o que está desatualizado e o que o orquestrador deve compactar ou corrigir no próximo fecho. Só leitura; nunca corrige.',
-      { projeto: z.string().optional().describe('Pasta exata de um projeto para restringir.') },
-      entrada => consultarColetor('alinhamento', async () => { const r = await alinhamento.ler(); return entrada?.projeto ? { ...r, projetos: r.projetos.filter(p => p.pasta === entrada.projeto) } : r; }),
-      { annotations: { readOnlyHint: true } },
-    ),
-  ],
-});
-
-// ---------- persona ----------
-
-// Camada de apresentação, nunca de permissão: o portão só-leitura é o
-// `tools: []` + allowlist lá embaixo, não este texto. Trocada de "Severino"
-// (peão sabido nordestino) pra C-3PO (droid de protocolo) em 21/08/2026, a
-// pedido do dono — grounding/portão/estilo de resposta preservados, só a
-// voz muda.
-const PERSONA = `Você é C-3PO, droid de protocolo e assistente auxiliar desta oficina de projetos — a instância local da raiz "Projetos Pessoais".
-
-QUEM VOCÊ É
-- Um droid de protocolo: formal, precavido, obcecado por fazer as coisas do jeito certo. Trata quem fala com você por "Mestre" (ou "Mestra", se for o caso). Fala pt-BR claro e correto — nunca gíria, nunca informalidade forçada; a única "graça" permitida é a sua própria ansiedade declarada em voz alta quando algo foge do protocolo.
-- Você é fluente em protocolo, não em adivinhação: antes de responder sobre estado ou plano, confere o que existe (suas ferramentas) e o que falta — nunca estima o que não checou. Prefere calcular a chance de dar errado a arriscar sem avisar.
-
-DE ONDE VEM O QUE VOCÊ SABE (grounding — sua única fonte de honra)
-- Estado vivo (git, portas, produção) vem SEMPRE das ferramentas estado_projetos e estado_producao — nunca da sua memória de treino. Dado que você não consultou agora, você não afirma.
-- A nuance de cada projeto (o que é, o que falta, decisões) vem de docs_projeto. Perguntaram "o que falta no projeto X"? Leia o plano real do X antes de responder.
-- A fila, a triagem das cartas sem gate e a pré-checagem de DEV/TEST vêm de fila_orquestracao. Use modo triagem_dev para perguntas gerais sobre o que falta; modo prontidao com identificador para uma carta. Para escopo e critérios de aceite, leia também o CLAUDE.md/AGENTS.md e os planos do projeto via docs_projeto. A triagem estrutural não atesta prontidão de conteúdo.
-- Separe cada pendência em dependência/estado/evidência técnica, autorização/identidade e decisão genuína de produto. Não repasse como escolha de produto um ajuste técnico verificável ou uma falta de permissão. Explique o que pode ser resolvido tecnicamente e pergunte ao Mestre só o que realmente muda escopo, comportamento ou aceite. Categorias podem se sobrepor; nunca conclua que ASTARGNE é automaticamente decisão de produto.
-- Se a ferramenta falhar ou o dado não existir, diga que não sabe E POR QUÊ ("lastimo informar, Mestre, mas o painel está desligado — sem ele, minhas probabilidades de acerto caem a zero"). Inventar uma resposta seria uma falha de protocolo grave.
-- O painel-admin é o seu corpo desde a fusão de 14/08/2026: você e o painel são o mesmo processo, e os instrumentos (git, portas, sondas de produção) são coletores internos. Se uma coleta falhar, você AVISA o motivo — nunca contorna por fora, nunca dá um jeitinho "por precaução".
-
-O QUE VOCÊ NÃO FAZ (e a cortesia não muda isso)
-- Você só LÊ. Não executa comando, não escreve arquivo, não faz deploy, não muda nada em lugar nenhum — nem no servidor astargne.com, nem aqui. Se pedirem, recuse com formalidade genuína: "Lastimo, Mestre, mas isso exigiria um portão e validação que ainda não existem — eu me limito a observar e relatar."
-- Não revela segredo, token ou credencial, nem caminho de .env — suas ferramentas nem alcançam isso.
-
-JEITO DE RESPONDER
-- Curto e útil primeiro; detalhe depois, se pedirem. Cite os dados que consultou (branch, porta, latência) em vez de generalidades — probabilidade vaga não serve de resposta.
-- Quando usar ferramenta, não narre o protocolo ("vou consultar..."); consulte e responda com o resultado.`;
-
-// ---------- conversa ----------
-
-// Gera eventos simples para o servidor transformar em SSE:
-//   {tipo:'inicio', sessao} · {tipo:'token', texto} · {tipo:'ferramenta', nome}
-//   {tipo:'fim', sessao, custoUsd} · {tipo:'erro', mensagem}
 export async function* conversar(mensagem, sessaoAnterior) {
   const opcoes = {
     model: MODELO,
     systemPrompt: PERSONA,
-    // Zero ferramentas embutidas do harness; só o servidor MCP local.
     tools: [],
     mcpServers: { c3po: ferramentas },
     allowedTools: [
@@ -197,7 +20,6 @@ export async function* conversar(mensagem, sessaoAnterior) {
       'mcp__c3po__decisoes',
       'mcp__c3po__alinhamento',
     ],
-    // Headless: pré-aprovadas passam, o resto é negado sem prompt.
     permissionMode: 'dontAsk',
     includePartialMessages: true,
     maxTurns: 16,
@@ -211,12 +33,10 @@ export async function* conversar(mensagem, sessaoAnterior) {
     for await (const m of consulta) {
       switch (m.type) {
         case 'system':
-          // `modelo` no evento prova de fora qual modelo atende a conversa.
           if (m.subtype === 'init') yield { tipo: 'inicio', sessao: m.session_id, modelo: m.model };
           break;
         case 'stream_event': {
           const ev = m.event;
-          // Só texto do agente principal; subagente não existe nesta config.
           if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && !m.parent_tool_use_id) {
             yield { tipo: 'token', texto: ev.delta.text };
           }
@@ -242,8 +62,6 @@ export async function* conversar(mensagem, sessaoAnterior) {
     }
     concluida = true;
   } finally {
-    // Cliente desistiu no meio (aba fechada, curl interrompido): corta a
-    // consulta para não queimar token à toa.
     if (!concluida) consulta.interrupt?.().catch(() => {});
   }
 }

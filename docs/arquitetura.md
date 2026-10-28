@@ -39,7 +39,7 @@ em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
 
 ### servidor.js
 
-HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, relações, contas e o redirecionamento do Severino, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, modelos, handoff, gate, despacho, consumo, vigília, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -61,24 +61,28 @@ e estáticos de `publico/` (dashboard na raiz, chat em `/severino/`).
 ### orquestrador/
 
 O Orquestrador de Projetos (padrão em `../../ORQUESTRADOR-PROJETOS.md`), um
-módulo por responsabilidade: `politica.js` (contrato opt-in, elegibilidade,
-gramática de comandos), `fila.js` (projeção do Plane, dependências, simulação,
-serviço de perfil/gate/handoff/despacho), `estado.js` (trava, lease,
-touchpoints, recuperação), `modelos.js` (seleção por papel sem fallback e
-flags de CLI), `canal-plane.js`/`perfil-plane.js`/`handoff-plane.js`/`gate-plane.js`
+módulo por responsabilidade: `politica.js` (reexporta `contrato-politica.js`,
+`prontidao.js` (marcas em `marcas-carta.js`, gate em `prontidao-gate.js`, despacho em `prontidao-despacho.js`) e `vigilia-politica.js`), `fila.js` (reexporta `dependencias-carta.js`, que junta `relacoes-formais.js` e `texto-dependencia.js`,
+`fila-leitura.js` (a carta em `carta-da-fila.js`, o resumo em `resumo-fila.js`), `despacho-servico.js` (checagem em `checagem-despacho.js`, tentativa em `tentativa-despacho.js`), `simulacao-despacho.js`, `gate-servico.js` (pré-checagem em `preavaliacao-gate.js`, marcação em `registro-gate.js`), `handoff-servico.js`,
+`perfil-servico.js` (consulta em `consulta-perfil.js`, registro em `registro-perfil.js`), `canal-carta.js`, `estado-carta.js` e `servico-orquestracao.js`), `estado.js` (recuperação; o lease em `arquivo-lease.js`, o diário em `diario-touchpoints.js`, a trava em `trava.js`), `modelos.js` (seleção por papel sem fallback e
+flags de CLI), `canal-plane.js` (a forma do comentário em `interacao-canal.js`)/`perfil-plane.js` (texto em `protocolo-perfil.js`, escrita em `escritor-perfil-plane.js`)/`handoff-plane.js` (texto em `protocolo-handoff.js`, escrita em `escritor-handoff-plane.js`)/`gate-plane.js` (texto em `protocolo-gate.js`, escrita em `escritor-gate-plane.js`)
 (protocolos versionados no card: leitura paginada, `PERFIL-IA/v1`, `HANDOFF/v1`,
-`GATE/v1`, escritores restritos a um projeto), `sso.js`/`confirmacoes.js`/`api-*.js`
-(sessão do Cadastro Único por ssh, desafio de confirmação, rotas), `triagem.js`
-e `consulta-c3po.js` (pendências DEV e a ferramenta do motor), `voz-xai.js`,
-`consumo.js`, **`executor-cli.js`** (o executor real: três papéis de IA como
+`GATE/v1`, escritores restritos a um projeto), `sso.js` (reexporta `erro-acesso.js`, `sessao-cookie.js`, `origem-privilegiada.js`, `verificador-cadastro.js` e `autorizador.js`)/`confirmacoes.js`/`api-*.js`
+(sessão do Cadastro Único por ssh, desafio de confirmação, rotas), `triagem.js` (classificação em `classificar-prontidao-dev.js`, varredura em `varredura-triagem.js`)
+e `consulta-c3po.js` (pendências DEV e a ferramenta do motor), `voz-xai.js` (transcrição),
+`voz-eleven.js` (`ProxyElevenLabs`, a síntese; a chave não sai do processo),
+`consumo.js`, **`executor-cli.js`** (o executor real; ambiente em `ambiente-cli.js`,
+gramática de `scripts.test` em `gramatica-cli.js`, processo em `processo-cli.js`,
+papel em `papel-cli.js` (argumentos em `argumentos-cli.js`, retrato em `retrato-cli.js`), briefing em `briefing-papel.js`, worktree em
+`isolamento-git.js` e instalação em `dependencias-worktree.js`; três papéis de IA como
 CLIs descartáveis — `claude -p` / `codex exec` — num worktree `orq/<carta>-<id>`
 fora da árvore principal, comando de aceite do contrato sem shell, ambiente por
 lista branca, timeout que mata o grupo, logs em `~/.local/state/painel-admin/orquestracao/saidas/<tentativa>/`;
 moldes dos papéis em `briefings/`; só é construído com `ORQ_EXECUCAO_HABILITADA=true`)
-**`canal-legado.js`** (lê `SupervisorHandoff/scripts/estado_canal.py`, python
-só-leitura, um processo por config com cache de 60 s — a prova de equivalência
+**`canal-legado.js`** (a forma em `forma-canal-legado.js`, o processo em `processo-canal-legado.js`; daqui a escolha da config e o cache de 60 s — lê `SupervisorHandoff/scripts/estado_canal.py`, python
+só-leitura, um processo por config — a prova de equivalência
 do dashboard 7791 pedida por PAINEL-35), **`vigilia.js`** + **`api-vigilia.js`**
-(varredura automática por projeto: a cada dois minutos escolhe a primeira carta
+(varredura automática por projeto: o controle em `vigilia-controle.js`, a passada em `vigilia-varredura.js`, o passo de uma carta em `passo-vigilia.js`, o diário em `vigilia-diario.js` e `vigilia.js` só compõe; a cada dois minutos escolhe a primeira carta
 elegível do projeto ligado, muda Todo → In Progress, grava o perfil padrão do
 contrato se faltar, chama `iniciarDespacho` e, em `concluido`, troca `READY TO
 DEV` por `READY TO TEST` com recibo ou leva `READY TO TEST` a Done; freios por
@@ -87,6 +91,11 @@ por SSO em duas ações) e **`estado-plane.js`** (PATCH de estado do card pelo
 grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
 
 ### contas.js
+
+Porta. A tabela fechada mora em `contas/tabela.js`, o processo em
+`contas/processo-ssh.js`, a redação em `contas/redacao.js`, a leitura da
+saída em `contas/saida-central.js` e `contas/ssh.js` só reexporta. O cliente
+e as rotas `/api/contas/*` ficam em `contas/fronteira.js`.
 
 (13/09/2026, Fase 5 do `../../PLANO-CADASTRO-UNICO.md`) —
 administração do **CadastroUnico** (login único do `astargne.com`). A API
@@ -118,6 +127,11 @@ chips mostram "App · Papel". Central antigo (sem papéis) cai no comportamento
 anterior: checkbox entra/não entra. O backend do painel não muda (o corpo
 passa pelo stdin do ssh como sempre).
 ### chaves.js
+
+Porta. O catálogo mora em `chaves/catalogo.js`, o inventário em `chaves/inventario.js` (arquivo local em `inventario-local.js`, servidor em `inventario-servidor.js`),
+o diário em `chaves/eventos.js`, a troca em `chaves/troca.js` (arquivo local em `troca-local.js`, servidor em `troca-servidor.js`) e `chaves/servico.js`
+só compõe os três. A confirmação em duas ações fica em `chaves/confirmacoes.js`
+e o HTTP em `chaves/api.js`.
 
 (24/10/2026, decisão do dono) — a tela **Chaves**: inventário dos segredos por projeto
 e a troca de valor pelo painel, para que o dono rotacione o que vazou sem abrir
@@ -167,6 +181,10 @@ rotações já registradas.
 
 ### alinhamento.js
 
+Porta. `alinhamento/fio-medida.js` conta o fio, `alinhamento/git-medida.js` lê o git, `alinhamento/portao-docs.js` roda o check-docs e `alinhamento/regras-sinal.js` guarda as regras; `alinhamento/medidas.js` só reexporta. `alinhamento/cache.js` guarda o resultado, `alinhamento/fios.js` mede os
+comentários e `alinhamento/sinais.js` junta `sinal-git.js`, `sinal-current.js` e `sinal-fio.js`. `alinhamento/varredura.js`
+só percorre a lista.
+
 (25/10/2026, decisão do dono) — rotina de **alinhamento código ⇄ Plane ⇄
 painel**: mede a dívida em vez de deixá-la crescer em silêncio. A cada 30 min
 (e em `GET /api/alinhamento?agora=1`) varre cada projeto não congelado e emite
@@ -187,9 +205,12 @@ fecho. Consumidores: aba Docs (`publico/docs.js`) e a ferramenta
 
 ### plane.js
 
+Porta. `plane/cliente.js` consulta e guarda o cache; `plane/features.js` projeta
+o workspace na forma do backlog.
+
 (30/09/2026; de 29 a 30/09 foi `linear.js`, com o Linear) — o
 backlog vem do **Plane** (instância própria no Omarchy, workspace
-`astargne`, `https://plane.casa.astargne.com`; a verdade desde a
+`astargne`, `https://plane.vpn.astargne.com`; a verdade desde a
 migração; `../../PADROES-BACKLOG.md`): API v1 com o token do usuário
 **"painel"** (`PLANE_API_KEY` no `.env`; papel Guest no workspace e em cada
 projeto — lê tudo, e a API devolve 403 a qualquer escrita, conferido de
@@ -205,7 +226,7 @@ entrar nele como Guest.**
 
 ### coletores.js
 
-Coletores de estado (git, portas, sondas de produção,
+Porta única. A implementação mora em `coletores/`: `caminhos.js` (raiz e portão), `git-local.js` (git), `portas-locais.js` (escuta local), `estado-local.js` (o resumo dos dois), `leitura-md.js` (corte), `modeladores.js` (lista), `docs.js` (o projeto), `sonda-https.js` (o GET), `sondas.js` (o catálogo de produção), `parser-backlog.js` (markdown), `backlog.js` (montagem Plane/markdown), `idade-linha.js` (idade no git), `decisoes.js` (a lista) e `catalogo.js`. Coletores de estado (git, portas, sondas de produção,
 backlog, **leitura segura de docs modeladores por projeto**),
 **compartilhados**. `RAIZ` é `~/Work` (dois níveis acima) e, desde a
 reorganização de 30/09/2026, todo caminho passa por `dirDoProjeto()` =
@@ -216,6 +237,11 @@ reorganização de 30/09/2026, todo caminho passa por `dirDoProjeto()` =
 mesmas funções — o motor nunca faz HTTP para o próprio processo.
 
 ### motor.js
+
+Porta da conversa. O catálogo das seis ferramentas só-leitura mora em
+`motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
+a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
+aqui.
 
 Claude Agent SDK (`claude-sonnet-5` fixo), persona do
 C-3PO, quatro ferramentas **só-leitura**: `estado_projetos`,
@@ -245,7 +271,7 @@ markdown) e o campo opcional `docs` (arquitetura/objetos/dataFlow
 — só nos projetos que já têm diagrama Mermaid vivo: `_oldSistemaLoreEngine`,
 `Mapa Khorvaire`, `DiscordTranscriber`). **Mantenha em sincronia com o
 `../CLAUDE.md` (mapa de `ProjetosPessoais/`) e com `../../PORTAS.md`**
-quando um projeto nascer, morrer ou mudar de porta.
+quando um projeto nascer, morrer ou mudar de porta. As sondas que não são de um projeto (`PRODUCAO_EXTRA` e `conferirEscutaDoSSO`) moram em `producao-extra.js` e saem reexportadas daqui.
 
 ### relacoes.js
 
@@ -270,7 +296,7 @@ o console do Severino como overlay por ⌘K/Ctrl+K:
 
 #### app.js
 
-Núcleo compartilhado: roteador por hash
+O arquivo só guarda o tema e o relógio de sincronia. O DOM e o markdown estão em `dom.js`, o estado compartilhado em `estado-painel.js`, a tira em `telemetria.js` (nome curto em `nomes-curtos.js`, célula em `tira-telemetria.js`, bloqueios em `palco-bloqueios.js`, placar em `placar-cabecalho.js`), o console em `console-palco.js`, `console-digest.js`, `console-decisao.js` e `console-c3po.js`, o hash em `roteador-painel.js` e as buscas em `carga.js`. Núcleo compartilhado: roteador por hash
 (`#/projetos`·`#/backlog`·`#/decisoes`·`#/orquestracao`·`#/contas`·`#/projeto/<pasta>`), estado
 `projetoSelecionado` **compartilhado entre as abas Projetos e Backlog**
 (a mesma variável que a tira de telemetria, o outline do Backlog e a
@@ -278,8 +304,9 @@ coluna de contexto do painel de projeto leem — `decisoes.js` e
 `contas.js` não a leem), tira de telemetria (uma célula
 por projeto do catálogo — 15 desde 12/10/2026), tema claro/escuro (`data-tema` em `<html>`,
 persistido em `localStorage`), e o console do Severino (`#console-scrim`
-— abre por ⌘K/barra de comando/clique numa decisão, sempre reabre no
-digest).
+— na aba Projetos é o palco do meio; de outra aba abre em overlay por
+⌘K/barra de comando/clique numa decisão. O digest matinal sai uma vez
+por dia local).
 
 #### backlog.js
 
@@ -298,17 +325,19 @@ Projetos): cabeçalho + outline do backlog na coluna principal;
 Arquitetura (moldura hachurada + Mermaid real nos 3 projetos que já têm
 diagrama, "sem diagrama ainda" nos outros) + Decisões paradas + Fila de
 jobs (**estado vazio honesto** — não existe sistema de jobs) + Produção
-(sondas + SSH sob demanda) na coluna de 420px. Também define
+(sondas + SSH sob demanda) na coluna de 420px. O desenho de cada bloco mora em `idade-curta.js`, `secao-cabecalho.js`, `secao-outline.js`, `secao-arquitetura.js`, `secao-decisoes.js`, `secao-fila.js` e `secao-producao.js`; `projeto-secoes.js` só compõe. Também define
 `abrirConsoleComDecisao` (chamada por `app.js`/`decisoes.js`).
 
 #### decisoes.js
 
 Aba Decisões: todas as decisões agrupadas por projeto
 (top 3 por contagem abertos, resto em "Outros N projetos" colapsado).
+A página é `PaginaDecisoes`; o agrupamento mora em `decisoes-grupo.js`,
+a linha em `decisoes-linha.js` e o bloco do dono em `decisoes-astargne.js`.
 
 #### contas.js (publico/)
 
-(13/09/2026) — aba Contas: usuários (nome, e-mail, ativo,
+(13/09/2026) — aba Contas. O desenho mora em `contas-pecas.js` (peças comuns), `contas-usuario.js` (linha e editor) e `contas-convite.js` (lista, formulário e resultado); `contas-desenho.js` só compõe. Usuários (nome, e-mail, ativo,
 apps como chips; ações permissões/desativar-reativar/redefinir senha),
 convites pendentes (reenviar/revogar) e o formulário Convidar (e-mail,
 nome opcional, checkboxes dos apps com `sso: true` vindos de
@@ -320,7 +349,7 @@ de 60 s passando pela mesma view não dispara ssh nenhum.
 
 #### orquestrador.js (publico/) e orquestrador.css
 
-Aba de leitura/simulação do Plane: painel de projetos candidatos, consulta
+A aba está partida em `publico/orquestracao/`: núcleo (estado e HTTP), demanda (elegibilidade na carta, pré-checagem em `demanda-prontidao.js`, portão em `demanda-portao.js`, histórico em `demanda-historico.js`), fila (filtro em `fila-filtro.js`, lista em `fila-lista.js`, triagem em `fila-triagem.js`), despacho, gate, conversa (canal em `conversa-canal.js`, handoff em `conversa-handoff.js`), modelos (seletores em `modelos-seletores.js`, confirmação em `modelos-confirmacao.js`), vigília (desenho em `vigilia-desenho.js`, confirmação em `vigilia-confirmacao.js`), legado, consumo e voz da carta. `orquestrador.js` só liga os tópicos. Leitura/simulação do Plane: painel de projetos candidatos, consulta
 C-3PO sob demanda, impedimentos reais, fila filtrável e touchpoints. Recebe
 HTML de referência visual Protocolo (11/10/2026), com a camada Protocolo,
 sem escuta contínua ou ações do mock. Abre o console sem enviar mensagem ou
@@ -344,7 +373,7 @@ mas não a envia: o dono escolhe quando conversar.
 
 Aba **Docs** (25/10/2026): a documentação de cada projeto separada dos cards
 (o Plane é só desenvolvimento) e, no topo, a dívida de alinhamento da rotina
-(`GET /api/alinhamento`; botão "Varrer agora"). Por projeto: links para os
+(`GET /api/alinhamento`; botão "Varrer agora"). A página é `PainelDocs`; o desenho mora em `docs-desenho.js`. Por projeto: links para os
 docs funcional/arquitetural/técnico/contrato, que abrem na página do projeto
 (`#/projeto/<pasta>?arquivo=<caminho>` — `app.js` lê o parâmetro e
 `projeto.js` abre o documento ao montar) e a lista de sinais com link para o
@@ -352,7 +381,7 @@ card. Selo na aba = total de sinais.
 
 #### chaves.js (publico/)
 
-(24/10/2026) — aba Chaves: um `<details>` por projeto com o `.env` local e o do
+(24/10/2026) — aba Chaves: `PainelChaves` guarda o estado, `chaves-pedido.js` fala com a API, `chaves-linha.js` desenha a linha, `chaves-troca-form.js` abre o preparo e `chaves-desenho.js` lista um `<details>` por projeto com o `.env` local e o do
 servidor (arquivo, modo, FROUXO se não for 600), uma linha por variável
 (presença local/servidor, última troca, ROTAÇÃO PENDENTE com card e motivo), botões
 "Trocar aqui" / "Trocar no servidor" / "Marcar como rotacionada" que abrem o
@@ -374,9 +403,10 @@ pelos diagramas dos docs e pela Arquitetura do painel de projeto.
 Reaproveita `publico/severino/chat.js` (agora
 numa IIFE, expõe só `window.mandarMensagemSeverino`) e `voz.js`
 inteiros — só o container mudou (da faixa lateral fixa da manhã de
-21/08 pro overlay). Abrir por ⌘K manda um "digest" automático (prompt
+21/08 pro overlay, e em 25/10 para o palco central da aba Projetos).
+Abrir por ⌘K manda o digest matinal uma vez por dia local (prompt
 fixo pro `/api/conversa` já existente — **nenhuma rota nova pro
-digest**); clicar numa decisão manda o texto dela verbatim e pergunta o
+digest**; a marca fica em `localStorage`, chave `c3po-digest-dia`); clicar numa decisão manda o texto dela verbatim e pergunta o
 que trava/o que falta (persona só-leitura: explica e pergunta, nunca
 decide). A página standalone `/severino/` **continua existindo** como
 está (acesso alternativo, sem o chrome do dashboard) — os dois modos
@@ -410,7 +440,7 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
 
 - **Sem login, então porta fechada** (reescrita em 06/10/2026, a pedido do
   dono): escuta só em `127.0.0.1:7777`, nunca em `0.0.0.0`. A única entrada
-  de fora é `https://painel.casa.astargne.com`, pelo Caddy de
+  de fora é `https://painel.vpn.astargne.com`, pelo Caddy de
   `~/servicos/borda`, que só encaminha o IP de tailnet do Windows do dono
   (`100.87.142.59`); qualquer outro nó, o racknerd inclusive, recebe 404.
   `guarda.js` recusa Host fora da lista (421, contra DNS rebinding) e método
@@ -492,25 +522,31 @@ vivo tinha; provas e evidências ficaram em
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.
 - **Estáticos**: `GET /severino` → 301 `/severino/` (assets relativos dependem
   da barra); `..` em path-as-is → 404; método errado em `/api/tts` → 405.
-- **ElevenLabs** (`responderTts` em `servidor.js`): upstream
+- **ElevenLabs** (`ProxyElevenLabs` em `orquestrador/voz-eleven.js`, rota em `servidor.js`): upstream
   `POST api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream` (header
-  `xi-api-key`), `output_format=mp3_44100_128`, modelo
-  `eleven_multilingual_v2`; voice_id default `JBFqnCBsd6RMkjVDRZzb` ("George"),
-  troca por `ELEVENLABS_VOZ_ID` no `.env`. Sem chave → `POST /api/tts` 503 com
+  `xi-api-key`), `output_format=mp3_44100_128`, modelo `eleven_v4` (o ajuste de clonagem do
+  playground não existe no multilingual_v2); voice_id default `JBFqnCBsd6RMkjVDRZzb` ("George"),
+  troca por `ELEVENLABS_VOZ_ID` no `.env`. O corpo manda o ajuste do playground
+  (25/10): estabilidade 0.07, similaridade 0.09, clonagem 0, filtro `robot`,
+  distância 0.5; idioma fica automático (sem `language_code`). Sem chave → `POST /api/tts` 503 com
   `motivo` nomeado (`sem-chave-elevenlabs`); `GET /api/tts` é sonda que não
   gasta caractere; upstream recusando → `elevenlabs-recusou` + status, genérico
   de propósito; a chave jamais aparece em log, erro ou resposta; cliente que
   some aborta o upstream (`AbortController`).
-- **Cadeia de voz declarada** (`publico/severino/voz.js`): ElevenLabs →
+- **Cadeia de voz declarada** (`locutor.js` fala, `escuta.js` ouve, `sessao-voz.js` decide o turno; corte, eco, nome e retentativa em `politica-fala.js`): ElevenLabs →
   Antônio (voz pt-BR cujo nome contém `antonio` + `natural`; fallback = primeira
   pt-BR, e o status diz qual) → só texto. A linha `#status-voz` declara a camada
   ("voz: ElevenLabs" / "voz: Antônio — ElevenLabs sem chave" / "só texto —
   motivo"). Desde 20/08/2026 há **uma retentativa** antes de cair para o
-  Antônio; `calar()` pausa o áudio e aborta downloads em voo. Degradar
+  Antônio. Um 429 (a conta aceita 3 sínteses ao mesmo tempo) não troca a
+  voz da sessão: no máximo 2 pedidos em voo, e a frase espera e tenta de
+  novo. `calar()` pausa o áudio e aborta downloads em voo. Degradar
   declarando, nunca quebrar: erro vira mensagem na UI.
-- **Reconhecimento**: push-to-talk estrito (`continuous: false`, uma captura
-  por clique, segundo clique cancela); hotword/escuta contínua proibidas pelo
-  plano. `corrigirNomesProprios` (20/08/2026) compara o ouvido com o catálogo
+- **Reconhecimento**: push-to-talk (`continuous: false`, uma captura por
+  clique, segundo clique cancela). Copiloto (21/08): escuta contínua com
+  gatilho "C3PO" depois de 90s. Ligação (25/10): escuta contínua sem gatilho
+  até desligar; falar por cima corta a síntese e, confirmada a frase, aborta
+  a resposta em curso. `corrigirNomesProprios` (20/08/2026) compara o ouvido com o catálogo
   de `GET /api/projetos` por distância de edição (`SIMILARIDADE_MINIMA = 0.72`),
   avisa toda troca na conversa e ignora nomes de uma palavra.
 - **Fluidez**: `limparParaFala` tira marcação só da fala; blocos de

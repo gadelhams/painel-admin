@@ -56,14 +56,18 @@ test('cache evita um python por clique; JSON ruim, código de saída e timeout v
 
 test('a aba carrega o canal legado só no tópico, sem innerHTML, e o servidor expõe a rota antes do 405', async () => {
   const front = await fs.readFile(new URL('../publico/orquestrador.js', import.meta.url), 'utf8');
+  const legado = await fs.readFile(new URL('../publico/orquestracao/legado.js', import.meta.url), 'utf8');
   const html = await fs.readFile(new URL('../publico/index.html', import.meta.url), 'utf8');
-  const servidor = await fs.readFile(new URL('../servidor.js', import.meta.url), 'utf8');
+  const compositor = await fs.readFile(new URL('../http/rotas-orquestracao.js', import.meta.url), 'utf8');
+  const rotaLegado = await fs.readFile(new URL('../http/rotas-orq-legado.js', import.meta.url), 'utf8');
   assert.match(html, /data-orq-topico="legado"/);
   assert.match(html, /id="orq-topico-legado"/);
-  const bloco = front.slice(front.indexOf('async function carregarLegado'), front.indexOf('async function carregarConsumo'));
-  assert.ok(bloco.length > 100, 'carregarLegado existe antes de carregarConsumo');
-  assert.doesNotMatch(bloco, /innerHTML/);
-  assert.match(front, /if \(nome === 'legado'\) carregarLegado\(\)/);
-  assert.equal((front.match(/\/api\/orquestracao\/legado/g) ?? []).length, 1);
-  assert.ok(servidor.indexOf("pathname === '/api/orquestracao/legado'") < servidor.indexOf("pathname.startsWith('/api/orquestracao')"));
+  assert.doesNotMatch(legado, /innerHTML/);
+  assert.match(front, /nome === 'legado'/);
+  assert.equal((legado.match(/\/api\/orquestracao\/legado/g) ?? []).length, 1);
+  assert.match(rotaLegado, /pathname !== '\/api\/orquestracao\/legado'/);
+  const laço = compositor.slice(compositor.indexOf('for (const grupo of ['));
+  const grupo = laço.indexOf('this.legado');
+  const recusa = laço.indexOf('escrita e execução indisponíveis nesta etapa');
+  assert.ok(grupo > 0 && grupo < recusa);
 });

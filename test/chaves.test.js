@@ -155,12 +155,21 @@ test('API: exige sessão antes do corpo, payload fixo, valor só no confirmar e 
 test('front: aba Chaves e bloco Astargne existem, sem innerHTML, e a rota de chaves vem antes do 405', async () => {
   const html = await fs.readFile(new URL('../publico/index.html', import.meta.url), 'utf8');
   const chaves = await fs.readFile(new URL('../publico/chaves.js', import.meta.url), 'utf8');
+  const desenho = await fs.readFile(new URL('../publico/chaves-desenho.js', import.meta.url), 'utf8');
+  const formulario = await fs.readFile(new URL('../publico/chaves-troca-form.js', import.meta.url), 'utf8');
+  const linhaChaves = await fs.readFile(new URL('../publico/chaves-linha.js', import.meta.url), 'utf8');
+  const pedido = await fs.readFile(new URL('../publico/chaves-pedido.js', import.meta.url), 'utf8');
   const decisoes = await fs.readFile(new URL('../publico/decisoes.js', import.meta.url), 'utf8');
-  const app = await fs.readFile(new URL('../publico/app.js', import.meta.url), 'utf8');
+  const astargne = await fs.readFile(new URL('../publico/decisoes-astargne.js', import.meta.url), 'utf8');
+  const app = await fs.readFile(new URL('../publico/roteador-painel.js', import.meta.url), 'utf8');
   assert.match(html, /data-aba="chaves"/); assert.match(html, /id="aba-chaves"/); assert.match(html, /chaves\.js/);
-  assert.doesNotMatch(chaves, /innerHTML/); assert.doesNotMatch(decisoes, /innerHTML/);
-  assert.match(chaves, /type: 'password'/);
-  assert.match(decisoes, /ASTARGNE · O QUE DEPENDE DE VOCÊ/);
+  const grupo = await fs.readFile(new URL('../publico/decisoes-grupo.js', import.meta.url), 'utf8');
+  const linha = await fs.readFile(new URL('../publico/decisoes-linha.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(chaves, /innerHTML/); assert.doesNotMatch(desenho, /innerHTML/); assert.doesNotMatch(formulario, /innerHTML/); assert.doesNotMatch(linhaChaves, /innerHTML/); assert.doesNotMatch(pedido, /innerHTML/);
+  assert.doesNotMatch(decisoes, /innerHTML/); assert.doesNotMatch(grupo, /innerHTML/); assert.doesNotMatch(linha, /innerHTML/);
+  assert.doesNotMatch(astargne, /innerHTML/);
+  assert.match(formulario, /type: 'password'/);
+  assert.match(astargne, /ASTARGNE · O QUE DEPENDE DE VOCÊ/);
   assert.match(app, /view === 'chaves'/);
 });
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
-import { criarTranscritorXai, criarApiVoz, lerAudio, MAX_AUDIO } from '../orquestrador/voz-xai.js';
+import { criarTranscritorXai, criarApiVoz, criarAutorizadorVoz, lerAudio, MAX_AUDIO } from '../orquestrador/voz-xai.js';
 import { criarAutorizador, ErroAcesso } from '../orquestrador/sso.js';
 
 const AUDIO = Buffer.alloc(150, 1);
@@ -32,7 +32,7 @@ test('rota de voz exige origem, sessão, áudio e rejeita tamanho sem chamar xAI
     tiposConteudo: /^audio\/webm(?:\s*;|$)/i });
   const api = criarApiVoz({ autorizar, transcrever: async () => { transcricoes++; return { texto: 'ok' }; },
     ler: async () => AUDIO });
-  const req = extras => ({ headers: { host: 'painel.casa.astargne.com', origin: 'https://painel.casa.astargne.com',
+  const req = extras => ({ headers: { host: 'painel.vpn.astargne.com', origin: 'https://painel.vpn.astargne.com',
     'sec-fetch-site': 'same-origin', 'content-type': 'audio/webm', cookie: `astargne_session=${'x'.repeat(43)}`, ...extras } });
   assert.equal((await api(req({ origin: 'https://outro.astargne.com' }))).status, 403);
   assert.equal((await api(req({ cookie: undefined }))).status, 401);
@@ -40,6 +40,24 @@ test('rota de voz exige origem, sessão, áudio e rejeita tamanho sem chamar xAI
   assert.equal(transcricoes, 0);
   assert.deepEqual(await api(req({ 'content-length': '150' })), { status: 200, corpo: { texto: 'ok' } });
   assert.equal(consultas, 2, 'origem e cookie recusados antes de verificar sessão');
+});
+
+test('loopback do painel transcreve sem sessão; a borda continua exigindo', async () => {
+  let consultas = 0;
+  const privilegiado = criarAutorizador({ proprietarioId: '7', verificar: async () => { consultas++; return '7'; },
+    tiposConteudo: /^audio\/webm(?:\s*;|$)/i });
+  const api = criarApiVoz({
+    autorizar: criarAutorizadorVoz({ privilegiado, porta: 7777 }),
+    transcrever: async () => ({ texto: 'ok' }),
+    ler: async () => AUDIO,
+  });
+  const local = { headers: { host: '127.0.0.1:7777', origin: 'http://127.0.0.1:7777', 'sec-fetch-site': 'same-origin', 'content-type': 'audio/webm' } };
+  assert.deepEqual(await api(local), { status: 200, corpo: { texto: 'ok' } });
+  assert.equal((await api({ headers: { ...local.headers, host: 'localhost:7777', origin: 'http://localhost:7777' } })).status, 200);
+  assert.equal(consultas, 0);
+  assert.equal((await api({ headers: { ...local.headers, origin: 'http://localhost:7777' } })).status, 403);
+  assert.equal((await api({ headers: { host: 'painel.vpn.astargne.com', origin: 'https://painel.vpn.astargne.com', 'sec-fetch-site': 'same-origin', 'content-type': 'audio/webm' } })).status, 401);
+  assert.equal(consultas, 0, 'na borda, cookie ausente recusa antes de verificar a sessão');
 });
 
 test('leitura limitada rejeita áudio além do teto', async () => {

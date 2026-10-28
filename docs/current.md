@@ -1,4 +1,4 @@
-# painel-admin — estado real (24/10/2026)
+# painel-admin — estado real (28/10/2026)
 
 Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 `historico/`; mecanismos em `arquitetura.md`.
@@ -34,8 +34,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 149 testes + `check-docs` 0 erros (24/10); Playwright 11/11.
-- Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` publicada no GitHub.
-- Auditoria de 24/10 aplicada: legados removidos, trava fora do I/O do Plane,
-  lease não pegajoso, resultado do executor persistido antes do Plane,
-  releitura das etiquetas antes do PATCH, 409 do Plane = idempotência.
+- `npm test`: 168 testes + `check-docs` 0 erros (28/10); Playwright 11/11.
+- Refatoração de 27–28/10: módulos por responsabilidade (`http/`,
+  `coletores/`, `chaves/`, `orquestrador/*`, `publico/*`…); os arquivos
+  antigos só reexportam. Mapa em `arquitetura.md`.
+- Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` no GitHub.

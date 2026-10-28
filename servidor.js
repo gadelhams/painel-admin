@@ -7,11 +7,6 @@
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import fs from 'node:fs/promises';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog } from './coletores.js';
 import { conversar } from './motor.js';
 import { criarClienteContas, criarManipuladorContas } from './contas.js';
@@ -25,7 +20,8 @@ import { criarConfirmacoes } from './orquestrador/confirmacoes.js';
 import { criarApiPerfil } from './orquestrador/api-perfil.js';
 import { criarEscritorHandoffPlane } from './orquestrador/handoff-plane.js';
 import { criarApiHandoff, criarConfirmacoesHandoff } from './orquestrador/api-handoff.js';
-import { criarApiVoz } from './orquestrador/voz-xai.js';
+import { criarApiVoz, criarAutorizadorVoz } from './orquestrador/voz-xai.js';
+import { ProxyElevenLabs } from './orquestrador/voz-eleven.js';
 import { criarEscritorGatePlane } from './orquestrador/gate-plane.js';
 import { criarApiGate, criarConfirmacoesGate } from './orquestrador/api-gate.js';
 import { criarApiDespacho, criarConfirmacoesDespacho } from './orquestrador/api-despacho.js';
@@ -38,8 +34,15 @@ import { criarServicoChaves, criarConfirmacoesChaves, criarApiChaves } from './c
 import { criarAlinhamento } from './alinhamento.js';
 import { criarClientePlane } from './plane.js';
 import { PROJETOS } from './projetos.js';
-
-const execFileAsync = promisify(execFile);
+import { RespostaHttp } from './http/resposta.js';
+import { ConversaHttp } from './http/conversa.js';
+import { LeituraSsh } from './http/ssh-leitura.js';
+import { RotasPainel } from './http/rotas-painel.js';
+import { RotasOrquestracao } from './http/rotas-orquestracao.js';
+import { RotasVoz } from './http/rotas-voz.js';
+import { RotasChaves } from './http/rotas-chaves.js';
+import { RotasAlinhamento } from './http/rotas-alinhamento.js';
+import { RoteadorPainel } from './http/roteador.js';
 
 // Aba Contas (13/09/2026): /api/contas/* — administração do CadastroUnico.
 // Cada rota vira UM comando ssh fixo executado no servidor; o TOKEN_INTERNO
@@ -62,7 +65,7 @@ const PUBLICO = path.join(import.meta.dirname, 'publico');
 const CHAVE_SSH = path.join(os.homedir(), '.ssh', 'paroquia-vultr');
 const MAX_CORPO = 64 * 1024;
 const MAX_MENSAGEM = 8_000;
-const MAX_TEXTO_TTS = 4_000;
+const proxyEleven = new ProxyElevenLabs();
 const recusaDaGuarda = criarGuarda(PORTA);
 const proprietarioId = process.env.ORQ_OWNER_USER_ID?.trim();
 // Cada identidade só escreve no projeto explicitamente autorizado. Guest
@@ -132,409 +135,36 @@ alinhamento.iniciar();
 const apiChaves = criarApiChaves({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesChaves({ servico: chaves }) });
 const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) });
-const apiVoz = criarApiVoz({ autorizar: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
-  tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }) });
+const apiVoz = criarApiVoz({ autorizar: criarAutorizadorVoz({
+  privilegiado: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
+    tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }),
+  porta: PORTA,
+}) });
 
-// Camada 3 da voz do Severino: a chave vive só no processo (.env local) e
-// JAMAIS aparece em log, erro ou resposta. Voice_id default é o do quickstart
-// público da ElevenLabs ("George", multilíngue, serve pt-BR) — troca por
-// ELEVENLABS_VOZ_ID no .env sem tocar código.
-const ELEVENLABS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-const VOZ_ID_PADRAO = 'JBFqnCBsd6RMkjVDRZzb';
-// eleven_multilingual_v2 é o modelo de qualidade para pt-BR na doc pública
-// (flash_v2_5 é mais barato/rápido, mas o timbre era a queixa do dono).
-const MODELO_TTS = 'eleven_multilingual_v2';
 
-// ---------- consulta SSH sob demanda (somente leitura) ----------
-
-// Consulta somente-leitura ao servidor. Roda apenas sob demanda (botão no
-// painel), nunca no refresh automático — SSH a cada 30 s seria abuso.
-const COMANDO_SSH = [
-  "echo '== uptime =='; uptime -p",
-  "echo; echo '== systemd =='",
-  'for s in corre-do-tarado caddy; do printf "%s: " "$s"; systemctl is-active "$s"; done',
-  "echo; echo '== docker =='; docker ps --format '{{.Names}}\t{{.Status}}'",
-  "echo; echo '== disco =='; df -h / | tail -1",
-  "echo; echo '== memoria =='; free -h | head -2",
-].join('; ');
-
-async function consultarServidorSsh() {
-  try {
-    const { stdout } = await execFileAsync(
-      'ssh',
-      [
-        '-o', 'BatchMode=yes',
-        '-o', 'ConnectTimeout=8',
-        '-i', CHAVE_SSH,
-        'linuxuser@astargne.com',
-        COMANDO_SSH,
-      ],
-      { timeout: 30_000 },
-    );
-    return { ok: true, saida: stdout };
-  } catch (erro) {
-    return { ok: false, erro: erro.stderr?.trim() || erro.message };
-  }
-}
-
-// ---------- HTTP: utilitários ----------
-
-const TIPOS = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-};
-
-function responderJson(res, corpo, status = 200) {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(corpo));
-}
-
-async function responderEstatico(res, urlPath) {
-  // Caminho terminado em "/" serve o index.html da pasta — é o que faz
-  // /severino/ abrir o chat com os assets relativos dele resolvendo certo.
-  const nome = (urlPath.endsWith('/') ? `${urlPath}index.html` : urlPath).slice(1);
-  const alvo = path.resolve(PUBLICO, nome);
-  // Nunca servir fora de publico/ (path traversal).
-  if (!alvo.startsWith(PUBLICO + path.sep)) {
-    responderJson(res, { erro: 'caminho inválido' }, 400);
-    return;
-  }
-  try {
-    const conteudo = await fs.readFile(alvo);
-    res.writeHead(200, { 'content-type': TIPOS[path.extname(alvo)] ?? 'application/octet-stream' });
-    res.end(conteudo);
-  } catch {
-    responderJson(res, { erro: 'não encontrado' }, 404);
-  }
-}
-
-function lerCorpo(req) {
-  return new Promise((resolve, reject) => {
-    const pedacos = [];
-    let tamanho = 0;
-    req.on('data', (pedaco) => {
-      tamanho += pedaco.length;
-      if (tamanho > MAX_CORPO) {
-        reject(new Error('corpo grande demais'));
-        req.destroy();
-        return;
-      }
-      pedacos.push(pedaco);
-    });
-    req.on('end', () => resolve(Buffer.concat(pedacos).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
-// ---------- conversa com o Severino (SSE) ----------
-
-// A resposta pinga token a token: cada evento do motor vira um evento SSE
-// escrito na hora (chunked). Buffering aqui seria defeito, não detalhe.
-async function responderConversa(req, res) {
-  let corpo;
-  try {
-    corpo = JSON.parse(await lerCorpo(req));
-  } catch {
-    responderJson(res, { erro: 'corpo inválido: mande JSON {"mensagem": "...", "sessao": "..."}' }, 400);
-    return;
-  }
-  const mensagem = typeof corpo.mensagem === 'string' ? corpo.mensagem.trim() : '';
-  const sessao = typeof corpo.sessao === 'string' && corpo.sessao ? corpo.sessao : undefined;
-  if (!mensagem || mensagem.length > MAX_MENSAGEM) {
-    responderJson(res, { erro: `"mensagem" precisa ser texto de 1 a ${MAX_MENSAGEM} caracteres` }, 400);
-    return;
-  }
-
-  res.writeHead(200, {
-    'content-type': 'text/event-stream; charset=utf-8',
-    'cache-control': 'no-cache',
-    connection: 'keep-alive',
-  });
-  res.flushHeaders?.();
-
-  let clienteVivo = true;
-  res.on('close', () => { clienteVivo = false; });
-
-  try {
-    for await (const evento of conversar(mensagem, sessao)) {
-      if (!clienteVivo) break; // o `finally` do motor interrompe a consulta
-      const { tipo, ...dados } = evento;
-      res.write(`event: ${tipo}\ndata: ${JSON.stringify(dados)}\n\n`);
-    }
-  } catch (erro) {
-    if (clienteVivo) {
-      // Mensagem genérica de propósito: erro de auth/SDK não vaza detalhe de credencial.
-      console.error('[conversa]', erro);
-      res.write(`event: erro\ndata: ${JSON.stringify({ mensagem: 'falha no motor do Severino — veja o log do servidor' })}\n\n`);
-    }
-  }
-  if (clienteVivo) res.end();
-}
-
-// ---------- voz do Severino (proxy ElevenLabs) ----------
-
-// Proxy de streaming do TTS (camada ElevenLabs): o front nunca vê a chave e o
-// áudio pinga para o cliente conforme chega. Sem chave → 503 com motivo
-// NOMEADO em JSON — é o que o front usa para cair DECLARADAMENTE para o
-// Antônio (nunca 500 genérico, contrato do upgrade).
-async function responderTts(req, res) {
-  const chave = process.env.ELEVENLABS_API_KEY;
-  if (!chave) {
-    responderJson(res, {
-      motivo: 'sem-chave-elevenlabs',
-      mensagem: 'ELEVENLABS_API_KEY ausente no ambiente — grave a chave em painel-admin/.env e reinicie o servidor',
-    }, 503);
-    return;
-  }
-
-  let corpo;
-  try {
-    corpo = JSON.parse(await lerCorpo(req));
-  } catch {
-    responderJson(res, { erro: 'corpo inválido: mande JSON {"texto": "..."}' }, 400);
-    return;
-  }
-  const texto = typeof corpo.texto === 'string' ? corpo.texto.trim() : '';
-  if (!texto || texto.length > MAX_TEXTO_TTS) {
-    responderJson(res, { erro: `"texto" precisa ser texto de 1 a ${MAX_TEXTO_TTS} caracteres` }, 400);
-    return;
-  }
-
-  // Cliente desistiu (calar, pergunta nova, aba fechada) → aborta o upstream:
-  // não adianta baixar áudio que ninguém vai ouvir.
-  const controlador = new AbortController();
-  res.on('close', () => controlador.abort());
-
-  const vozId = process.env.ELEVENLABS_VOZ_ID || VOZ_ID_PADRAO;
-  let upstream;
-  try {
-    upstream = await fetch(
-      `${ELEVENLABS_URL}/${encodeURIComponent(vozId)}/stream?output_format=mp3_44100_128`,
-      {
-        method: 'POST',
-        headers: { 'xi-api-key': chave, 'content-type': 'application/json' },
-        body: JSON.stringify({ text: texto, model_id: MODELO_TTS }),
-        signal: controlador.signal,
-      },
-    );
-  } catch (erro) {
-    if (controlador.signal.aborted) return;
-    console.error('[tts] ElevenLabs inalcançável:', erro?.cause?.code ?? erro.message);
-    responderJson(res, {
-      motivo: 'elevenlabs-inalcancavel',
-      mensagem: 'não alcancei a API da ElevenLabs — sem internet ou serviço fora',
-    }, 502);
-    return;
-  }
-
-  if (!upstream.ok) {
-    // Genérico de propósito (regra 5 dos padrões gerais): a resposta não diz
-    // SE a chave é inválida ou a conta está sem saldo — o detalhe fica no log
-    // do servidor, que nunca contém a chave.
-    const detalhe = await upstream.text().catch(() => '');
-    console.error(`[tts] ElevenLabs respondeu ${upstream.status}:`, detalhe.slice(0, 300));
-    responderJson(res, {
-      motivo: 'elevenlabs-recusou',
-      mensagem: `a ElevenLabs recusou a síntese (HTTP ${upstream.status}) — detalhe no log do servidor`,
-    }, 502);
-    return;
-  }
-
-  res.writeHead(200, { 'content-type': upstream.headers.get('content-type') ?? 'audio/mpeg' });
-  try {
-    await pipeline(Readable.fromWeb(upstream.body), res);
-  } catch {
-    res.destroy(); // cliente fechou no meio do áudio — normal, não é erro nosso
-  }
-}
-
-// ---------- roteamento ----------
-
-const servidor = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://127.0.0.1:${PORTA}`);
-  const { pathname } = url;
-  const recusa = recusaDaGuarda({
-    metodo: req.method,
-    host: req.headers.host,
-    origem: req.headers.origin,
-    secFetchSite: req.headers['sec-fetch-site'],
-  });
-  if (recusa) {
-    responderJson(res, { erro: recusa.erro }, recusa.status);
-    return;
-  }
-  try {
-    if (pathname === '/api/conversa' && req.method === 'POST') {
-      await responderConversa(req, res);
-    } else if (pathname === '/api/conversa') {
-      responderJson(res, { erro: 'use POST' }, 405);
-    } else if (pathname === '/api/tts' && req.method === 'POST') {
-      await responderTts(req, res);
-    } else if (pathname === '/api/tts' && req.method === 'GET') {
-      // Sonda barata de disponibilidade (não sintetiza nada): o front usa
-      // para declarar a camada de voz ativa já na carga da página. Só diz SE
-      // há chave configurada — nunca a chave.
-      responderJson(res, process.env.ELEVENLABS_API_KEY
-        ? { disponivel: true }
-        : { disponivel: false, motivo: 'sem-chave-elevenlabs' });
-    } else if (pathname === '/api/tts') {
-      responderJson(res, { erro: 'use POST (sintetizar) ou GET (disponibilidade)' }, 405);
-    } else if (pathname === '/api/projetos') {
-      responderJson(res, await estadoProjetos());
-    } else if (pathname.startsWith('/api/projetos/') && pathname.endsWith('/docs')) {
-      // Página de projeto (20/08/2026): docs modeladores + curados
-      // (arquitetura/objetos/data-flow) de UM projeto — mesma mecânica de
-      // leitura segura que a ferramenta docs_projeto do Severino usa.
-      // Com ?arquivo=, devolve o conteúdo de UM modelador específico (clique
-      // na lista) em vez do pacote completo.
-      const pasta = decodeURIComponent(pathname.slice('/api/projetos/'.length, -'/docs'.length));
-      const arquivo = url.searchParams.get('arquivo');
-      responderJson(res, arquivo ? await lerModeladorProjeto(pasta, arquivo) : await docsProjeto(pasta));
-    } else if (pathname.startsWith('/api/projetos/') && pathname.endsWith('/git')) {
-      // Página de projeto (20/08/2026): diff --stat + commits não enviados
-      // ao remoto — só sob demanda, nunca no refresh de 60s da grade.
-      const pasta = decodeURIComponent(pathname.slice('/api/projetos/'.length, -'/git'.length));
-      responderJson(res, await gitDetalhado(pasta));
-    } else if (pathname === '/api/producao') {
-      responderJson(res, await estadoProducao());
-    } else if (pathname === '/api/producao/ssh') {
-      responderJson(res, await consultarServidorSsh());
-    } else if (pathname === '/api/backlog') {
-      responderJson(res, await lerBacklog());
-    } else if (pathname === '/api/decisoes') {
-      // Pesada (git log -L por decisão) — sob demanda, nunca no polling de
-      // 60s do front (mesma régua de gitDetalhado/SSH).
-      responderJson(res, await decisoesDoBacklog());
-    } else if (pathname === '/api/orquestracao' && req.method === 'GET') {
-      responderJson(res, await orquestracao.fila());
-    } else if (pathname === '/api/orquestracao/triagem-dev' && req.method === 'GET') {
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, await triagemDev());
-    } else if (pathname === '/api/orquestracao/prontidao' && req.method === 'GET') {
-      try {
-        responderJson(res, await orquestracao.preavaliar(url.searchParams.get('carta'), url.searchParams.get('gate')));
-      } catch (erro) {
-        responderJson(res, { erro: erro.message }, 422);
-      }
-    } else if (pathname === '/api/orquestracao/canal' && req.method === 'GET') {
-      try { responderJson(res, await orquestracao.canal(url.searchParams.get('carta'), url.searchParams.get('projeto'))); }
-      catch (erro) { responderJson(res, { erro: erro.message }, 422); }
-    } else if (pathname === '/api/orquestracao/modelos' && req.method === 'GET') {
-      try { responderJson(res, await orquestracao.modelos(url.searchParams.get('carta'))); }
-      catch (erro) { responderJson(res, { erro: erro.message }, 422); }
-    } else if (pathname === '/api/orquestracao/modelos/validar' && req.method === 'POST') {
-      try {
-        const corpo = JSON.parse(await lerCorpo(req));
-        responderJson(res, await orquestracao.validarModelos(corpo.carta, corpo.selecoes));
-      } catch (erro) { responderJson(res, { erro: erro.message }, 422); }
-    } else if ((pathname === '/api/orquestracao/modelos/preparar' || pathname === '/api/orquestracao/modelos/confirmar') && req.method === 'POST') {
-      const { status, corpo } = await apiPerfil(req, pathname, lerCorpo);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if ((pathname === '/api/orquestracao/handoff/preparar' || pathname === '/api/orquestracao/handoff/confirmar') && req.method === 'POST') {
-      const { status, corpo } = await apiHandoff(req, pathname, lerCorpo);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if ((pathname === '/api/orquestracao/gates/preparar' || pathname === '/api/orquestracao/gates/confirmar') && req.method === 'POST') {
-      const { status, corpo } = await apiGate(req, pathname, lerCorpo);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if ((pathname === '/api/orquestracao/despacho/preparar' || pathname === '/api/orquestracao/despacho/confirmar') && req.method === 'POST') {
-      const { status, corpo } = await apiDespacho(req, pathname, lerCorpo);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if (pathname === '/api/orquestracao/consumo' && req.method === 'GET') {
-      responderJson(res, await lerConsumoIas());
-    } else if (pathname === '/api/orquestracao/vigilia' && req.method === 'GET') {
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, await vigilia.estadoDaVigilia());
-    } else if ((pathname === '/api/orquestracao/vigilia/preparar' || pathname === '/api/orquestracao/vigilia/confirmar') && req.method === 'POST') {
-      const { status, corpo } = await apiVigilia(req, pathname, lerCorpo);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if (pathname === '/api/orquestracao/legado' && req.method === 'GET') {
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, await lerCanalLegado());
-    } else if (pathname === '/api/alinhamento' && req.method === 'GET') {
-      // Rotina de alinhamento código ⇄ Plane ⇄ painel (alinhamento.js): varre
-      // a cada 30 min em segundo plano; `?agora=1` força uma varredura.
-      res.setHeader('cache-control', 'no-store');
-      try { responderJson(res, await alinhamento.ler({ forcar: url.searchParams.get('agora') === '1' })); }
-      catch (erro) { responderJson(res, { erro: erro.message }, 503); }
-    } else if (pathname === '/api/diagnostico/voz' && req.method === 'POST') {
-      // Diagnóstico da voz do C-3PO (25/10/2026): o navegador manda eventos
-      // (motor escolhido, erro do microfone, nível captado, áudio recusado…)
-      // e eles vão para o journal, onde o orquestrador lê — sem áudio, sem
-      // segredo, teto de 4 KiB. Sem isso o que falha no navegador do dono é
-      // invisível daqui.
-      try {
-        const corpo = (await lerCorpo(req)).slice(0, 4096);
-        console.error('[voz-diag]', corpo.replace(/[\r\n]+/g, ' '));
-      } catch { /* diagnóstico nunca derruba nada */ }
-      res.writeHead(204); res.end();
-    } else if (pathname === '/api/orquestracao/voz' && req.method === 'GET') {
-      // Só a presença da transcrição xAI (nunca a chave): o C-3PO decide se
-      // pode cair para ela quando o reconhecimento do navegador não existe
-      // ou não alcança o Google (Brave, Chromium sem chaves, Firefox).
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, { xai: Boolean(process.env.XAI_API_KEY) });
-    } else if (pathname === '/api/orquestracao/voz/transcrever' && req.method === 'POST') {
-      const { status, corpo } = await apiVoz(req);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if (pathname === '/api/orquestracao/simular' && req.method === 'POST') {
-      try {
-        const corpo = JSON.parse(await lerCorpo(req));
-        if (typeof corpo.carta !== 'string' || typeof corpo.comando !== 'string') throw new Error('carta e comando obrigatórios');
-        responderJson(res, await orquestracao.simular(corpo.carta, corpo.comando, corpo.selecoes ?? null));
-      } catch (erro) {
-        responderJson(res, { erro: erro.message }, 422);
-      }
-    } else if (pathname.startsWith('/api/orquestracao')) {
-      responderJson(res, { erro: 'escrita e execução indisponíveis nesta etapa' }, 405);
-    } else if (pathname === '/api/chaves' && req.method === 'GET') {
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, await chaves.inventario());
-    } else if (pathname === '/api/chaves/servidor' && req.method === 'GET') {
-      res.setHeader('cache-control', 'no-store');
-      try { responderJson(res, await chaves.lerServidor()); } catch (erro) { responderJson(res, { erro: erro.message }, 502); }
-    } else if ((pathname === '/api/chaves/preparar' || pathname === '/api/chaves/confirmar') && req.method === 'POST') {
-      const { status, corpo } = await apiChaves(req, pathname, lerCorpo);
-      res.setHeader('cache-control', 'no-store');
-      responderJson(res, corpo, status);
-    } else if (pathname.startsWith('/api/chaves')) {
-      responderJson(res, { erro: 'operação indisponível' }, 405);
-    } else if (pathname === '/api/relacoes') {
-      responderJson(res, await catalogoRelacoes());
-    } else if (pathname.startsWith('/api/contas/')) {
-      // GET apps|usuarios|convites · POST convites · POST convites/:id/reenviar
-      // · DELETE convites/:id · PUT usuarios/:id/permissoes · POST
-      // usuarios/:id/desativar|reativar|redefinir — tabela fechada em
-      // contas.js; o corpo (quando há) vai ao servidor pelo stdin do ssh.
-      // Sob demanda apenas (a aba recarrega ao abrir e após cada ação),
-      // nunca no polling de 60s: cada chamada é um ssh de verdade.
-      const corpoTexto = req.method === 'GET' ? '' : await lerCorpo(req);
-      const { status, corpo } = await manipularContas(req.method, pathname, corpoTexto);
-      responderJson(res, corpo, status);
-    } else if (pathname === '/severino' && req.method === 'GET') {
-      // Sem a barra final os assets relativos do chat resolveriam na raiz
-      // (estilo do dashboard em vez do estilo do chat).
-      res.writeHead(301, { location: '/severino/' });
-      res.end();
-    } else if (req.method === 'GET') {
-      await responderEstatico(res, pathname);
-    } else {
-      responderJson(res, { erro: 'método não suportado' }, 405);
-    }
-  } catch (erro) {
-    console.error('[servidor]', erro);
-    if (!res.headersSent) responderJson(res, { erro: 'erro interno' }, 500);
-    else res.end();
-  }
+const resposta = new RespostaHttp({ publico: PUBLICO, maxCorpo: MAX_CORPO });
+const roteador = new RoteadorPainel({
+  porta: PORTA,
+  recusa: recusaDaGuarda,
+  resposta,
+  conversa: new ConversaHttp({ resposta, conversar, maxMensagem: MAX_MENSAGEM }),
+  voz: new RotasVoz({ resposta, proxyEleven }),
+  painel: new RotasPainel({
+    resposta,
+    coletores: { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog },
+    contas: manipularContas,
+    ssh: new LeituraSsh({ chave: CHAVE_SSH }),
+  }),
+  orquestracao: new RotasOrquestracao({
+    resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas, vigilia, lerCanalLegado,
+    apiPerfil, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz,
+    xai: () => Boolean(process.env.XAI_API_KEY),
+  }),
+  alinhamento: new RotasAlinhamento({ resposta, alinhamento }),
+  chaves: new RotasChaves({ resposta, chaves, apiChaves }),
 });
+
+const servidor = http.createServer((req, res) => roteador.atender(req, res));
 
 servidor.listen(PORTA, '127.0.0.1', () => {
   console.log(`Painel administrativo (com o Severino a bordo) em http://localhost:${PORTA}`);

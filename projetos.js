@@ -224,39 +224,4 @@ export const PROJETOS = [
 // O severino saiu do catálogo em 14/08/2026: foi fundido NESTE app (rota
 // /severino/, mesma porta 7777) — deixou de existir como projeto irmão.
 
-// Sondas de produção que não pertencem a um projeto específico.
-// O `/saude` do cadastro único publica em quantos endereços ele DEVERIA estar
-// escutando e em quantos está. O segundo endereço é a ponte `astargne_sso`, por
-// onde o container do filosofia valida sessão (Fase 2, 23/09/2026): se ele cair,
-// o central continua respondendo 200 na raiz, no player e no fliperama, e só o
-// filosofia devolve 503 — verde por fora, quebrado por dentro. Esta conferência
-// é o que torna a falha visível; sem ela, o listener secundário "não fatal" do
-// central apenas troca uma falha barulhenta por uma muda.
-export function conferirEscutaDoSSO(dado) {
-  if (!dado || typeof dado !== 'object') return { ok: false, detalhe: 'resposta ilegível' };
-  const escuta = dado.escuta;
-  if (!escuta || typeof escuta.ligados !== 'number' || typeof escuta.esperados !== 'number') {
-    // Release do central anterior à Fase 2: não sabe reportar escuta.
-    return { ok: dado.ok === true, detalhe: 'release sem relatório de escuta' };
-  }
-  if (escuta.ligados < escuta.esperados) {
-    return {
-      ok: false,
-      detalhe: `escutando em ${escuta.ligados} de ${escuta.esperados} endereços — o filosofia não valida sessão`,
-    };
-  }
-  return { ok: dado.ok === true };
-}
-
-export const PRODUCAO_EXTRA = [
-  { rotulo: 'Caddy do host (astargne.com)', url: 'https://astargne.com' },
-  {
-    // Desde a Fase 2 do cadastro único (23/09/2026) o central escuta em DOIS
-    // endereços: o loopback (Caddy) e a ponte `astargne_sso` (container do
-    // filosofia). Perder o segundo não muda nada no que esta sonda veria pelo
-    // status — por isso ela lê o corpo, com a conferência logo acima.
-    rotulo: 'Cadastro Único — escuta',
-    url: 'https://astargne.com/saude',
-    conferirCorpo: conferirEscutaDoSSO,
-  },
-];
+export { conferirEscutaDoSSO, PRODUCAO_EXTRA } from './producao-extra.js';

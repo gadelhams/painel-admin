@@ -5,3 +5,6 @@ node_modules/
 # cópias que a aba Chaves do painel deixa ao lado do .env (segredo velho)
 .env.bak-*
 .env.*.tmp
+# artefatos do Playwright (e2e)
+test-results/
+playwright-report/

@@ -42,7 +42,7 @@ Roda como **serviço de usuário do systemd na Omarchy** desde 27/09/2026
 `enable --now`, linger ligado:
 sobe no boot sem login e reinicia se cair). Operação: `systemctl --user
 {status,restart} painel-admin`; log em `journalctl --user -u painel-admin`.
-Do Windows chega-se por `https://painel.casa.astargne.com` (borda do
+Do Windows chega-se por `https://painel.vpn.astargne.com` (borda do
 tailnet, só o IP do Windows; 06/10/2026) ou por `localhost:7777` via
 encaminhamento do Remote-SSH do VS Code (`remote.SSH.defaultForwardedPorts`
 no settings do usuário). O gatilho
@@ -76,12 +76,18 @@ remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 - **xAI** (gravação + `POST /api/orquestracao/voz/transcrever`): entra
   sozinho no primeiro erro fatal do navegador ou quando ele não tem
   reconhecimento (`GET /api/orquestracao/voz` diz se a chave existe). Exige
-  a **sessão do painel** (abrir por `painel.casa.astargne.com`, logado):
-  por `127.0.0.1:7777` a rota responde 401. Push-to-talk grava até o
+  a **sessão do painel** na borda (`painel.vpn.astargne.com`, logado). No
+  loopback (`127.0.0.1` ou `localhost`) a mesma origem do painel transcreve
+  sem essa sessão — a guarda já recusa POST de outro site. Push-to-talk grava até o
   silêncio; o copiloto fatia por detecção de voz (energia). **Custo:** em
   copiloto por xAI tudo que se fala perto do microfone é transcrito, pago,
   inclusive em espera (o gatilho "C3PO" só se detecta no texto) — o status
   avisa.
+- **Ligação** (botão "ligar", 25/10/2026): conversa aberta até "desligar",
+  sem gatilho e sem o hiato de 90s. Falar por cima corta a voz na hora; a
+  frase confirmada (e que não é eco da própria fala) substitui a resposta
+  em curso. Pela xAI cada frase da ligação é transcrição paga — o status
+  avisa. Fechar o console do dashboard desliga a chamada.
 - **Diagnóstico:** o navegador manda eventos da voz (motores, erro do
   microfone, nível captado a cada 5 s, trechos enviados, áudio recusado) para
   `POST /api/diagnostico/voz`, que os grava no journal:

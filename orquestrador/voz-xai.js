@@ -61,6 +61,24 @@ export function criarTranscritorXai({ chave = process.env.XAI_API_KEY, fetchImpl
   };
 }
 
+export function criarAutorizadorVoz({ privilegiado, porta }) {
+  // No loopback o painel já não tem login: quem alcança a porta é o dono, e o
+  // C-3PO gasta a conversa sem SSO. A borda (painel.vpn.astargne.com) continua
+  // exigindo sessão. A guarda de mesma origem vale nos dois casos.
+  const locais = new Map([
+    [`127.0.0.1:${porta}`, `http://127.0.0.1:${porta}`],
+    [`localhost:${porta}`, `http://localhost:${porta}`],
+  ]);
+  return async req => {
+    const host = String(req.headers.host ?? '').toLowerCase();
+    const origemLocal = locais.get(host);
+    if (origemLocal && req.headers.origin === origemLocal && req.headers['sec-fetch-site'] === 'same-origin') {
+      return { usuarioId: 'local', sessaoHash: null };
+    }
+    return privilegiado(req);
+  };
+}
+
 export function criarApiVoz({ autorizar, transcrever = criarTranscritorXai(), ler = lerAudio } = {}) {
   return async req => {
     try {

@@ -68,7 +68,7 @@ da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
    de escrita — a limitação é estrutural, não comportamental.
 3. **Sem login, então porta fechada.** Escuta em `127.0.0.1` (porta **7777**
    desde a fusão; nasceu na 7778), sem autenticação. Desde 06/10/2026 a borda
-   do tailnet publica `painel.casa.astargne.com` só para o Windows do dono
+   do tailnet publica `painel.vpn.astargne.com` só para o Windows do dono
    (`docs/arquitetura.md`, invariante 1).
 4. **Mínimo de dependências.** Backend: só `@anthropic-ai/claude-agent-sdk`
    (versão fixada). Frontend: zero deps — voz pela Web Speech API nativa
@@ -136,6 +136,11 @@ derruba) — nenhum processo/engine novo, nenhum custo novo. O gatilho em si é
 um filtro de texto local sobre o que o navegador já transcreveu, não um
 serviço de wake-word. Implementação: `voz.js` (`ouvirContinuo`,
 `detectarGatilho`) + estado dormente/ativa em `chat.js`.
+
+**Ligação (25/10/2026, pedido do dono)**: botão "ligar" abre uma conversa
+contínua, no jeito de uma chamada — sem gatilho e sem o hiato de 90s, até
+"desligar". Falar por cima corta a voz na hora e a frase nova substitui a
+resposta em curso. O copiloto continua para o caso "ouvindo enquanto eu jogo".
 
 **Painel único (21/08/2026, pedido do dono) — SUPERSEDIDO no mesmo dia, à
 tarde, pelo reskin "Industry HUD" logo abaixo.** A faixa lateral fixa virou
@@ -209,7 +214,7 @@ implementação:
   `git log -L` por decisão (74 decisões reais, ~0.5s de resposta) — pesada,
   nunca no polling de 60s, só quando a aba Decisões/Projetos carrega.
 - **Nenhuma rota nova pro console do Severino.** O "digest matinal" (Estado
-  A, abertura por ⌘K) e o "explique a decisão" (Estado B, clique numa
+  A, uma vez por dia local ao abrir por ⌘K) e o "explique a decisão" (Estado B, clique numa
   decisão) são só uma primeira mensagem automática pro `/api/conversa` já
   existente, com prompts fixos — o motor grounded de sempre faz o resto.
   `chat.js` ganhou uma linha de export

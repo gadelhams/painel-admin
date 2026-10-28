@@ -64,9 +64,84 @@
          #/projetos (sem parâmetro, mostra a última seleção ou a primeira do
          catálogo) caem aqui dentro; só o painel focado muda. -->
     <div id="aba-projetos">
-      <div class="pagina-intro"><div><p>PROTOCOLO · 01 / PORTFÓLIO</p><h1>Projetos</h1><span>Estado, trabalho e contexto dos projetos em um só lugar.</span></div><span class="pagina-intro-modo">LEITURA AO VIVO</span></div>
-      <div id="tira-telemetria" class="tira-telemetria">
-        <p class="discreto">Carregando…</p>
+      <div class="protocolo-grade">
+        <section class="coluna-projetos" aria-label="Projetos">
+          <h2 id="rotulo-projetos">PROJETOS</h2>
+          <div id="tira-telemetria" class="tira-telemetria">
+            <p class="discreto">Carregando…</p>
+          </div>
+        </section>
+        <div id="encaixe-voz">
+  <!-- Palco do C-3PO: no meio da aba Projetos. De outra aba, abrirConsole
+       o leva para o body como overlay. /severino/ continua à parte. -->
+  <div id="console-scrim" class="console-scrim">
+    <div class="console-painel voice-stage">
+      <div class="palco-stats" id="palco-stats"></div>
+      <div class="palco-orb" aria-hidden="true">
+        <svg viewBox="0 0 400 400">
+          <defs>
+            <radialGradient id="palco-halo" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#FFB52E" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#FFB52E" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="palco-olho" cx="45%" cy="40%" r="60%">
+              <stop offset="0%" stop-color="#FFE9A8"/>
+              <stop offset="40%" stop-color="#FFB52E"/>
+              <stop offset="100%" stop-color="#8A5A12"/>
+            </radialGradient>
+          </defs>
+          <circle cx="200" cy="200" r="198" fill="url(#palco-halo)"/>
+          <circle cx="200" cy="200" r="186" fill="none" stroke="#4A3A20" stroke-width="1.5" stroke-dasharray="2 9"/>
+          <circle cx="200" cy="200" r="164" fill="none" stroke="#7A5E2A" stroke-width="10" stroke-dasharray="1.5 10.3"/>
+          <circle cx="200" cy="200" r="138" fill="none" stroke="#E0A83C" stroke-opacity="0.45" stroke-width="1.5"/>
+          <circle class="palco-nucleo" cx="200" cy="200" r="92" fill="url(#palco-olho)"/>
+          <circle cx="200" cy="200" r="92" fill="none" stroke="#FFE9A8" stroke-opacity="0.5" stroke-width="1.5"/>
+          <circle cx="200" cy="200" r="34" fill="#1A1208"/>
+          <circle cx="188" cy="188" r="7" fill="#FFE9A8" fill-opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="palco-estado" id="palco-estado">EM ESPERA</div>
+      <div class="palco-barras" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <p class="palco-texto" id="palco-texto">Abra a ligação, ou pergunte por escrito.</p>
+      <p class="palco-dica">fale por cima para me interromper · digite embaixo</p>
+      <div class="console-cabecalho">
+        <div>
+          <span class="console-titulo">C-3PO</span>
+          <span class="kicker" id="console-kicker"></span>
+        </div>
+        <button type="button" id="console-fechar" class="console-esc">esc</button>
+      </div>
+
+      <div id="historico" aria-live="polite"></div>
+
+      <div class="console-rodape">
+        <form id="formulario" autocomplete="off">
+          <span class="console-chevron">›</span>
+          <input id="entrada" type="text" placeholder="digite, ou fale" maxlength="8000">
+          <!-- type=button: falar não é submeter o formulário -->
+          <button id="microfone" type="button" aria-label="Falar com o C-3PO" title="clique e fale (push-to-talk)" class="selo-voz">voz</button>
+          <button id="ligar" type="button" class="selo-voz" aria-pressed="false" title="abre uma ligação: o microfone fica aberto e falar por cima me interrompe">ligar</button>
+          <button id="enviar" type="submit">mandar</button>
+        </form>
+        <div class="console-chips" id="console-chips"></div>
+        <label id="rotulo-copiloto" class="copiloto">
+          <input id="modo-copiloto" type="checkbox">
+          modo copiloto — fica ouvindo, sem clicar; diga "C3PO" pra retomar depois de um hiato
+        </label>
+        <p id="status-voz">preparando a voz…</p>
+        <p id="status-copiloto" hidden></p>
+        <p id="status-ligacao" hidden></p>
+      </div>
+    </div>
+  </div>
+
+        </div>
+        <section class="coluna-bloqueios" aria-label="Bloqueios">
+          <h2 id="rotulo-bloqueios">BLOQUEIOS</h2>
+          <div id="lista-bloqueios"><p class="discreto">Carregando…</p></div>
+        </section>
       </div>
       <div class="grid-projeto">
         <div id="painel-projeto-principal" class="painel-projeto-principal">
@@ -137,57 +212,85 @@
     </section>
   </main>
 
-  <!-- Tela 6 — console do Severino, overlay por ⌘K/Ctrl+K, pela barra de
-       comando, ou por clique numa decisão (21/08/2026). Substitui a faixa
-       lateral fixa desta manhã — reaproveita severino/voz.js e
-       severino/chat.js inteiros, só muda o container que os hospeda.
-       /severino/ standalone continua existindo como acesso alternativo. -->
-  <div id="console-scrim" class="console-scrim" hidden>
-    <div class="console-painel moldura">
-      <i class="canto tl"></i><i class="canto tr"></i><i class="canto bl"></i><i class="canto br"></i>
-      <div class="console-cabecalho">
-        <div>
-          <span class="console-titulo">C-3PO</span>
-          <span class="kicker" id="console-kicker"></span>
-        </div>
-        <button type="button" id="console-fechar" class="console-esc">esc</button>
-      </div>
-
-      <div id="historico" aria-live="polite"></div>
-
-      <div class="console-rodape">
-        <form id="formulario" autocomplete="off">
-          <span class="console-chevron">›</span>
-          <input id="entrada" type="text" placeholder="digite, ou fale" maxlength="8000">
-          <!-- type=button: falar não é submeter o formulário -->
-          <button id="microfone" type="button" aria-label="Falar com o C-3PO" title="clique e fale (push-to-talk)" class="selo-voz">voz</button>
-          <button id="enviar" type="submit">mandar</button>
-        </form>
-        <div class="console-chips" id="console-chips"></div>
-        <label id="rotulo-copiloto" class="copiloto">
-          <input id="modo-copiloto" type="checkbox">
-          modo copiloto — fica ouvindo, sem clicar; diga "C3PO" pra retomar depois de um hiato
-        </label>
-        <p id="status-voz">preparando a voz…</p>
-        <p id="status-copiloto" hidden></p>
-      </div>
-    </div>
-  </div>
-
   <!-- grafo.js/relacoes.js/api/relacoes ficam no repo mas saem da nav por
        ora (decisão do dono, 21/08/2026, ao adotar o design "Industry HUD" —
        fácil de religar depois como 4ª aba). -->
+  <script src="dom.js"></script>
+  <script src="estado-painel.js"></script>
+  <script src="nomes-curtos.js"></script>
+  <script src="tira-telemetria.js"></script>
+  <script src="palco-bloqueios.js"></script>
+  <script src="placar-cabecalho.js"></script>
+  <script src="telemetria.js"></script>
+  <script src="console-palco.js"></script>
+  <script src="console-digest.js"></script>
+  <script src="console-decisao.js"></script>
+  <script src="console-c3po.js"></script>
+  <script src="roteador-painel.js"></script>
+  <script src="carga.js"></script>
   <script src="app.js"></script>
+  <script src="backlog-nodo.js"></script>
   <script src="backlog.js"></script>
+  <script src="decisoes-grupo.js"></script>
+  <script src="idade-curta.js"></script>
+  <script src="decisoes-linha.js"></script>
+  <script src="decisoes-astargne.js"></script>
   <script src="decisoes.js"></script>
+  <script src="contas-pedido.js"></script>
+  <script src="contas-pecas.js"></script>
+  <script src="contas-usuario.js"></script>
+  <script src="contas-convite.js"></script>
+  <script src="contas-desenho.js"></script>
   <script src="contas.js"></script>
+  <script src="chaves-pedido.js"></script>
+  <script src="chaves-linha.js"></script>
+  <script src="chaves-troca-form.js"></script>
+  <script src="chaves-desenho.js"></script>
   <script src="chaves.js"></script>
+  <script src="docs-desenho.js"></script>
   <script src="docs.js"></script>
-  <script src="orquestrador.js?v=20261022-3campos"></script>
+  <script src="orquestracao/nucleo.js?v=20261027-modulos"></script>
+  <script src="orquestracao/demanda-prontidao.js?v=20261027-modulos"></script>
+  <script src="orquestracao/demanda-portao.js?v=20261027-modulos"></script>
+  <script src="orquestracao/demanda-historico.js?v=20261027-modulos"></script>
+  <script src="orquestracao/demanda-carta.js?v=20261027-modulos"></script>
+  <script src="orquestracao/fila-filtro.js?v=20261027-modulos"></script>
+  <script src="orquestracao/fila-lista.js?v=20261027-modulos"></script>
+  <script src="orquestracao/fila-triagem.js?v=20261027-modulos"></script>
+  <script src="orquestracao/fila.js?v=20261027-modulos"></script>
+  <script src="orquestracao/despacho.js?v=20261027-modulos"></script>
+  <script src="orquestracao/gate.js?v=20261027-modulos"></script>
+  <script src="orquestracao/conversa-canal.js?v=20261027-modulos"></script>
+  <script src="orquestracao/conversa-handoff.js?v=20261027-modulos"></script>
+  <script src="orquestracao/conversa.js?v=20261027-modulos"></script>
+  <script src="orquestracao/modelos-seletores.js?v=20261027-modulos"></script>
+  <script src="orquestracao/modelos-confirmacao.js?v=20261027-modulos"></script>
+  <script src="orquestracao/modelos.js?v=20261027-modulos"></script>
+  <script src="orquestracao/vigilia-desenho.js?v=20261027-modulos"></script>
+  <script src="orquestracao/vigilia-confirmacao.js?v=20261027-modulos"></script>
+  <script src="orquestracao/vigilia.js?v=20261027-modulos"></script>
+  <script src="orquestracao/legado.js?v=20261027-modulos"></script>
+  <script src="orquestracao/consumo.js?v=20261027-modulos"></script>
+  <script src="orquestracao/voz-carta.js?v=20261027-modulos"></script>
+  <script src="orquestrador.js?v=20261027-modulos"></script>
+  <script src="secao-cabecalho.js"></script>
+  <script src="secao-outline.js"></script>
+  <script src="secao-arquitetura.js"></script>
+  <script src="secao-decisoes.js"></script>
+  <script src="secao-fila.js"></script>
+  <script src="secao-producao.js"></script>
+  <script src="projeto-secoes.js"></script>
   <script src="projeto.js"></script>
   <!-- voz.js antes: define o global Voz que chat.js consome (mesmo contrato
        de severino/index.html) -->
+  <script src="severino/politica-fala.js"></script>
+  <script src="severino/sessao-voz.js"></script>
+  <script src="severino/locutor.js"></script>
+  <script src="severino/escuta.js"></script>
   <script src="severino/voz.js"></script>
+  <script src="severino/palco.js"></script>
+  <script src="severino/fluxo-sse.js"></script>
+  <script src="severino/modos-voz.js"></script>
   <script src="severino/chat.js"></script>
 </body>
 </html>
