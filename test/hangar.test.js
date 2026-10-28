@@ -233,6 +233,24 @@ test('nave: % por peça com andamento separado, cancelada fora, PRODUTO na esta�
   assert.deepEqual(coleta.proximas.map((p) => p.id), ['ALFA-2', 'ALFA-3']);
 });
 
+test('nave: só o que espera o dono vira decisão; bloqueio por outra carta não vai para o chão', () => {
+  const ws = {
+    projetos: [{ id: 'P', name: 'Alfa', url: 'u' }],
+    milestones: [{ id: 'M1', name: 'Coleta', sortOrder: 1, project: { id: 'P' } }],
+    issues: [
+      issue(1, { labels: { nodes: [{ name: 'BLOQUEADA' }] }, description: '(BLOQUEADA: espera ALFA-9)' }),
+      issue(2, { labels: { nodes: [{ name: 'EMPÍRICA' }] } }),
+      issue(3, { labels: { nodes: [{ name: 'DONO' }] }, description: 'Escolher (DONO: o formato)' }),
+      issue(4, { labels: { nodes: [{ name: 'PRODUTO' }] } }),
+      issue(5, { labels: { nodes: [{ name: 'SEM ESCOPO' }] } }),
+    ],
+  };
+  const backlog = { pasta: 'alfa', fonte: 'plane', estado: 'ok', features: montarFeatures(ws, 'P').features };
+  const nave = montarNave({ pasta: 'alfa', titulo: 'Alfa', plane: 'P' }, backlog);
+  assert.deepEqual(nave.pecas[0].decisoes.map((d) => d.id), ['ALFA-3']);
+  assert.deepEqual(nave.decisoesProduto.map((d) => d.id), ['ALFA-4']);
+});
+
 test('nave: semente estável por pasta; sem backlog vira casco vazio, não erro', async () => {
   assert.equal(sementeDe('painel-admin'), sementeDe('painel-admin'));
   assert.notEqual(sementeDe('alfa'), sementeDe('beta'));

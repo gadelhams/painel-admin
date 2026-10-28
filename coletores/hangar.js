@@ -34,8 +34,10 @@ function resumoItem(n) {
   return { id: n.identificador ?? null, titulo: n.texto, url: n.url ?? null };
 }
 
-// Decisão = carta aberta com tag. `produto` (label PRODUTO) vai para a estação
-// de planejamento; o resto trava o módulo e vira peça no chão da doca.
+// Decisão = carta aberta que espera o dono (decidido por ele em 28/10/2026):
+// label PRODUTO vai para a estação de planejamento; ASTARGNE (ou `(DONO)` em
+// texto antigo) trava o módulo e vira peça no chão. BLOQUEADA esperando outra
+// carta, EMPÍRICA e SEM ESCOPO não são decisão e ficam fora do chão.
 function decisao(n, modulo) {
   return { ...resumoItem(n), modulo, tags: n.tags.map((t) => t.tag), detalhe: n.tags.find((t) => t.detalhe)?.detalhe ?? null };
 }
@@ -70,9 +72,9 @@ export function montarNave(projeto, backlog) {
       cont[grupoDe(n)] += 1;
       if (n.identificador && !nave.sigla) nave.sigla = n.identificador.replace(/-\d+$/, '');
       if (n.idRastreador) nave.cartoes[n.idRastreador] = [indice, n.identificador ?? null, n.texto];
-      if (n.estado === 'pronto' || !n.tags?.length) continue;
+      if (n.estado === 'pronto') continue;
       if (n.produto) nave.decisoesProduto.push(decisao(n, f.titulo));
-      else decisoes.push(decisao(n, f.titulo));
+      else if (n.tags?.some((t) => t.tag === 'ASTARGNE')) decisoes.push(decisao(n, f.titulo));
     }
     const total = cont.abertas + cont.andamento + cont.feitas;
     nave.pecas.push({
