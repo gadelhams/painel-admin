@@ -41,7 +41,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 - `api.js` — Fronteira HTTP de /api/chaves/preparar e /api/chaves/confirmar.
 - `catalogo.js` — O que cada projeto guarda e onde.
-- `confirmacoes.js` — Duas ações: preparar guarda o desafio; confirmar grava.
+- `confirmacoes.js` — Duas ações da troca de chave: preparar guarda o pedido; confirmar grava o valor, que só entra nesta segunda ação.
 - `eventos.js` — Diário das trocas.
 - `inventario-local.js` — Inventário local: nomes, modo e rotação.
 - `inventario-servidor.js` — Inventário do servidor: um ssh de nomes.
@@ -134,10 +134,11 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 - `ambiente-cli.js` — Ambiente dos filhos da CLI: lista branca, sem chave do painel.
 - `api-despacho.js` — Duas ações do despacho: preparar valida e guarda o desafio; confirmar inicia a tentativa real.
+- `api-duas-acoes.js` — Fronteira HTTP das duas ações: sessão antes do corpo, campos fechados, falha upstream sem eco.
 - `api-gate.js` — Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta.
 - `api-handoff.js` — Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário.
 - `api-perfil.js` — Fronteira HTTP de /api/orquestracao/modelos/{preparar,confirmar}.
-- `api-vigilia.js` — Ligar/desligar a vigília de um projeto: a confirmação que antes era por carta passa a ser por projeto, com a mesma fronteira (origem, sessão do Cadastro Único, duas ações).
+- `api-vigilia.js` — Duas ações da vigília: preparar valida a alternância de um projeto; confirmar liga ou desliga.
 - `argumentos-cli.js` — Argumentos fixos de cada CLI.
 - `arquivo-lease.js` — Um arquivo de lease por carta.
 - `autorizador.js` — Autoriza uma ação privilegiada: origem, cookie, sessão e dono.
@@ -156,6 +157,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `contrato-politica.js` — Gramática do contrato opt-in: o que o projeto permite executar.
 - `dependencias-carta.js` — Junta a relação formal do Plane com o que a carta declara no texto.
 - `dependencias-worktree.js` — Instalação do worktree quando há lock e faltam os módulos.
+- `desafio-duas-acoes.js` — Esqueleto das duas ações privilegiadas: preparar guarda um desafio, confirmar o executa uma vez.
 - `despacho-servico.js` — Junta a checagem e a tentativa real.
 - `diario-touchpoints.js` — Diário JSONL dos touchpoints.
 - `erro-acesso.js` — Erro das ações privilegiadas.

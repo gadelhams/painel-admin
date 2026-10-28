@@ -68,7 +68,7 @@ módulo por responsabilidade: `politica.js` (reexporta `contrato-politica.js`,
 flags de CLI), `canal-plane.js` (a forma do comentário em `interacao-canal.js`)/`perfil-plane.js` (texto em `protocolo-perfil.js`, escrita em `escritor-perfil-plane.js`)/`handoff-plane.js` (texto em `protocolo-handoff.js`, escrita em `escritor-handoff-plane.js`)/`gate-plane.js` (texto em `protocolo-gate.js`, escrita em `escritor-gate-plane.js`)
 (protocolos versionados no card: leitura paginada, `PERFIL-IA/v1`, `HANDOFF/v1`,
 `GATE/v1`, escritores restritos a um projeto), `sso.js` (reexporta `erro-acesso.js`, `sessao-cookie.js`, `origem-privilegiada.js`, `verificador-cadastro.js` e `autorizador.js`)/`confirmacoes.js`/`api-*.js`
-(sessão do Cadastro Único por ssh, desafio de confirmação, rotas), `triagem.js` (classificação em `classificar-prontidao-dev.js`, varredura em `varredura-triagem.js`)
+(sessão do Cadastro Único por ssh, desafio de confirmação, rotas; desde 28/10/2026 o esqueleto das duas ações é um só, `desafio-duas-acoes.js` + `api-duas-acoes.js`, e perfil, gate, handoff, despacho, vigília e a troca de chaves só declaram o que validam e o que gravam), `triagem.js` (classificação em `classificar-prontidao-dev.js`, varredura em `varredura-triagem.js`)
 e `consulta-c3po.js` (pendências DEV e a ferramenta do motor), `voz-xai.js` (transcrição),
 `voz-eleven.js` (`ProxyElevenLabs`, a síntese; a chave não sai do processo),
 `consumo.js`, **`executor-cli.js`** (o executor real; ambiente em `ambiente-cli.js`,
