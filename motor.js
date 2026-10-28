@@ -6,7 +6,20 @@ import { PERSONA } from './motor/persona.js';
 
 const MODELO = 'claude-sonnet-5';
 
-export async function* conversar(mensagem, sessaoAnterior) {
+// O .env do painel mora em process.env, e o SDK repassaria tudo ao CLI do modelo:
+// chaves de escrita (Plane, Chaves) ficariam a uma regra de permissão de distância.
+// O CLI só precisa achar o login em ~/.claude e rodar (PAINEL-52, 28/10/2026).
+export const AMBIENTE_PERMITIDO = Object.freeze([
+  'HOME', 'PATH', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'LC_CTYPE', 'TZ', 'TMPDIR',
+  'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_RUNTIME_DIR',
+  'CLAUDE_CONFIG_DIR', 'NODE_EXTRA_CA_CERTS',
+]);
+
+export function ambienteDoModelo(ambiente = process.env) {
+  return Object.fromEntries(AMBIENTE_PERMITIDO.filter((k) => ambiente[k] !== undefined).map((k) => [k, ambiente[k]]));
+}
+
+export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
   const opcoes = {
     model: MODELO,
     systemPrompt: PERSONA,
@@ -24,10 +37,17 @@ export async function* conversar(mensagem, sessaoAnterior) {
     includePartialMessages: true,
     maxTurns: 16,
     cwd: import.meta.dirname,
+    env: ambienteDoModelo(ambiente),
+    // Nada de settings, hooks, MCPs ou CLAUDE.md do disco: só o que está aqui.
+    settingSources: [],
+    strictMcpConfig: true,
   };
   if (sessaoAnterior) opcoes.resume = sessaoAnterior;
+  return opcoes;
+}
 
-  const consulta = query({ prompt: mensagem, options: opcoes });
+export async function* conversar(mensagem, sessaoAnterior) {
+  const consulta = query({ prompt: mensagem, options: opcoesDaConversa(sessaoAnterior) });
   let concluida = false;
   try {
     for await (const m of consulta) {

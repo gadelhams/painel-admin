@@ -355,6 +355,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `handoff-plane.test.js`
 - `hangar.test.js` — Hangar: sessões vivas (/proc e transcripts falsos em pasta temporária) e naves sobre backlog falso.
 - `identidades-projeto.test.js`
+- `motor-ambiente.test.js` — Prova que o processo do modelo do C-3PO não recebe segredo do .env nem config do disco (PAINEL-52).
 - `orquestrador-core-v2.test.js`
 - `orquestrador-sso.test.js`
 - `orquestrador-ui.test.js`

@@ -241,7 +241,10 @@ mesmas funções — o motor nunca faz HTTP para o próprio processo.
 Porta da conversa. O catálogo das seis ferramentas só-leitura mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
-aqui.
+aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
+branca (`AMBIENTE_PERMITIDO`: o login em `~/.claude` e o básico; nenhum segredo do `.env`),
+`settingSources: []` e `strictMcpConfig` (nada de settings, hooks, MCPs ou CLAUDE.md do disco).
+Teste: `test/motor-ambiente.test.js`.
 
 Claude Agent SDK (`claude-sonnet-5` fixo), persona do
 C-3PO, quatro ferramentas **só-leitura**: `estado_projetos`,
@@ -406,8 +409,9 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   cache de 60 s do Plane): por projeto, peças = módulos com abertas/em
   andamento/feitas (canceladas fora), próximas fases (cartas abertas na ordem
   do Plane), decisões e o mapa UUID da carta → peça. Decisão = carta aberta
-  com tag; com a label `PRODUTO` vai para a **estação de planejamento**, sem
-  ela é **peça no chão** do módulo (`../../PADROES-BACKLOG.md`). Mais o
+  que espera o dono: label `PRODUTO` vai para a **estação de planejamento**,
+  `ASTARGNE` (ou a legada `DONO`) vira **peça no chão** do módulo; bloqueio por
+  outra carta, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`). Mais o
   inventário da Oficina (`acervo.js`: `PADROES-*`, orientações da raiz,
   skills, `licoes-vivas/`). `GET /api/hangar/sessoes` (`coletores/sessoes.js`,
   feito para poll de 5 s, memo por mtime): processo vivo em `/proc` é só
@@ -566,7 +570,7 @@ vivo tinha; provas e evidências ficaram em
 - **Autenticação do motor**: o login do Claude Code já existente na máquina;
   funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
 - **Só-leitura estrutural** (`motor.js`): `tools: []` + servidor MCP em
-  processo com só as quatro ferramentas de leitura + `allowedTools` nelas +
+  processo com só as seis ferramentas de leitura + `allowedTools` nelas +
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.

@@ -7,7 +7,7 @@ ordem). Quem muda código confere a lista inteira antes do portão.
 1. **Sem login, então porta fechada** — escuta só em `127.0.0.1:7777`; fora dele, só a borda do tailnet restrita ao Windows (06/10/2026), com Host e origem conferidos em `guarda.js`. (§1)
 2. **SSH só-leitura** em `/api/producao/ssh` (`uptime`, `systemctl is-active`, `docker ps`, `df`, `free`; chave `~/.ssh/paroquia-vultr`; só sob demanda, nunca no refresh) — única exceção: o `ssh` de `contas.js` muda só o banco do CadastroUnico, só por `/interno/*`, só pela tabela fechada `OPERACOES`; infra continua SSH manual + `validador-deploy`. (§2)
 3. **O `TOKEN_INTERNO` do CadastroUnico nunca sai do servidor** — não entra no `.env` do painel, não é lido, logado nem devolvido em HTTP; o script remoto monta o cabeçalho lá; "copiar pro `.env` pra simplificar" é não. (§3)
-4. **Ferramentas de IA só-leitura até a fase 3** — `tools: []` + allowlist de quatro ferramentas MCP, inclusive a fila; limitação estrutural. (§4)
+4. **Ferramentas de IA só-leitura até a fase 3** — `tools: []` + allowlist de seis ferramentas MCP; o processo do modelo não herda o `.env`; limitação estrutural. (§4)
 5. **Voz não fura o canon de deploy** — ação que mude estado no `astargne.com` exige `validador-deploy` + validação de premissas. (§5)
 6. **Segredo só no `.env`** — Guest só lê Plane; escritor opcional usa chave própria, projeto único, SSO e confirmação. Nunca no navegador, código, log, commit ou resposta HTTP; a aba Chaves troca valores só por SSO + duas ações, escrita 600, e só nomes voltam. (§6, § chaves.js)
 
