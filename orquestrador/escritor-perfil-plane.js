@@ -1,6 +1,6 @@
 // Grava o comentário do perfil. O texto PERFIL-IA/v1 mora em protocolo-perfil.js.
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 
 export function criarEscritorPerfilPlane({ chave, projetoPermitido, autorEsperado, apiBase = process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095', fetchImpl = fetch }) {
   if (!chave || !UUID.test(projetoPermitido ?? '') || !UUID.test(autorEsperado ?? '')) throw new Error('identidade de escrita restrita ausente');

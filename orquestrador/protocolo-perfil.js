@@ -1,6 +1,6 @@
 // Texto PERFIL-IA/v1. Comentário livre não vira perfil.
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 const MARCADOR = 'PERFIL-IA/v1 ';
 
 function uuid(valor) {

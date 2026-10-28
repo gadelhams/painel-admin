@@ -1,6 +1,6 @@
 // Forma de um comentário do card: texto visível e o cabeçalho ORQ/v1.
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 
 export function validarAlvoCanal(projetoId, cartaId) {
   if (!UUID.test(projetoId ?? '') || !UUID.test(cartaId ?? '')) throw new Error('projeto ou carta inválido');

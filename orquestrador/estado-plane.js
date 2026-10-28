@@ -1,7 +1,7 @@
 // Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e
 // In Progress → Done quando a tentativa de teste é aprovada. Só a identidade técnica do
 // projeto escreve; a versão da carta é conferida antes e o resultado relido depois.
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 const GRUPOS = new Set(['started', 'completed']);
 // Quando o projeto tem mais de um estado no grupo, estes nomes desempatam (os padrões do Plane).
 const PREFERIDOS = { started: ['In Progress', 'Em andamento'], completed: ['Done', 'Concluído', 'Concluido'] };

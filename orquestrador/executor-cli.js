@@ -20,7 +20,7 @@ export { validarScriptNpm, inspecionarComando } from './gramatica-cli.js';
 
 const BINARIOS_PADRAO = Object.freeze({ claude: 'claude', codex: 'codex', git: 'git', npm: 'npm' });
 const LICOES_VIVAS_PADRAO = path.resolve(import.meta.dirname, '../../licoes-vivas');
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 const DIFF_MAX = 200 * 1024;
 
 export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, limites = {}, spawn = spawnPadrao,

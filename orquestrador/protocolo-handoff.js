@@ -1,6 +1,6 @@
 // Texto HANDOFF/v1: valida a entrada, codifica o comentário e lê o card.
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 const MARCADOR = 'HANDOFF/v1 ';
 const PAPEIS = new Set(['orquestracao', 'desenvolvedor', 'validador']);
 const RESULTADOS = new Set(['proposta', 'em_andamento', 'concluido', 'impedido', 'rejeitado']);

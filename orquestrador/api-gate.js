@@ -3,7 +3,7 @@ import { ErroAcesso } from './sso.js';
 import { criarDesafios } from './desafio-duas-acoes.js';
 import { criarApiDuasAcoes } from './api-duas-acoes.js';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 
 export function criarConfirmacoesGate({ servico, agora }) {
   return criarDesafios({

@@ -2,7 +2,7 @@
 
 import { configuracaoVigilia } from './politica.js';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 
 function recusa(mensagem) { const e = new Error(mensagem); e.semEscrita = true; return e; }
 

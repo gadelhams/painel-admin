@@ -1,6 +1,6 @@
 // Grava o comentário de handoff. O texto HANDOFF/v1 mora em protocolo-handoff.js.
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 
 export function criarEscritorHandoffPlane({ chave, projetoPermitido, autorEsperado,
   apiBase = process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095', fetchImpl = fetch }) {

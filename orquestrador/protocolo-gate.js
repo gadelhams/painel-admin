@@ -1,6 +1,6 @@
 // Texto GATE/v1: valida a proposta, codifica o comentário e lê a evidência.
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 export const GATES = new Set(['READY TO DEV', 'READY TO TEST']);
 const MARCADOR = 'GATE/v1 ';
 const escapar = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

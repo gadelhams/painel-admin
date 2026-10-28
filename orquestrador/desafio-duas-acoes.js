@@ -5,7 +5,7 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ErroAcesso } from './sso.js';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID } from './uuid.js';
 const PRAZO_MS = 2 * 60_000;
 const RETENCAO_RESULTADO_MS = 24 * 60 * 60_000;
 const TETO_PENDENTES = 100;
