@@ -53,6 +53,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## coletores/
 
+- `acervo.js` — Acervo compartilhado (a Oficina central do Hangar): padrões, orientações, skills e lições.
+- `acoes-sessao.js` — Uma chamada de ferramenta de sessão de IA → ação segura para o Hangar.
 - `backlog.js` — Monta o backlog de cada projeto: Plane quando há id, markdown no resto.
 - `caminhos.js` — Raiz e portão de caminho.
 - `catalogo.js` — Catálogo estático de relações.
@@ -60,13 +62,18 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `docs.js` — Docs de um projeto do catálogo, já dentro da raiz.
 - `estado-local.js` — Monta o resumo de cada projeto: existência, git e portas.
 - `git-local.js` — Git local de um projeto do catálogo.
+- `hangar.js` — Naves do Hangar: por projeto, peças (módulos) com a contagem de cartas, próximas fases e decisões.
 - `idade-linha.js` — Idade de uma linha no git, pelo log -L.
 - `leitura-md.js` — Lê um markdown e corta no teto.
 - `modeladores.js` — Lista os markdowns de um diretório já autorizado.
 - `parser-backlog.js` — Lê o markdown de backlog.
 - `portas-locais.js` — Escuta TCP em 127.0.0.1.
+- `sessoes.js` — Sessões de IA vivas na máquina (os droids do Hangar): /proc + cauda dos transcripts.
 - `sonda-https.js` — Um GET HTTPS com teto de tempo.
 - `sondas.js` — Quais endereços de produção sondar.
+- `transcript-cauda.js` — Lê só o fim de um transcript .jsonl e devolve as linhas que são JSON.
+- `transcript-claude.js` — Uma sessão do Claude Code a partir da cauda do transcript: última atividade, cwd, fim de turno e ações.
+- `transcript-codex.js` — Uma sessão do Codex a partir da cauda do rollout: última atividade, cwd, fim de turno e ações.
 
 ## contas/
 
@@ -87,6 +94,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## e2e/tests/
 
+- `hangar.spec.mjs`
 - `orquestrador.spec.mjs`
 
 ## http/
@@ -102,6 +110,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-chaves.js` — Inventário e troca de chaves.
 - `rotas-contas.js` — Repassa o Cadastro Único.
 - `rotas-decisoes.js` — Decisões paradas do backlog.
+- `rotas-hangar.js` — Naves e droids do Hangar.
 - `rotas-orq-canal.js` — Comentários do card.
 - `rotas-orq-consumo.js` — Cotas de assinatura.
 - `rotas-orq-despacho.js` — Preparar e confirmar o despacho.
@@ -283,6 +292,20 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `sessao-voz.js` — Quem decide se a frase ouvida vira turno.
 - `voz.js` — Fachada.
 
+## publico/hangar/
+
+- `cena.js` — Cena 3D do Hangar (Three.js r128 vendorizado + bloom): monta as estruturas, reconstrói o que os dados mudam e desenha cada quadro.
+- `conteudo.js` — O que o C-3PO diz e mostra no popup de cada estrutura do Hangar.
+- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes) e sondas (/api/producao) e as aplica ao estado da cena sem perder a animação.
+- `estado.js` — Mapa do estaleiro (posições fixas) e o estado vivo compartilhado entre os módulos do Hangar.
+- `formas.js` — Formas das peças da nave (polígonos vistos de cima, nariz para +x) e a escolha da forma de cada módulo.
+- `hangar.js` — Entrada do Hangar: liga dados, simulação, cena e interface, e pausa tudo quando a aba sai de vista.
+- `interface.js` — Popup do C-3PO ancorado na cena, painéis laterais (droids, projetos, Oficina) e os botões do Hangar.
+- `narrador.js` — Narrador do Hangar: fila de falas prontas do C-3PO, balão digitado e diário.
+- `rotulos.js` — Rótulos HTML sobre a cena (docas, vagas, droids, bancadas, Oficina), projetados do 3D para a tela a cada quadro.
+- `simulacao.js` — Movimento do Hangar: sessões reais viram droids, cada ação nova vira uma ida (bancada, nave ou Oficina), naves vão e voltam das docas.
+- `util.js` — Utilidades do Hangar: curvas de movimento, sorteio com semente, escape de HTML e atalhos de DOM.
+
 ## publico/orquestracao/
 
 - `consumo.js` — Medidores de consumo.
@@ -330,6 +353,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `gate-plane.test.js`
 - `guarda.test.js`
 - `handoff-plane.test.js`
+- `hangar.test.js` — Hangar: sessões vivas (/proc e transcripts falsos em pasta temporária) e naves sobre backlog falso.
 - `identidades-projeto.test.js`
 - `orquestrador-core-v2.test.js`
 - `orquestrador-sso.test.js`

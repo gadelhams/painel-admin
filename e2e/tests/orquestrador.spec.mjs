@@ -83,6 +83,9 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoModelosMs = 0, opcoe
       if (url.pathname === '/api/backlog') return responder({ projetos: [] });
       if (url.pathname === '/api/decisoes') return responder({ decisoes: [] });
       if (url.pathname === '/api/producao') return responder({ sondas: [] });
+      // Hangar (28/10/2026) é a entrada: a raiz lê naves e droids ao abrir.
+      if (url.pathname === '/api/hangar') return responder({ naves: [], acervo: [] });
+      if (url.pathname === '/api/hangar/sessoes') return responder({ em: VERSAO, ias: [], sessoes: [] });
       if (url.pathname === '/api/tts') return responder({ disponivel: false, motivo: 'fixture' });
       if (url.pathname === '/api/contas/apps') return responder({ apps: [] });
       if (url.pathname === '/api/contas/usuarios') return responder({ usuarios: [] });
@@ -330,6 +333,7 @@ test('SSO simulado só prepara: confirmação segue uma segunda ação', async (
 test('cinco abas abrem sem chamada de escrita', async ({ page }) => {
   const audit = await fixtures(page);
   await page.goto('/');
+  await expect(page.locator('#aba-hangar')).toBeVisible();
   for (const nome of ['Projetos', 'Backlog', 'Decisões', 'Orquestração', 'Contas']) {
     await page.locator('.barra-abas button.aba').filter({ hasText: nome }).click();
     const aba = { Projetos: 'projetos', Backlog: 'backlog', Decisões: 'decisoes',

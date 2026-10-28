@@ -11,31 +11,29 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   origem conferidos em `guarda.js`.
 - Backlog lido do **Plane** (`127.0.0.1:8095`, Guest "painel", só leitura):
   13 projetos no Plane, 15 no catálogo.
-- Abas: **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves ·
-  Docs** (25/10: docs por projeto + alinhamento código ⇄ Plane ⇄ painel).
-  Chaves (24/10): segredos por projeto, só nomes, troca por SSO, servidor
-  ligado (validador, 2ª rodada). Decisões abre com o bloco "Astargne". A
-  Orquestração lê a fila, pré-checa gates, registra perfil/gate/handoff com
-  identidade técnica (CKBL e PLAYER) só por SSO + confirmação em duas ações,
-  e mostra em leitura o canal legado do SupervisorHandoff (doc 59, os dois
-  configs) — [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
-- Portão de despacho **desligado**: `ORQ_EXECUCAO_HABILITADA` ausente do
-  `.env`. Executor real provado com CLIs falsas; só nasce com a variável.
-  **Vigília**: varredura automática por projeto, todas desligadas; só o
-  PLAYER declara o bloco. 24/10: 13 projetos, 418 cartas, PLAYER-38 única elegível.
+- **Hangar** (28/10) é a entrada: naves = projetos (peça = módulo do Plane),
+  droids = sessões Claude/Codex vivas (`/proc` + transcripts, só ferramenta e
+  arquivo), C-3PO narrando — [arquitetura.md](arquitetura.md) § Hangar.
+- Abas: Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs.
+  Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
+  identidade técnica (CKBL, PLAYER) por SSO + duas ações; canal legado em
+  leitura — [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
+- Despacho **desligado** (`ORQ_EXECUCAO_HABILITADA` ausente); executor
+  provado com CLIs falsas. Vigília: todas desligadas; só o PLAYER declara.
 
 ## O que falta
 
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo de assinatura** (PAINEL-40): sem fonte verificável, "indisponível".
-- **Fase 3 do C-3PO** (ações): motor só-leitura, sem suíte (LLM sempre mock).
-  Voz (25/10): xAI se o navegador não reconhece; ligação sem gatilho, falar por cima corta.
+- **Fase 3 do C-3PO** (ações): motor só-leitura. Voz: xAI se o navegador não
+  reconhece; ligação sem gatilho, falar por cima corta.
+- **Hangar**: encomenda de nave é só texto de pedido (falta pedido por SSO);
+  CSS ainda monolítico (`estilo.css`); Grok sem CLI.
 
 ## Portão e repositório
 
-- `npm test`: 170 testes + `check-docs` 0 erros (28/10); Playwright 11/11.
-- Refatoração de 27–28/10: um módulo por responsabilidade (`http/`,
-  `coletores/`, `chaves/`, `orquestrador/`, `publico/`…); os arquivos antigos
-  são portas. Mapa gerado em `mapa.md`; o `npm test` o confere.
+- `npm test`: 179 testes + `check-docs` 0 erros (28/10); Playwright 15/15.
+- Um módulo por responsabilidade (27–28/10); mapa gerado em `mapa.md`,
+  conferido no `npm test`.
 - Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` no GitHub.

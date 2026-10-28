@@ -4,6 +4,7 @@ export const TAGS_CANONICAS = ['ASTARGNE', 'EMPÍRICA', 'BLOQUEADA', 'SEM ESCOPO
 const LEGADO = { DONO: 'ASTARGNE' };
 const RE_TAG = /\((ASTARGNE|DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]{0,200})\)/gu;
 const VARREDURA_MAX = 4000;
+export const ROTULO_PRODUTO = 'PRODUTO';
 
 function tagsDaIssue(issue) {
   const rotulos = new Set(issue.labels.nodes.map((l) => LEGADO[l.name] ?? l.name));
@@ -29,7 +30,13 @@ export function montarFeatures({ projetos, milestones: todasMilestones, issues }
     texto: i.title,
     estado: i.state.type === 'completed' ? 'pronto' : 'aberto',
     estadoRastreador: i.state.name,
+    // O Hangar separa "em andamento" de "em aberto"; `estado` continua binário para as outras abas.
+    grupoEstado: i.state.type,
+    // Label PRODUTO = decisão de direção do produto (estação de planejamento), não a que trava o módulo.
+    produto: i.labels.nodes.some((l) => l.name === ROTULO_PRODUTO),
     identificador: i.identifier,
+    // O Hangar casa a carta tocada pelo MCP `plane` (que só traz o UUID) com o módulo dela.
+    idRastreador: i.id,
     url: i.url,
     criadoEm: i.createdAt,
     tags: tagsDaIssue(i),

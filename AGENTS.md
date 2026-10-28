@@ -16,7 +16,7 @@ Leitura comum, sempre: `docs/current.md` (estado real, datado) e
 | Tarefa | Contrato |
 |---|---|
 | Coletor, rota HTTP ou catálogo (`coletores/`, `http/`, `projetos.js`, `relacoes.js`) | `docs/arquitetura.md` § servidor.js / coletores.js / projetos.js / relacoes.js; portas e mapa em `../../PORTAS.md` e `../CLAUDE.md` |
-| Front (`publico/`): abas, console, tema | `docs/arquitetura.md` § publico/ |
+| Front (`publico/`): abas, console, tema, Hangar | `docs/arquitetura.md` § publico/ e § Hangar |
 | Aba Contas / CadastroUnico (`contas/`, `publico/contas*.js`) | `docs/arquitetura.md` § contas.js + `../../PLANO-CADASTRO-UNICO.md` ("Retomada"); relatório da fatia em `docs/RELATORIO-F5-CONTAS.md` |
 | Backlog / Plane (`plane/`, `coletores/backlog.js`, `publico/{backlog,decisoes}*.js`) | `docs/arquitetura.md` § plane.js + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
 | Aba Orquestração (`orquestrador/`, `http/rotas-orq-*.js`, `publico/orquestracao/`, contrato `.orquestrador.json`) | `docs/orquestracao-v2-integracao.md` + `../ORQUESTRADOR-PROJETOS.md`; escrita só por identidade técnica com SSO e confirmação; despacho desligado sem `ORQ_EXECUCAO_HABILITADA` (variáveis em `docs/operacao.md`) |

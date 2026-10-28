@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="protocolo.css">
   <link rel="stylesheet" href="orquestrador.css?v=20261022-3campos">
+  <link rel="stylesheet" href="hangar.css">
   <script src="vendor/mermaid.min.js"></script>
 </head>
 <body>
@@ -47,7 +48,8 @@
   </header>
 
   <nav class="barra-abas">
-    <button class="aba ativa" data-aba="projetos" type="button">Projetos</button>
+    <button class="aba ativa" data-aba="hangar" type="button">Hangar</button>
+    <button class="aba" data-aba="projetos" type="button">Projetos</button>
     <button class="aba" data-aba="backlog" type="button">Backlog</button>
     <button class="aba" data-aba="decisoes" type="button">Decisões <span class="selo-contagem" id="selo-decisoes">—</span></button>
     <button class="aba" data-aba="orquestracao" type="button">Orquestração</button>
@@ -58,12 +60,114 @@
   </nav>
 
   <main>
+    <!-- Hangar (28/10/2026): a entrada do painel. Naves = projetos do
+         catálogo (peça = módulo do Plane), droids = sessões de IA vivas nesta
+         máquina, C-3PO narrando com falas prontas. Módulos em publico/hangar/;
+         dados de /api/hangar e /api/hangar/sessoes, só leitura. -->
+    <section id="aba-hangar" class="hg" aria-label="Hangar: projetos como naves e sessões de IA como droids">
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <radialGradient id="hg-ouro" cx="40%" cy="30%" r="75%"><stop offset="0" stop-color="#ffe7a3"/><stop offset=".55" stop-color="#d39a2c"/><stop offset="1" stop-color="#6b4512"/></radialGradient>
+          <radialGradient id="hg-olhoG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffbe0"/><stop offset=".6" stop-color="#ffd25a"/><stop offset="1" stop-color="#b9740f"/></radialGradient>
+        </defs>
+        <symbol id="hg-c3po" viewBox="0 0 64 64">
+          <rect x="23" y="50" width="18" height="12" fill="#8a5c1a"/>
+          <path d="M24 52h16M24 56h16M24 60h16" stroke="#5a3a0e" stroke-width="1.4"/>
+          <ellipse cx="32" cy="29" rx="17" ry="21" fill="url(#hg-ouro)"/>
+          <path d="M15 24c4-3 30-3 34 0" stroke="#7a4f14" stroke-width="2" fill="none"/>
+          <circle cx="25" cy="29" r="4.6" fill="url(#hg-olhoG)"><animate attributeName="r" values="4.6;4.6;0.6;4.6" keyTimes="0;.92;.96;1" dur="5s" repeatCount="indefinite"/></circle>
+          <circle cx="39" cy="29" r="4.6" fill="url(#hg-olhoG)"><animate attributeName="r" values="4.6;4.6;0.6;4.6" keyTimes="0;.92;.96;1" dur="5s" repeatCount="indefinite"/></circle>
+          <rect x="27" y="40" width="10" height="4" rx="1" fill="#3b2608"/>
+          <path d="M28 41.4h8M28 42.8h8" stroke="#8a5c1a" stroke-width=".6"/>
+          <path d="M32 9v6" stroke="#7a4f14" stroke-width="1.4"/>
+        </symbol>
+      </svg>
+      <div class="hg-app">
+        <header class="hg-topo">
+          <div class="hg-marca"><h2>Hangar <span>·</span> estaleiro</h2><span class="hg-olho">naves = projetos · droids = sessões de IA vivas · só leitura</span></div>
+          <div class="hg-acoes">
+            <button type="button" class="hg-btn" id="hg-geral" aria-pressed="true" style="--c:var(--hg-ciano)">Visão geral</button>
+            <button type="button" class="hg-btn" id="hg-btn-patio" aria-pressed="false" style="--c:var(--hg-patio)">Pátio do Plane</button>
+            <button type="button" class="hg-btn" id="hg-btn-oficina" aria-pressed="false" style="--c:var(--hg-oficina)">Oficina</button>
+            <button type="button" class="hg-btn hg-ajuda" id="hg-abrir-ajuda" aria-label="Legenda e comandos">?</button>
+          </div>
+        </header>
+        <aside class="hg-lado esq" aria-label="Droids em serviço">
+          <section class="hg-bloco"><h2>Droids em serviço <small id="hg-conta-droids"></small></h2><div class="hg-droids" id="hg-droids"></div></section>
+          <section class="hg-bloco"><h2>Fábricas · norte</h2><ul class="hg-mini" id="hg-fabricas"></ul></section>
+        </aside>
+        <div class="hg-palco" id="hg-palco" aria-label="Estaleiro 3D: docas no centro, fábricas de droids ao norte, Oficina central a leste e pátio do Plane a oeste">
+          <div class="hg-camada" id="hg-camada"><div class="hg-aviso" id="hg-aviso">Carregando o motor 3D…</div></div>
+          <div class="hg-rotulos" id="hg-rotulos"></div>
+          <svg class="hg-rosa" viewBox="-30 -30 60 60" aria-hidden="true">
+            <g id="hg-rosa-g" fill="none" stroke="#8299b8" stroke-width="1.2">
+              <circle r="20" stroke-opacity=".5"/>
+              <path d="M0 -20 L4 0 L0 20 L-4 0 Z" fill="rgba(130,153,184,.15)"/>
+              <path d="M0 -20 L4 0 L-4 0 Z" fill="#5cf2ff" stroke="#5cf2ff"/>
+              <text y="-23" text-anchor="middle" fill="#5cf2ff" stroke="none" font-size="9" font-family="IBM Plex Mono, monospace">N</text>
+            </g>
+          </svg>
+          <span class="hg-mira" id="hg-mira" hidden></span>
+          <section class="hg-holo" id="hg-holo" hidden role="dialog" aria-labelledby="hg-holo-titulo">
+            <div class="hg-holo-topo">
+              <a href="/c3po/" title="Conversar com o C-3PO"><svg class="hg-retrato" aria-hidden="true"><use href="#hg-c3po"/></svg></a>
+              <div><span class="hg-holo-olho" id="hg-holo-olho"></span><h3 id="hg-holo-titulo"></h3></div>
+              <button type="button" class="hg-fechar" id="hg-holo-fechar" aria-label="Fechar">×</button>
+            </div>
+            <p class="hg-holo-fala" id="hg-holo-fala"></p>
+            <div class="hg-holo-corpo" id="hg-holo-corpo"></div>
+          </section>
+          <div class="hg-narrador" id="hg-narrador" aria-live="polite">
+            <a href="/c3po/" class="hg-retrato-link" title="Conversar com o C-3PO"><svg class="hg-retrato" aria-hidden="true"><use href="#hg-c3po"/></svg></a>
+            <div class="hg-balao"><b>C-3PO · relações humano-droid</b><p id="hg-fala"></p></div>
+          </div>
+          <span class="hg-dica">esquerdo arrasta · direito gira · roda aproxima · clique em qualquer estrutura</span>
+        </div>
+        <aside class="hg-lado dir" aria-label="Projetos, Oficina e diário">
+          <section class="hg-bloco"><h2>Projetos <small id="hg-conta-proj"></small></h2><div id="hg-projetos"></div></section>
+          <section class="hg-bloco"><h2>Oficina central <button type="button" class="hg-link" id="hg-oficina-todos" style="--cor:var(--hg-oficina)">ver tudo</button></h2><ul class="hg-mini" id="hg-oficina-lista"></ul></section>
+          <section class="hg-bloco"><h2>Diário do C-3PO</h2><ul class="hg-diario" id="hg-diario"></ul></section>
+        </aside>
+      </div>
+      <dialog class="hg-ajuda-dlg" id="hg-ajuda" aria-labelledby="hg-ajuda-titulo">
+        <div class="hg-ajuda-topo"><h2 id="hg-ajuda-titulo">Como ler o Hangar</h2><button type="button" class="hg-fechar" id="hg-fechar-ajuda" aria-label="Fechar">×</button></div>
+        <div class="hg-mapa-mini" aria-label="Mapa do estaleiro">
+          <div class="n" style="--c:#ff9d5c">norte · fábricas de droids</div>
+          <div class="w" style="--c:var(--hg-patio)">oeste · pátio do Plane</div>
+          <div class="c" style="--c:var(--hg-ciano)">centro · docas (naves em trabalho)</div>
+          <div class="e" style="--c:var(--hg-oficina)">leste · Oficina central</div>
+        </div>
+        <dl class="hg-legenda">
+          <div><i style="--cor:#ff9d5c"></i><dt>Fábricas de droids</dt><dd>Uma por IA. Cada droid é uma sessão de Claude Code ou Codex viva nesta máquina (ativa nos últimos 15 minutos); quando a sessão some, ele volta e é desmontado. Sem a CLI rodando, a fábrica fica offline.</dd></div>
+          <div><i style="--cor:var(--hg-ciano)"></i><dt>Docas</dt><dd>Quatro, no centro: só as naves em que algum droid trabalha agora. A cor da doca é a do projeto.</dd></div>
+          <div><i style="--cor:var(--hg-patio)"></i><dt>Pátio do Plane</dt><dd>Todos os projetos do catálogo, com a pilha de cartas abertas, em andamento e feitas. A nave é rebocada para uma doca quando um droid começa a trabalhar nela.</dd></div>
+          <div><i class="tracejado" style="--cor:var(--hg-ouro)"></i><dt>Berço de encomendas</dt><dd>A próxima vaga do pátio. Monta o pedido de um projeto novo para o orquestrador; o painel só lê o Plane.</dd></div>
+          <div><i style="--cor:var(--hg-oficina)"></i><dt>Oficina central</dt><dd>Padrões, orientações, skills e lições vivas. O droid vai até lá quando a sessão chama uma skill ou lê um desses arquivos.</dd></div>
+          <div><i style="--cor:var(--hg-cartao)"></i><dt>Caixa de ferramentas</dt><dd>A carta do Plane que a sessão tocou pelo MCP.</dd></div>
+          <div><i style="--cor:var(--hg-editar)"></i><dt>Fábrica de peças</dt><dd>Arquivo editado. O droid leva a peça para o módulo da carta.</dd></div>
+          <div><i style="--cor:var(--hg-testar)"></i><dt>Banco de provas</dt><dd>Teste rodado (npm, pytest…), com feixe de varredura sobre a nave.</dd></div>
+          <div><i class="tracejado" style="--cor:var(--hg-alerta)"></i><dt>Peça no chão</dt><dd>Decisão que trava um módulo: sem ela, a peça não entra na nave.</dd></div>
+          <div><i style="--cor:var(--hg-ouro)"></i><dt>Estação de planejamento</dt><dd>Decisões de produto, que mudam o rumo do projeto inteiro. No Plane, a carta leva a label PRODUTO.</dd></div>
+          <div><i style="--cor:var(--hg-falha)"></i><dt>Contorno vermelho</dt><dd>A sonda de produção do projeto não responde.</dd></div>
+        </dl>
+        <h3>Comandos</h3>
+        <dl class="hg-teclas">
+          <dt>botão esquerdo</dt><dd>arrasta o estaleiro</dd>
+          <dt>botão direito</dt><dd>gira a câmera</dd>
+          <dt>roda</dt><dd>aproxima e afasta</dd>
+          <dt>clique</dt><dd>abre o C-3PO com os detalhes</dd>
+          <dt>Esc</dt><dd>fecha o popup</dd>
+        </dl>
+        <p>De cada sessão, o Hangar mostra só o nome da ferramenta, o arquivo relativo ao projeto, o programa do comando e a carta do Plane. Nunca texto de prompt, resposta ou argumento. O preenchimento de cada peça é a fração de cartas concluídas do módulo no Plane; os droids não mudam esse número.</p>
+      </dialog>
+    </section>
+
     <!-- Aba Projetos (21/08/2026): tira de telemetria (uma célula por
          projeto do catálogo) + painel do projeto focado — não é mais duas
          views separadas (grade vs. página de projeto). #/projeto/<pasta> e
          #/projetos (sem parâmetro, mostra a última seleção ou a primeira do
          catálogo) caem aqui dentro; só o painel focado muda. -->
-    <div id="aba-projetos">
+    <div id="aba-projetos" hidden>
       <div class="protocolo-grade">
         <section class="coluna-projetos" aria-label="Projetos">
           <h2 id="rotulo-projetos">PROJETOS</h2>
@@ -270,6 +374,7 @@
   <script src="orquestracao/vigilia-confirmacao.js?v=20261027-modulos"></script>
   <script src="orquestracao/vigilia.js?v=20261027-modulos"></script>
   <script src="orquestracao/legado.js?v=20261027-modulos"></script>
+  <script type="module" src="hangar/hangar.js"></script>
   <script src="orquestracao/consumo.js?v=20261027-modulos"></script>
   <script src="orquestracao/voz-carta.js?v=20261027-modulos"></script>
   <script src="orquestrador.js?v=20261027-modulos"></script>

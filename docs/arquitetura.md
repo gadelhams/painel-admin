@@ -39,13 +39,13 @@ em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
 
 ### servidor.js
 
-O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, modelos, handoff, gate, despacho, consumo, vigília, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, modelos, handoff, gate, despacho, consumo, vigília, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
 enviados ao remoto de UM projeto — só sob demanda, mais pesado que o
 resumo que os cards já usam; 20/08/2026), `/api/producao`,
-`/api/producao/ssh`, `/api/backlog`, `/api/decisoes` (decisões derivadas
+`/api/producao/ssh`, `/api/backlog`, `/api/hangar` e `/api/hangar/sessoes` (Hangar, § abaixo), `/api/decisoes` (decisões derivadas
 do backlog; idade = criação do work item no Plane, ou `git log -L` no
 markdown do repo congelado, pesada — sob demanda, nunca no polling de 60s;
 aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
@@ -226,7 +226,7 @@ entrar nele como Guest.**
 
 ### coletores.js
 
-Porta única. A implementação mora em `coletores/`: `caminhos.js` (raiz e portão), `git-local.js` (git), `portas-locais.js` (escuta local), `estado-local.js` (o resumo dos dois), `leitura-md.js` (corte), `modeladores.js` (lista), `docs.js` (o projeto), `sonda-https.js` (o GET), `sondas.js` (o catálogo de produção), `parser-backlog.js` (markdown), `backlog.js` (montagem Plane/markdown), `idade-linha.js` (idade no git), `decisoes.js` (a lista) e `catalogo.js`. Coletores de estado (git, portas, sondas de produção,
+Porta única. A implementação mora em `coletores/`: `caminhos.js` (raiz e portão), `git-local.js` (git), `portas-locais.js` (escuta local), `estado-local.js` (o resumo dos dois), `leitura-md.js` (corte), `modeladores.js` (lista), `docs.js` (o projeto), `sonda-https.js` (o GET), `sondas.js` (o catálogo de produção), `parser-backlog.js` (markdown), `backlog.js` (montagem Plane/markdown), `idade-linha.js` (idade no git), `decisoes.js` (a lista), `catalogo.js` e os do Hangar (`hangar.js`, `sessoes.js`, `acervo.js`, `acoes-sessao.js`, `transcript-{cauda,claude,codex}.js`, § Hangar). Coletores de estado (git, portas, sondas de produção,
 backlog, **leitura segura de docs modeladores por projeto**),
 **compartilhados**. `RAIZ` é `~/Work` (dois níveis acima) e, desde a
 reorganização de 30/09/2026, todo caminho passa por `dirDoProjeto()` =
@@ -291,13 +291,13 @@ Dashboard vanilla, reskin **"Industry HUD"** desde 21/08/2026
 declarados como finais no handoff da época — Barlow/Barlow Condensed/IBM Plex Mono
 vendorizados em `publico/vendor/fonts/`, mesmo princípio zero-CDN do
 Mermaid). Em 12/10/2026, `publico/protocolo.css` sobrepõe o visual das abas
-segundo o protótipo do dono, sem mudar lógica. Seis abas — **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves** (esta desde 24/10/2026) — mais
+segundo o protótipo do dono, sem mudar lógica. Desde 28/10/2026 a entrada (`/`, `#/hangar`) é o **Hangar** (§ abaixo); seguem as abas — **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs** — mais
 o console do C-3PO como overlay por ⌘K/Ctrl+K:
 
 #### app.js
 
 O arquivo só guarda o tema e o relógio de sincronia. O DOM e o markdown estão em `dom.js`, o estado compartilhado em `estado-painel.js`, a tira em `telemetria.js` (nome curto em `nomes-curtos.js`, célula em `tira-telemetria.js`, bloqueios em `palco-bloqueios.js`, placar em `placar-cabecalho.js`), o console em `console-palco.js`, `console-digest.js`, `console-decisao.js` e `console-c3po.js`, o hash em `roteador-painel.js` e as buscas em `carga.js`. Núcleo compartilhado: roteador por hash
-(`#/projetos`·`#/backlog`·`#/decisoes`·`#/orquestracao`·`#/contas`·`#/projeto/<pasta>`), estado
+(`#/hangar` (padrão)·`#/projetos`·`#/backlog`·`#/decisoes`·`#/orquestracao`·`#/contas`·`#/projeto/<pasta>`), estado
 `projetoSelecionado` **compartilhado entre as abas Projetos e Backlog**
 (a mesma variável que a tira de telemetria, o outline do Backlog e a
 coluna de contexto do painel de projeto leem — `decisoes.js` e
@@ -393,9 +393,52 @@ pendentes. Carrega ao ENTRAR na aba (`rotear`), sem polling.
 
 Fora da nav (ver acima), arquivos intactos.
 
+#### Hangar (`hangar/`, `hangar.css`, `vendor/three/`)
+
+Tela de entrada desde 28/10/2026 (plano em `~/.claude/plans/lovely-dancing-hamster.md`,
+estilo holo-3D escolhido pelo dono no mock v7). Mapa fixo: docas no centro (4,
+só naves em trabalho), fábricas de droids ao norte (Claude, Codex, Grok),
+Oficina central a leste (acervo compartilhado), pátio do Plane a oeste (uma vaga
+por projeto do catálogo). **Só leitura**: nenhuma rota de escrita; a
+encomenda de nave nova só monta o texto de um pedido para o orquestrador.
+
+- **Dados.** `GET /api/hangar` (`coletores/hangar.js` sobre `lerBacklog`,
+  cache de 60 s do Plane): por projeto, peças = módulos com abertas/em
+  andamento/feitas (canceladas fora), próximas fases (cartas abertas na ordem
+  do Plane), decisões e o mapa UUID da carta → peça. Decisão = carta aberta
+  com tag; com a label `PRODUTO` vai para a **estação de planejamento**, sem
+  ela é **peça no chão** do módulo (`../../PADROES-BACKLOG.md`). Mais o
+  inventário da Oficina (`acervo.js`: `PADROES-*`, orientações da raiz,
+  skills, `licoes-vivas/`). `GET /api/hangar/sessoes` (`coletores/sessoes.js`,
+  feito para poll de 5 s, memo por mtime): processo vivo em `/proc` é só
+  portão por IA (o VS Code abre a CLI na pasta-mãe e o app-server do Codex
+  hospeda várias conversas); a sessão é o transcript (`~/.claude/projects`,
+  `~/.codex/sessions`) com evento nos últimos 15 min — o mtime não basta,
+  a CLI regrava metadados sem timestamp. Projeto = último caminho tocado
+  que cai num projeto do catálogo, senão o `cwd`; MCP `plane` dá a carta
+  pelo `issue_id`. Sub-sessão "guardian" do Codex e qualquer coisa em
+  `Exitlag/` ficam fora.
+- **Privacidade (regra 5).** O painel abre pelo tailnet e o transcript pode
+  ter segredo colado: do transcript só saem nome de ferramenta, caminho
+  relativo ao projeto, nome do programa (sem argumento) e UUID de carta —
+  nunca prompt, resposta ou argumento (`acoes-sessao.js`; prova em
+  `test/hangar.test.js` com um segredo no prompt e no comando). Título do
+  Plane passa por `esc()` antes de virar HTML.
+- **Front.** Módulos ES (escopo próprio, sem colidir com os globais dos
+  scripts clássicos): `dados.js` (busca), `simulacao.js` (sessão → droid,
+  ação nova → ida à bancada, à nave ou à Oficina; docas rebocam a nave em
+  demanda e a devolvem 45 s depois do último droid), `cena.js` (Three r128
+  vendorizado + bloom; sem WebGL, aviso e painéis seguem), `rotulos.js`,
+  `conteudo.js` (popups do C-3PO), `interface.js`, `narrador.js` (falas
+  prontas, sem LLM; o retrato abre `/c3po/`), `formas.js` (6 peças de corpo,
+  6 acessórios e contêineres do 13º módulo em diante). O preenchimento da
+  peça é sempre a fração do Plane; os droids não mexem nele. Fora da aba ou
+  com a janela oculta, poll e animação param. `prefers-reduced-motion`
+  desliga os voos.
+
 #### vendor/mermaid.min.js
 
-`publico/vendor/mermaid.min.js` — Mermaid vendorizado, reaproveitado
+`publico/vendor/mermaid.min.js` — Mermaid vendorizado (o Three do Hangar mora em `vendor/three/`, r128 com `SHA256SUMS`), reaproveitado
 pelos diagramas dos docs e pela Arquitetura do painel de projeto.
 
 #### Console do C-3PO

@@ -5,6 +5,7 @@ import { RotasProducao } from './rotas-producao.js';
 import { RotasSsh } from './rotas-ssh.js';
 import { RotasBacklog } from './rotas-backlog.js';
 import { RotasDecisoes } from './rotas-decisoes.js';
+import { RotasHangar } from './rotas-hangar.js';
 import { RotasRelacoes } from './rotas-relacoes.js';
 import { RotasContas } from './rotas-contas.js';
 import { RedirecionamentoC3po } from './redirecionamento-c3po.js';
@@ -17,6 +18,7 @@ export class RotasPainel {
       new RotasSsh({ resposta, ssh }),
       new RotasBacklog({ resposta, coletores }),
       new RotasDecisoes({ resposta, coletores }),
+      new RotasHangar({ resposta, coletores }),
       new RotasRelacoes({ resposta, coletores }),
       new RotasContas({ resposta, contas }),
       new RedirecionamentoC3po(),

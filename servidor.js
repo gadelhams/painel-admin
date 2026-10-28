@@ -7,7 +7,7 @@
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog } from './coletores.js';
+import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes } from './coletores.js';
 import { conversar } from './motor.js';
 import { criarClienteContas, criarManipuladorContas } from './contas.js';
 import { criarGuarda } from './guarda.js';
@@ -151,7 +151,7 @@ const roteador = new RoteadorPainel({
   voz: new RotasVoz({ resposta, proxyEleven }),
   painel: new RotasPainel({
     resposta,
-    coletores: { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog },
+    coletores: { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes },
     contas: manipularContas,
     ssh: new LeituraSsh({ chave: CHAVE_SSH }),
   }),
