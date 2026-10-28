@@ -35,7 +35,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 ## Portão e repositório
 
 - `npm test`: 168 testes + `check-docs` 0 erros (28/10); Playwright 11/11.
-- Refatoração de 27–28/10: módulos por responsabilidade (`http/`,
-  `coletores/`, `chaves/`, `orquestrador/*`, `publico/*`…); os arquivos
-  antigos só reexportam. Mapa em `arquitetura.md`.
+- Refatoração de 27–28/10: um módulo por responsabilidade (`http/`,
+  `coletores/`, `chaves/`, `orquestrador/`, `publico/`…); os arquivos antigos
+  são portas. Mapa gerado em `mapa.md`; o `npm test` o confere.
 - Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` no GitHub.

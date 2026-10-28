@@ -1,3 +1,4 @@
+// Duas ações do despacho: preparar valida e guarda o desafio; confirmar inicia a tentativa real. A sessão que preparou é a que confirma; sem fallback de modelo.
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ErroAcesso } from './sso.js';
 import { pendentes } from './confirmacoes.js';

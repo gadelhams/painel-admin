@@ -1,3 +1,4 @@
+// Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário. A sessão que preparou é a que confirma; texto não autoriza execução.
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ErroAcesso } from './sso.js';
 import { pendentes } from './confirmacoes.js';

@@ -1,3 +1,4 @@
+// Fronteira HTTP de /api/orquestracao/modelos/{preparar,confirmar}. Autoriza de novo em cada pedido; o payload vem do desafio guardado no servidor.
 import { ErroAcesso } from './sso.js';
 
 // Tabela mínima: não há rota que aceite chave de idempotência, HTML ou ação

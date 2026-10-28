@@ -1,3 +1,4 @@
+// Duas ações do perfil de modelos: preparar valida e guarda o desafio; confirmar grava no card. Só memória: reiniciar cancela, nunca confirma.
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ErroAcesso } from './sso.js';
 

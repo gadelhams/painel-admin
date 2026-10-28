@@ -1,3 +1,4 @@
+// Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta. A sessão que preparou é a que confirma; a marca não inicia execução.
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { ErroAcesso } from './sso.js';
 import { pendentes } from './confirmacoes.js';

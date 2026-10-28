@@ -9,19 +9,21 @@ Proprietário: Astargne.
 ## Leia por tarefa
 
 Leitura comum, sempre: `docs/current.md` (estado real, datado) e
-`docs/invariants.md` (regras numeradas). Depois **só** a linha da tarefa:
+`docs/invariants.md` (regras numeradas). **Mudança simples:** `docs/mapa.md`
+(gerado; cabeçalho = o que faz e o que não faz) → só esse módulo e o
+`test/<área>.test.js`. Desenho ou mecanismo: a linha da tarefa:
 
 | Tarefa | Contrato |
 |---|---|
-| Mexer em coletor, rota HTTP ou catálogo (`coletores.js`, `servidor.js`, `projetos.js`, `relacoes.js`) | `docs/arquitetura.md` § servidor.js / coletores.js / projetos.js / relacoes.js; portas e mapa em `../../PORTAS.md` e `../CLAUDE.md` |
+| Coletor, rota HTTP ou catálogo (`coletores/`, `http/`, `projetos.js`, `relacoes.js`) | `docs/arquitetura.md` § servidor.js / coletores.js / projetos.js / relacoes.js; portas e mapa em `../../PORTAS.md` e `../CLAUDE.md` |
 | Front (`publico/`): abas, console, tema | `docs/arquitetura.md` § publico/ |
-| Aba Contas / CadastroUnico (`contas.js`, `publico/contas.js`) | `docs/arquitetura.md` § contas.js + `../../PLANO-CADASTRO-UNICO.md` ("Retomada"); relatório da fatia em `docs/RELATORIO-F5-CONTAS.md` |
-| Backlog / Plane (`plane.js`, aba Backlog, aba Decisões) | `docs/arquitetura.md` § plane.js + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
-| Aba Orquestração (`orquestrador/`, `publico/orquestrador.js`, contrato `.orquestrador.json`, fila, lease, gate/handoff/perfil, executor, canal legado) | `docs/orquestracao-v2-integracao.md` + `../ORQUESTRADOR-PROJETOS.md`; escrita só por identidade técnica com SSO e confirmação; despacho desligado sem `ORQ_EXECUCAO_HABILITADA` (variáveis em `docs/operacao.md`) |
-| Aba Chaves (`chaves.js`, `publico/chaves.js`) e bloco "Astargne" da aba Decisões (`publico/decisoes.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
-| Aba Docs e rotina de alinhamento (`alinhamento.js`, `publico/docs.js`) | `docs/arquitetura.md` § alinhamento.js; regra de compactação em `../../PADROES-BACKLOG.md` |
-| Aba Backlog — desenho e história (parser do doc 39) | `docs/02_ABA_BACKLOG.md` |
-| Motor, persona ou voz do C-3PO (`motor.js`, `publico/severino/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § Severino por voz |
+| Aba Contas / CadastroUnico (`contas/`, `publico/contas*.js`) | `docs/arquitetura.md` § contas.js + `../../PLANO-CADASTRO-UNICO.md` ("Retomada"); relatório da fatia em `docs/RELATORIO-F5-CONTAS.md` |
+| Backlog / Plane (`plane/`, `coletores/backlog.js`, `publico/{backlog,decisoes}*.js`) | `docs/arquitetura.md` § plane.js + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
+| Aba Orquestração (`orquestrador/`, `http/rotas-orq-*.js`, `publico/orquestracao/`, contrato `.orquestrador.json`) | `docs/orquestracao-v2-integracao.md` + `../ORQUESTRADOR-PROJETOS.md`; escrita só por identidade técnica com SSO e confirmação; despacho desligado sem `ORQ_EXECUCAO_HABILITADA` (variáveis em `docs/operacao.md`) |
+| Aba Chaves (`chaves/`, `publico/chaves*.js`) e bloco "Astargne" (`publico/decisoes-astargne.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
+| Aba Docs e rotina de alinhamento (`alinhamento/`, `publico/docs*.js`) | `docs/arquitetura.md` § alinhamento.js; regra de compactação em `../../PADROES-BACKLOG.md` |
+| Aba Backlog — desenho e história | `docs/02_ABA_BACKLOG.md` |
+| Motor, persona ou voz do C-3PO (`motor.js`, `motor/`, `publico/severino/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § Severino por voz |
 | Subir, reiniciar, ver log | `docs/operacao.md` § Como roda |
 | Infra no `astargne.com` (o painel não faz deploy; só a aba Contas **muda estado** no servidor; `/api/producao/ssh` é só leitura) | `../../SERVIDOR-astargne.md` (master; `validador-deploy` antes) |
 | Como este projeto se liga aos outros | `../../RELACOES.md` |
@@ -36,9 +38,10 @@ de forma genérica — a estrutura destes arquivos é também dado do produto.
   (dashboard) e `/severino/` (chat). Em produção local é serviço de usuário:
   `systemctl --user {status,restart} painel-admin`,
   `journalctl --user -u painel-admin`.
-- **Portão** = `npm test`: suíte `node --test` (ssh e Plane sempre falsos)
-  **e** `node scripts/check-docs.mjs` (tetos, links e rotas dos docs —
-  `../../PADROES-CONTEXTO.md`). Vermelho em qualquer um não sela.
+- **Portão** = `npm test`: suíte `node --test` (ssh e Plane sempre falsos),
+  `node scripts/check-docs.mjs` (tetos, links e rotas dos docs —
+  `../../PADROES-CONTEXTO.md`) **e** `mapa-modulos.mjs --check` (cabeçalho em todo
+  módulo, mapa em dia; `npm run mapa` regenera). Vermelho não sela.
 - **Nunca** (texto completo em `docs/invariants.md`): expor a 7777 fora da
   máquina; ssh que mude estado fora do banco do CadastroUnico; copiar o
   `TOKEN_INTERNO` para o PC; dar ferramenta de escrita ao motor antes da fase
