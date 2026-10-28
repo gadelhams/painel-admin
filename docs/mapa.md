@@ -20,7 +20,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `producao-extra.js` — Sondas de produção que não pertencem a um projeto do catálogo.
 - `projetos.js` — Catálogo dos projetos da raiz.
 - `relacoes.js` — Relações estruturadas entre os projetos da raiz — espelho do que está em prosa em ../../RELACOES.md (era seção do CLAUDE.md da raiz até 30/09/2026).
-- `servidor.js` — Servidor único do painel-admin desde a fusão de 14/08/2026: dashboard na raiz (/), Severino em /severino/, e toda a API na mesma porta 7777.
+- `servidor.js` — Servidor único do painel-admin desde a fusão de 14/08/2026: dashboard na raiz (/), C-3PO em /c3po/, e toda a API na mesma porta 7777.
 
 ## alinhamento/
 
@@ -94,7 +94,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `arquivo-publico.js` — Serve um arquivo de publico/ sem sair da pasta.
 - `conversa.js` — Conversa do C-3PO em SSE.
 - `corpo-limitado.js` — Lê o corpo do pedido até o teto.
-- `redirecionamento-severino.js` — Leva /severino para a barra final.
+- `redirecionamento-c3po.js` — Leva /c3po à barra final e os endereços antigos /severino e /severino/ ao novo.
 - `resposta-json.js` — Escreve JSON na resposta.
 - `resposta.js` — Porta da resposta.
 - `rotas-alinhamento.js` — Varredura de alinhamento.
@@ -208,6 +208,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `texto-dependencia.js` — Declarações de dependência no texto da carta.
 - `trava.js` — Trava de diretório da orquestração.
 - `triagem.js` — Uma varredura por vez.
+- `uuid.js` — Forma de um UUID v4 do Plane ou do próprio painel.
 - `varredura-triagem.js` — Lê as folhas sem gate e devolve a triagem.
 - `verificador-cadastro.js` — Pergunta ao Cadastro Único se o token ainda vale.
 - `vigilia-controle.js` — Liga, desliga e pausa a vigília de um projeto.
@@ -270,6 +271,18 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `telemetria.js` — Junta a tira de projetos e os bloqueios do palco.
 - `tira-telemetria.js` — Uma célula da tira de projetos.
 
+## publico/c3po/
+
+- `chat.js` — Liga o palco, o fluxo e os modos de voz.
+- `escuta.js` — Microfone do C-3PO.
+- `fluxo-sse.js` — Fluxo da conversa: lê o SSE e manda o turno.
+- `locutor.js` — Alto-falante do C-3PO: ElevenLabs, e o Antônio quando ela cai.
+- `modos-voz.js` — Microfone do C-3PO: push-to-talk, copiloto e ligação.
+- `palco.js` — Palco do C-3PO: o histórico e o texto do console.
+- `politica-fala.js` — Política pura da voz do C-3PO.
+- `sessao-voz.js` — Quem decide se a frase ouvida vira turno.
+- `voz.js` — Fachada.
+
 ## publico/orquestracao/
 
 - `consumo.js` — Medidores de consumo.
@@ -295,18 +308,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `vigilia-desenho.js` — Desenho de um projeto da vigília.
 - `vigilia.js` — Estado da vigília por projeto.
 - `voz-carta.js` — Gravação da carta: só propõe texto.
-
-## publico/severino/
-
-- `chat.js` — Liga o palco, o fluxo e os modos de voz.
-- `escuta.js` — Microfone do C-3PO.
-- `fluxo-sse.js` — Fluxo da conversa: lê o SSE e manda o turno.
-- `locutor.js` — Alto-falante do C-3PO: ElevenLabs, e o Antônio quando ela cai.
-- `modos-voz.js` — Microfone do C-3PO: push-to-talk, copiloto e ligação.
-- `palco.js` — Palco do C-3PO: o histórico e o texto do console.
-- `politica-fala.js` — Política pura da voz do C-3PO.
-- `sessao-voz.js` — Quem decide se a frase ouvida vira turno.
-- `voz.js` — Fachada.
 
 ## scripts/
 
@@ -338,6 +339,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `plane.test.js`
 - `politica-fala.test.js`
 - `protocolo-ui.test.js`
+- `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
 - `sessao-voz.test.js`
 - `sonda-sso.test.js`
 - `triagem-dev.test.js`

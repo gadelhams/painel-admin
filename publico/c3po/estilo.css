@@ -30,7 +30,7 @@ h1 { font-size: 1.4rem; color: var(--destaque); }
 
 .fala { padding: .6rem .9rem; border-radius: .75rem; max-width: 85%; white-space: pre-wrap; overflow-wrap: break-word; }
 .fala.usuario { align-self: flex-end; background: var(--destaque); color: #1c1917; }
-.fala.severino { align-self: flex-start; background: var(--painel); border: 1px solid var(--borda); }
+.fala.c3po { align-self: flex-start; background: var(--painel); border: 1px solid var(--borda); }
 .fala.erro { align-self: center; background: #7f1d1d; font-size: .9rem; }
 
 .pensando { align-self: flex-start; color: var(--apagado); font-size: .9rem; font-style: italic; }

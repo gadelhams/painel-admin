@@ -24,5 +24,5 @@ mesmo `CLAUDE.md`; a explicação está no título indicado de `arquitetura.md`.
 12. `projetos.js` anda em sincronia com `../../CLAUDE.md` (mapa da área) e `../../../PORTAS.md`; `relacoes.js` e `../../../RELACOES.md` **mudam juntos**. (§ projetos.js, § relacoes.js)
 13. Aba Contas **sem polling**: busca ao entrar na aba e após cada ação. (§ contas.js (publico/))
 14. Gasto e fila de jobs **sem fonte real** mostram vazio honesto, nunca número inventado. (§ Gasto e fila de jobs)
-15. Persona por voz (Remote Control) só com **gatilho explícito** do Astargne, e grounding antes de falar de estado. (`operacao.md` § Severino por voz)
+15. Persona por voz (Remote Control) só com **gatilho explícito** do Astargne, e grounding antes de falar de estado. (`operacao.md` § C-3PO por voz)
 16. **Executor só atrás de todos os portões** — nasce só com `ORQ_EXECUCAO_HABILITADA=true`; roda num worktree próprio, sem shell, ambiente por lista branca (nenhuma chave do Painel), CLIs sem MCP/plugins e só com os comandos do contrato; falha de infraestrutura é `impedido`, nunca retry. A vigília usa esse mesmo caminho, uma tentativa por vez, dentro dos freios do contrato, e só é ligada por SSO + confirmação; nunca faz push nem merge. (§ orquestrador/)

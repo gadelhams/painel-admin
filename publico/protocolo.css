@@ -74,7 +74,7 @@ a { color: var(--ui-hot); }
 .cabecalho .marca span { font: 500 .58rem/1.2 var(--font-mono); letter-spacing: .12em; color: var(--ui-faint); }
 .barra-comando { margin: 8px; border: 1px solid var(--ui-line); min-height: 50px; color: var(--ui-dim); }
 .barra-comando .chevron { font-size: 1.55rem; line-height: 1; }
-.barra-comando .selo-severino { border-color: var(--ui-hot); color: var(--ui-hot); }
+.barra-comando .selo-c3po { border-color: var(--ui-hot); color: var(--ui-hot); }
 .placar-tema { gap: 16px; }
 .ponto-sync { border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-hot) 18%, transparent); }
 .barra-abas { gap: 6px; padding: 0 22px; background: var(--ui-bg); }

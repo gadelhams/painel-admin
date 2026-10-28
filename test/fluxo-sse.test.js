@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import '../publico/severino/fluxo-sse.js';
+import '../publico/c3po/fluxo-sse.js';
 
 const { FluxoSse } = globalThis;
 

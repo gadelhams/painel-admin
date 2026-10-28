@@ -35,7 +35,7 @@ class ConsolePalco {
   static chips(sugestoes) {
     document.getElementById('console-chips').replaceChildren(...sugestoes.map((texto) => {
       const chip = el('button', { type: 'button', class: 'chip-sugestao' }, texto);
-      chip.addEventListener('click', () => window.mandarMensagemSeverino?.(texto));
+      chip.addEventListener('click', () => window.mandarMensagemC3po?.(texto));
       return chip;
     }));
   }

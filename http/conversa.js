@@ -41,7 +41,7 @@ export class ConversaHttp {
     } catch (erro) {
       if (clienteVivo) {
         console.error('[conversa]', erro);
-        res.write(`event: erro\ndata: ${JSON.stringify({ mensagem: 'falha no motor do Severino — veja o log do servidor' })}\n\n`);
+        res.write(`event: erro\ndata: ${JSON.stringify({ mensagem: 'falha no motor do C-3PO — veja o log do servidor' })}\n\n`);
       }
     }
     if (clienteVivo) res.end();

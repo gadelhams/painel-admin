@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import '../publico/severino/politica-fala.js';
+import '../publico/c3po/politica-fala.js';
 
 const { Fala, Eco, CorretorDeNomes, GatilhoC3po, RetentativaEleven } = globalThis.PoliticaFala;
 

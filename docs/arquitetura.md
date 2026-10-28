@@ -39,7 +39,7 @@ em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
 
 ### servidor.js
 
-O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, relações, contas e o redirecionamento do Severino, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, modelos, handoff, gate, despacho, consumo, vigília, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, modelos, handoff, gate, despacho, consumo, vigília, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -50,13 +50,13 @@ do backlog; idade = criação do work item no Plane, ou `git log -L` no
 markdown do repo congelado, pesada — sob demanda, nunca no polling de 60s;
 aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
 `relacoes.js` — hoje fora da nav, ver abaixo), `POST /api/conversa` (SSE,
-motor do Severino), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
+motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 (aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
 `prontidao`, `canal?carta&projeto`, `modelos`, `consumo`, `legado`; POST
 `simular`, `modelos/validar`, `{modelos,handoff,gates,despacho}/{preparar,confirmar}`,
 `voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações)
-e estáticos de `publico/` (dashboard na raiz, chat em `/severino/`).
+e estáticos de `publico/` (dashboard na raiz, chat em `/c3po/`).
 
 ### orquestrador/
 
@@ -292,7 +292,7 @@ declarados como finais no handoff da época — Barlow/Barlow Condensed/IBM Plex
 vendorizados em `publico/vendor/fonts/`, mesmo princípio zero-CDN do
 Mermaid). Em 12/10/2026, `publico/protocolo.css` sobrepõe o visual das abas
 segundo o protótipo do dono, sem mudar lógica. Seis abas — **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves** (esta desde 24/10/2026) — mais
-o console do Severino como overlay por ⌘K/Ctrl+K:
+o console do C-3PO como overlay por ⌘K/Ctrl+K:
 
 #### app.js
 
@@ -303,7 +303,7 @@ O arquivo só guarda o tema e o relógio de sincronia. O DOM e o markdown estão
 coluna de contexto do painel de projeto leem — `decisoes.js` e
 `contas.js` não a leem), tira de telemetria (uma célula
 por projeto do catálogo — 15 desde 12/10/2026), tema claro/escuro (`data-tema` em `<html>`,
-persistido em `localStorage`), e o console do Severino (`#console-scrim`
+persistido em `localStorage`), e o console do C-3PO (`#console-scrim`
 — na aba Projetos é o palco do meio; de outra aba abre em overlay por
 ⌘K/barra de comando/clique numa decisão. O digest matinal sai uma vez
 por dia local).
@@ -398,17 +398,17 @@ Fora da nav (ver acima), arquivos intactos.
 `publico/vendor/mermaid.min.js` — Mermaid vendorizado, reaproveitado
 pelos diagramas dos docs e pela Arquitetura do painel de projeto.
 
-#### Console do Severino
+#### Console do C-3PO
 
-Reaproveita `publico/severino/chat.js` (agora
-numa IIFE, expõe só `window.mandarMensagemSeverino`) e `voz.js`
+Reaproveita `publico/c3po/chat.js` (agora
+numa IIFE, expõe só `window.mandarMensagemC3po`) e `voz.js`
 inteiros — só o container mudou (da faixa lateral fixa da manhã de
 21/08 pro overlay, e em 25/10 para o palco central da aba Projetos).
 Abrir por ⌘K manda o digest matinal uma vez por dia local (prompt
 fixo pro `/api/conversa` já existente — **nenhuma rota nova pro
 digest**; a marca fica em `localStorage`, chave `c3po-digest-dia`); clicar numa decisão manda o texto dela verbatim e pergunta o
 que trava/o que falta (persona só-leitura: explica e pergunta, nunca
-decide). A página standalone `/severino/` **continua existindo** como
+decide). A página standalone `/c3po/` **continua existindo** como
 está (acesso alternativo, sem o chrome do dashboard) — os dois modos
 compartilham a mesma sessão de conversa (`sessionStorage`, por aba do
 navegador) e os mesmos endpoints.
@@ -422,7 +422,7 @@ lugar de plugar.
 
 ### docs/00_PLANO.md e docs/01_ESTADO.md
 
-Plano e estado real do Severino,
+Plano e estado real do C-3PO,
 trazidos do repo antigo; leia o plano antes de mexer no motor ou na voz.
 
 ### docs/02_ABA_BACKLOG.md
@@ -503,9 +503,10 @@ O repo `github.com/gadelhams/severino` está **arquivado** como lápide; código
 e história continuam aqui (`github.com/gadelhams/painel-admin`).
 
 (Do mapa da raiz, não do `CLAUDE.md` antigo:) a persona foi renomeada de
-"Severino" para **C-3PO** em 21/08/2026; rota `/severino/`, pasta
-`publico/severino/` e nomes no código mantêm o nome antigo por decisão
-deliberada — só a persona mudou, não a infraestrutura.
+"Severino" para **C-3PO** em 21/08/2026; rota, pasta e nomes no código
+mantiveram o nome antigo até 28/10/2026, quando o dono pediu o alinhamento:
+rota `/c3po/`, pasta `publico/c3po/`, `mandarMensagemC3po`; `/severino` e
+`/severino/` redirecionam (301) para favoritos antigos.
 
 ## Fatos trazidos do `01_ESTADO.md` (01/10/2026)
 
@@ -520,8 +521,8 @@ vivo tinha; provas e evidências ficaram em
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.
-- **Estáticos**: `GET /severino` → 301 `/severino/` (assets relativos dependem
-  da barra); `..` em path-as-is → 404; método errado em `/api/tts` → 405.
+- **Estáticos**: `GET /c3po` → 301 `/c3po/` (assets relativos dependem
+  da barra); `/severino` e `/severino/` → 301 `/c3po/` (nome antigo); `..` em path-as-is → 404; método errado em `/api/tts` → 405.
 - **ElevenLabs** (`ProxyElevenLabs` em `orquestrador/voz-eleven.js`, rota em `servidor.js`): upstream
   `POST api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream` (header
   `xi-api-key`), `output_format=mp3_44100_128`, modelo `eleven_v4` (o ajuste de clonagem do

@@ -221,7 +221,7 @@ export const PROJETOS = [
     portas: [{ porta: 8600, servico: 'Web (uvicorn)' }],
   },
 ];
-// O severino saiu do catálogo em 14/08/2026: foi fundido NESTE app (rota
-// /severino/, mesma porta 7777) — deixou de existir como projeto irmão.
+// O C-3PO (então C-3PO) saiu do catálogo em 14/08/2026: foi fundido NESTE app
+// (rota /c3po/, mesma porta 7777) — deixou de existir como projeto irmão.
 
 export { conferirEscutaDoSSO, PRODUCAO_EXTRA } from './producao-extra.js';

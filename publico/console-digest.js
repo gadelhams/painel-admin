@@ -29,7 +29,7 @@ function abrirConsoleDigest() {
   if (DigestC3po.jaFoiHoje()) return;
   if (document.getElementById('enviar')?.disabled) return;
   DigestC3po.marcarHoje();
-  window.mandarMensagemSeverino?.(
+  window.mandarMensagemC3po?.(
     'Bom dia — resumo rápido: o que mudou desde ontem em cada projeto (git, portas, produção), e o que está parado (decisões)? Cite dado real, não invente.',
   );
 }

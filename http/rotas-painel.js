@@ -7,7 +7,7 @@ import { RotasBacklog } from './rotas-backlog.js';
 import { RotasDecisoes } from './rotas-decisoes.js';
 import { RotasRelacoes } from './rotas-relacoes.js';
 import { RotasContas } from './rotas-contas.js';
-import { RedirecionamentoSeverino } from './redirecionamento-severino.js';
+import { RedirecionamentoC3po } from './redirecionamento-c3po.js';
 
 export class RotasPainel {
   constructor({ resposta, coletores, contas, ssh }) {
@@ -19,7 +19,7 @@ export class RotasPainel {
       new RotasDecisoes({ resposta, coletores }),
       new RotasRelacoes({ resposta, coletores }),
       new RotasContas({ resposta, contas }),
-      new RedirecionamentoSeverino(),
+      new RedirecionamentoC3po(),
     ];
   }
 

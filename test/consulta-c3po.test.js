@@ -82,6 +82,6 @@ test('integração mantém as seis ferramentas MCP somente de leitura e não env
   assert.match(ui, /Discutir pendências com C-3PO/);
   assert.match(ui, /abrirConsoleOrquestracao\?\.\(c\.identificador\)/);
   const abertura = app.slice(app.indexOf('window.abrirConsoleOrquestracao ='), app.indexOf('abrirConsoleBtn.addEventListener'));
-  assert.doesNotMatch(abertura, /mandarMensagemSeverino/);
+  assert.doesNotMatch(abertura, /mandarMensagemC3po/);
   assert.match(abertura, /entrada\.value/);
 });

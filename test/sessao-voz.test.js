@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import '../publico/severino/sessao-voz.js';
+import '../publico/c3po/sessao-voz.js';
 
 const SessaoConversa = globalThis.SessaoConversa;
 

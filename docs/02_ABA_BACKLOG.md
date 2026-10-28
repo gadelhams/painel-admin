@@ -135,7 +135,7 @@ aqui NA MESMA ENTREGA** (regra do orquestrador da raiz; há nota espelhada no pr
 - **`servidor.js`**: `GET /api/backlog` — devolve a árvore parseada de todos os projetos
   com backlog.
 - **`publico/backlog.js`** (extraído de `app.js` em 20/08/2026, mesmo padrão de scripts
-  globais de `publico/severino/`): a aba no dashboard vanilla — colunas por feature, cada
+  globais de `publico/c3po/`): a aba no dashboard vanilla — colunas por feature, cada
   uma com subtítulo discreto do projeto dono; nó com filhos vira card `<details>`
   expansível, folha vira linha simples, placar **derivado na hora** das tasks (`n/m`
   marcadas — contagem nunca armazenada); filtro por tag (chip colorido por tag desde
@@ -153,7 +153,7 @@ aqui NA MESMA ENTREGA** (regra do orquestrador da raiz; há nota espelhada no pr
 
 Clicar num checkbox do quadro **edita a linha correspondente do markdown** (a escrita
 volta pro arquivo; a verdade continua uma só). É ação local que muda arquivo de outro
-projeto: entra no regime da fase 3 do Severino — confirmação explícita na UI + log local.
+projeto: entra no regime da fase 3 do C-3PO — confirmação explícita na UI + log local.
 
 ## O que a aba NÃO faz
 

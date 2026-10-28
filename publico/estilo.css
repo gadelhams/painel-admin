@@ -181,10 +181,10 @@ body {
 .moldura .canto.br { bottom: -3px; right: -3px; border-bottom: 1px solid var(--ui-hot); border-right: 1px solid var(--ui-hot); }
 
 /* ================================================================
-   Tela 6 — console do Severino (overlay por ⌘K, 21/08/2026)
+   Tela 6 — console do C-3PO (overlay por ⌘K, 21/08/2026)
    Substitui a faixa lateral fixa desta manhã. #historico/#formulario/
    #entrada/#enviar/#microfone/.copiloto/#status-voz/#status-copiloto
-   continuam os MESMOS IDs que severino/chat.js e severino/voz.js já usam —
+   continuam os MESMOS IDs que c3po/chat.js e c3po/voz.js já usam —
    só o container ao redor mudou, então nenhum dos dois arquivos precisou
    de alteração de lógica (só uma linha de export em chat.js). */
 
@@ -222,12 +222,12 @@ body {
 
 .fala { padding: .6rem .9rem; border-radius: .75rem; max-width: 85%; white-space: pre-wrap; overflow-wrap: break-word; font-size: .92rem; }
 .fala.usuario { align-self: flex-end; background: var(--ui-hot); color: var(--ui-onhot); }
-.fala.severino { align-self: flex-start; background: var(--ui-panel); border: 1px solid var(--ui-line); }
+.fala.c3po { align-self: flex-start; background: var(--ui-panel); border: 1px solid var(--ui-line); }
 .fala.erro { align-self: center; background: #7f1d1d; font-size: .85rem; }
 
 .pensando { align-self: flex-start; color: var(--ui-faint); font-size: .85rem; font-style: italic; }
-.pensando .pontos::after { content: ''; animation: severino-pontos 1.2s steps(4) infinite; }
-@keyframes severino-pontos { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+.pensando .pontos::after { content: ''; animation: c3po-pontos 1.2s steps(4) infinite; }
+@keyframes c3po-pontos { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
 .ferramenta { align-self: flex-start; color: var(--ui-faint); font-size: .75rem; }
 .ferramenta::before { content: '🔧 '; }
@@ -246,8 +246,8 @@ body {
 
 .selo-voz, #microfone, #ligar { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; border: 1px solid var(--ui-line); border-radius: 0; background: none; color: var(--ui-faint); cursor: pointer; }
 #microfone:disabled { opacity: .4; cursor: not-allowed; }
-#microfone.ouvindo, #ligar.na-linha { background: #7f1d1d; border-color: #dc2626; color: var(--ui-text); animation: severino-pulso 1.2s ease-in-out infinite; }
-@keyframes severino-pulso { 50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, .25); } }
+#microfone.ouvindo, #ligar.na-linha { background: #7f1d1d; border-color: #dc2626; color: var(--ui-text); animation: c3po-pulso 1.2s ease-in-out infinite; }
+@keyframes c3po-pulso { 50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, .25); } }
 
 .console-chips { display: flex; flex-wrap: wrap; gap: 6.8px; margin-top: 13.6px; }
 .chip-sugestao { font-family: var(--font-mono); font-size: 11px; padding: 3.4px 10.2px; background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 0; color: var(--ui-dim); cursor: pointer; }
@@ -322,7 +322,7 @@ button:disabled { opacity: .5; cursor: wait; }
 .barra-comando:hover { background: var(--ui-hover); color: var(--ui-text); border-color: var(--ui-line); }
 .barra-comando .chevron { color: var(--ui-hot); font-family: var(--font-body); }
 .barra-comando .comando-texto { flex: 1; }
-.barra-comando .selo-severino {
+.barra-comando .selo-c3po {
   font-family: var(--font-mono);
   font-size: 11px;
   padding: 2px 6px;

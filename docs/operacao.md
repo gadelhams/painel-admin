@@ -1,7 +1,7 @@
 # painel-admin — operação (texto de referência)
 
 Texto preservado do `CLAUDE.md` até 01/10/2026 (F3 do
-`../../../PLANO-CONTEXTO-POR-TAREFA.md`): as seções "Como roda" e "Severino
+`../../../PLANO-CONTEXTO-POR-TAREFA.md`): as seções "Como roda" e "C-3PO
 por voz, fora de casa". Estado atual em [`current.md`](current.md); original
 íntegro em [`historico/CLAUDE-ate-2026-10-01.md`](historico/CLAUDE-ate-2026-10-01.md).
 
@@ -26,13 +26,13 @@ por voz, fora de casa". Estado atual em [`current.md`](current.md); original
 ```powershell
 npm start   # node --env-file-if-exists=.env servidor.js
 # http://localhost:7777           → dashboard
-# http://localhost:7777/severino/ → chat do Severino (texto e voz)
+# http://localhost:7777/c3po/ → chat do C-3PO (texto e voz)
 npm test    # node --test — contas.js (ssh sempre falso, I5), sonda do SSO, plane.js (Plane falso) e caminhos das áreas
 ```
 
 Node ≥ 22.9 (pelo `--env-file-if-exists`). **Uma dependência**:
 `@anthropic-ai/claude-agent-sdk`, versão fixada sem `^` — o zero-deps
-histórico do painel acabou com a fusão, e o motor do Severino é o único
+histórico do painel acabou com a fusão, e o motor do C-3PO é o único
 motivo; upgrade da versão é decisão consciente, nunca automática. O `zod`
 aparece em `node_modules` como peer do SDK — não é dependência nossa.
 
@@ -94,7 +94,7 @@ remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
   `journalctl --user -u painel-admin | grep voz-diag`. Sem áudio nem texto da
   conversa. No copiloto por xAI a tela mostra um medidor "mic: ▮▮▮".
 
-## Severino por voz, fora de casa (Claude app + Remote Control)
+## C-3PO por voz, fora de casa (Claude app + Remote Control)
 
 **CORREÇÃO registrada em 15/08/2026, mesmo dia**: a primeira versão desta
 seção presumia Voice Mode (resposta falada) funcionando dentro de sessão do
@@ -108,13 +108,13 @@ arquivo/rede local.
 
 **O que fica de pé, por dictation** (fala→texto→[persona]→texto, sem áudio
 de saída nativo): no app, aba **Code**, sessão conectada por
-`claude remote-control --name "Severino"` (doc:
+`claude remote-control --name "C-3PO"` (doc:
 `code.claude.com/docs/en/remote-control.md`) — dono dita, sessão responde em
 texto. **Gatilho explícito, nunca automático**: só assuma a persona abaixo
-quando o dono pedir de viva voz ("fala comigo como o Severino"); fora disso,
+quando o dono pedir de viva voz ("fala comigo como o C-3PO"); fora disso,
 sessão normal, sem persona.
 
-Isto **não é** o app web em `/severino/` (que tem voz de verdade via
+Isto **não é** o app web em `/c3po/` (que tem voz de verdade via
 ElevenLabs, mas só em casa): é você, Claude Code, com acesso **completo** às
 suas ferramentas de sempre (decisão do dono, 15/08/2026, após avisado do
 risco — comando ditado mal-transcrito pode virar ação real). Sem sandbox
@@ -132,7 +132,7 @@ técnico aqui; o freio é o próprio personagem.
   se o painel estiver de pé, ou os docs modeladores dos projetos. Nunca
   responda "como estão os projetos" de memória de treino.
 - **Não fura o canon**: mudança em `astargne.com` continua exigindo
-  `validador-deploy` mesmo em modo Severino-de-voz — a persona muda o tom,
+  `validador-deploy` mesmo em modo C-3PO-de-voz — a persona muda o tom,
   nunca o portão.
 - Isto **não** contradiz a porta fechada (invariante 1 em
   [`invariants.md`](invariants.md)): Remote Control não expõe a

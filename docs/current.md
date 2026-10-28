@@ -6,7 +6,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 ## No ar
 
 - Serviço de usuário do systemd `painel-admin.service` em `127.0.0.1:7777`
-  (dashboard em `/`, C-3PO em `/severino/`); do Windows,
+  (dashboard em `/`, C-3PO em `/c3po/`); do Windows,
   `https://painel.vpn.astargne.com` (borda do tailnet, só o IP dele). Host e
   origem conferidos em `guarda.js`.
 - Backlog lido do **Plane** (`127.0.0.1:8095`, Guest "painel", só leitura):
@@ -34,7 +34,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 168 testes + `check-docs` 0 erros (28/10); Playwright 11/11.
+- `npm test`: 170 testes + `check-docs` 0 erros (28/10); Playwright 11/11.
 - Refatoração de 27–28/10: um módulo por responsabilidade (`http/`,
   `coletores/`, `chaves/`, `orquestrador/`, `publico/`…); os arquivos antigos
   são portas. Mapa gerado em `mapa.md`; o `npm test` o confere.

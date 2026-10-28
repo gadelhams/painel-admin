@@ -1,4 +1,4 @@
-// Liga o palco, o fluxo e os modos de voz. O console chama mandarMensagemSeverino.
+// Liga o palco, o fluxo e os modos de voz. O console chama mandarMensagemC3po.
 
 (() => {
   const palco = new Palco(document.getElementById('historico'));
@@ -16,5 +16,5 @@
     botaoLigacao: document.getElementById('ligar'),
     statusLigacao: document.getElementById('status-ligacao'),
   });
-  window.mandarMensagemSeverino = (mensagem) => conversa.mandar(mensagem);
+  window.mandarMensagemC3po = (mensagem) => conversa.mandar(mensagem);
 })();

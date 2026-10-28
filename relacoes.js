@@ -77,7 +77,7 @@ export const RELACOES = [
 ];
 
 // Nós que não são projeto do catálogo (projetos.js), mas aparecem como ponta
-// de relação — hoje só o servidor de produção. Severino não entra aqui: já é
+// de relação — hoje só o servidor de produção. C-3PO não entra aqui: já é
 // "⊂ painel-admin" (fundido em 14/08/2026), não é mais projeto irmão, não há
 // relação de grafo a desenhar nele.
 export const NOS_EXTRA = [

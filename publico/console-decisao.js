@@ -5,7 +5,7 @@ function abrirConsoleComDecisao(decisao) {
   ConsolePalco.chips(['o que isso trava', 'o que você precisa de mim', 'outra decisão deste projeto']);
   abrirConsole();
   const contexto = `${decisao.projeto} · ${decisao.arquivo} · ${decisao.feature} · tag ${decisao.tag}${decisao.detalhe ? ` (${decisao.detalhe})` : ''}`;
-  window.mandarMensagemSeverino?.(
+  window.mandarMensagemC3po?.(
     `Decisão parada — ${contexto}:\n"${decisao.texto}"\n\nO que isso trava, e o que você precisa de mim pra destravar? Não decida por mim, só explique e pergunte.`,
   );
 }

@@ -1,5 +1,5 @@
 // Servidor único do painel-admin desde a fusão de 14/08/2026: dashboard na
-// raiz (/), Severino em /severino/, e toda a API na mesma porta 7777.
+// raiz (/), C-3PO em /c3po/, e toda a API na mesma porta 7777.
 // Escuta só em 127.0.0.1, NUNCA em 0.0.0.0, e não tem autenticação: fora do
 // loopback, a única entrada é a borda do tailnet, restrita ao Windows do dono
 // (06/10/2026); Host e origem são conferidos em guarda.js.
@@ -167,5 +167,5 @@ const roteador = new RoteadorPainel({
 const servidor = http.createServer((req, res) => roteador.atender(req, res));
 
 servidor.listen(PORTA, '127.0.0.1', () => {
-  console.log(`Painel administrativo (com o Severino a bordo) em http://localhost:${PORTA}`);
+  console.log(`Painel administrativo (com o C-3PO a bordo) em http://localhost:${PORTA}`);
 });

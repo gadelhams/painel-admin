@@ -26,7 +26,7 @@ class ConversaC3po {
     this.enviar = enviar;
     this.microfone = microfone;
     this.entrada = entrada;
-    this.sessao = sessionStorage.getItem('severino-sessao') || undefined;
+    this.sessao = sessionStorage.getItem('c3po-sessao') || undefined;
     this.modoCopilotoAtivo = false;
     this.modoLigacaoAtivo = false;
     this.turno = 0;
@@ -62,7 +62,7 @@ class ConversaC3po {
     const pensando = this.palco.nota('pensando', 'C-3PO está calculando');
     pensando.insertAdjacentHTML('beforeend', '<span class="pontos"></span>');
 
-    let falaSeverino = null;
+    let falaC3po = null;
     this.enviar.disabled = true;
     this.microfone.disabled = true;
     this.palco.estado('CALCULANDO', true);
@@ -98,10 +98,10 @@ class ConversaC3po {
         for (const { evento, dados } of eventos) {
           if (meuTurno !== this.turno) break;
           if (evento === 'token') {
-            if (!falaSeverino) falaSeverino = this.palco.fala('severino');
-            falaSeverino.textContent += dados.texto;
+            if (!falaC3po) falaC3po = this.palco.fala('c3po');
+            falaC3po.textContent += dados.texto;
             this.palco.historico.scrollTop = this.palco.historico.scrollHeight;
-            this.palco.texto(falaSeverino.textContent);
+            this.palco.texto(falaC3po.textContent);
             this.palco.estado('FALANDO', true);
             locutor.alimentar(dados.texto);
           } else if (evento === 'ferramenta') {
@@ -109,7 +109,7 @@ class ConversaC3po {
           } else if (evento === 'inicio' || evento === 'fim') {
             if (dados.sessao) {
               this.sessao = dados.sessao;
-              sessionStorage.setItem('severino-sessao', this.sessao);
+              sessionStorage.setItem('c3po-sessao', this.sessao);
             }
           } else if (evento === 'erro') {
             this.palco.fala('erro', dados.mensagem);
