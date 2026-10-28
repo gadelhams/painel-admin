@@ -23,6 +23,7 @@ const SEGREDO = 'sk-segredo-que-nao-pode-vazar-123';
 const AGORA = Date.parse('2026-10-28T20:00:00.000Z');
 const UUID_PRJ = '11111111-2222-4333-8444-555555555555';
 const UUID_CARTA = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+const UUID_BETA = '99999999-2222-4333-8444-555555555555';
 const em = (s) => new Date(AGORA - s * 1000).toISOString();
 
 test('programa: pula cd, VAR=valor e prefixo; nunca devolve argumento', () => {
@@ -96,7 +97,7 @@ function cenario({ processos = ['claude'], transcripts = () => ({}) } = {}) {
       raizClaude: path.join(base, 'claude'),
       raizCodex: path.join(base, 'codex'),
       raiz,
-      projetos: [{ pasta: 'alfa', area: 'ProjetosPessoais', plane: UUID_PRJ }],
+      projetos: [{ pasta: 'alfa', area: 'ProjetosPessoais', plane: UUID_PRJ }, { pasta: 'beta', area: 'ProjetosPessoais', plane: UUID_BETA }],
       acervo: fontesAcervo({ raiz, casa: path.join(base, 'casa') }),
       agora,
     }),
@@ -142,6 +143,23 @@ test('sessão: sem CLI viva não há droid; Exitlag some; parada há 5 min é oc
   assert.equal(parada.projeto, null);
   // arquivo tocado agora (mtime novo) mas último evento há 2 h: sessão morta, sem droid
   assert.deepEqual((await cenario({ transcripts: () => ({ 's/d.jsonl': [usuario(7200, 'oi')] }) }).ler(AGORA)).sessoes, []);
+});
+
+test('sessão: MCP do Plane em outro projeto não tira o droid da nave do arquivo editado', async () => {
+  const c = cenario({
+    transcripts: (raiz) => ({
+      's/e.jsonl': [
+        assistente(40, [{ type: 'tool_use', name: 'Edit', input: { file_path: path.join(raiz, 'ProjetosPessoais/alfa/src/a.js') } }]),
+        // criar label em outro projeto: sem issue_id, não é trabalho naquele projeto
+        assistente(20, [{ type: 'tool_use', name: 'mcp__plane__create_label', input: { project_id: UUID_BETA, label_data: { name: 'X' } } }]),
+        // carta de outro projeto com issue_id, mas o arquivo editado ainda manda
+        assistente(10, [{ type: 'tool_use', name: 'mcp__plane__update_issue', input: { project_id: UUID_BETA, issue_id: UUID_CARTA } }]),
+      ],
+      's/f.jsonl': [assistente(10, [{ type: 'tool_use', name: 'mcp__plane__update_issue', input: { project_id: UUID_BETA, issue_id: UUID_CARTA } }])],
+    }),
+  });
+  const { sessoes } = await c.ler(AGORA);
+  assert.deepEqual(sessoes.map((s) => [s.id, s.projeto]), [['e', 'alfa'], ['f', 'beta']]);
 });
 
 test('acervo: só os caminhos da lista fixa contam como Oficina', () => {

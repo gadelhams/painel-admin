@@ -98,12 +98,19 @@ function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
   // O mtime não basta: a CLI regrava metadados (título, modo) sem timestamp em sessão parada há horas.
   if (agora - Date.parse(bruta.ultimoEm) > JANELA_MS) return null;
 
-  let projeto = null;
-  for (let i = bruta.acoes.length - 1; i >= 0 && !projeto; i -= 1) {
-    const a = bruta.acoes[i];
-    projeto = a.projetoPlane ? atribuidor.projetoDoPlane(a.projetoPlane) : atribuidor.projetoDe(a.caminho);
-  }
-  projeto ??= atribuidor.projetoDe(bruta.cwd);
+  // Precedência: arquivo de projeto tocado > cwd > carta do Plane. Chamada ao
+  // MCP sem issue_id (label, módulo) não diz onde a sessão trabalha: criar a
+  // mesma label em doze projetos não muda o droid de nave.
+  const ultimo = (pegar) => {
+    for (let i = bruta.acoes.length - 1; i >= 0; i -= 1) {
+      const p = pegar(bruta.acoes[i]);
+      if (p) return p;
+    }
+    return null;
+  };
+  const projeto = ultimo((a) => atribuidor.projetoDe(a.caminho))
+    ?? atribuidor.projetoDe(bruta.cwd)
+    ?? ultimo((a) => (a.itemPlane ? atribuidor.projetoDoPlane(a.projetoPlane) : null));
   const lugar = projeto?.pasta ?? (atribuidor.naRaiz(bruta.cwd) ? 'central' : null);
 
   const corte = agora - JANELA_MS;
