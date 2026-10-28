@@ -17,7 +17,7 @@ export const linkAlvo = (a, texto) => `<button type="button" class="hg-link" dat
 const linkFora = (url, texto) => (url ? `<a class="hg-link" href="${esc(url)}" target="_blank" rel="noopener">${texto}</a>` : '');
 export const tagDroid = (d) => `<span class="hg-tag" style="--cor:${fabrica(d.ia).cor}">${esc(d.rotulo)}</span>`;
 const chip = (cor, texto) => `<span class="hg-chip" style="--c:${cor}">${texto}</span>`;
-const blocoCartas = (n) => `<div class="hg-cartas"><div style="--c:#8fa3c9"><b>${n.cartas.aberto}</b><span>em aberto</span></div><div style="--c:var(--hg-alerta)"><b>${n.cartas.andamento}</b><span>em andamento</span></div><div style="--c:var(--hg-ok)"><b>${n.cartas.feito}</b><span>feitas</span></div></div>`;
+const blocoCartas = (n) => `<div class="hg-cartas"><div style="--c:#ac9b81"><b>${n.cartas.aberto}</b><span>em aberto</span></div><div style="--c:var(--hg-alerta)"><b>${n.cartas.andamento}</b><span>em andamento</span></div><div style="--c:var(--hg-ok)"><b>${n.cartas.feito}</b><span>feitas</span></div></div>`;
 const vazio = (t) => `<p class="hg-vazio">${t}</p>`;
 
 function blocoDecisao(x, produto) {
@@ -69,7 +69,7 @@ export function pedidoDeNave(d) {
 export function conteudo(a) {
   if (a.tipo === 'droid') {
     const d = droid(a.id);
-    if (!d) return { cor: '#8299b8', olho: 'C-3PO · droids', titulo: 'Droid<small>já desmontado</small>', fala: 'Este droid já voltou à fábrica, mestre. A sessão dele acabou.', corpo: '' };
+    if (!d) return { cor: '#ac9b81', olho: 'C-3PO · droids', titulo: 'Droid<small>já desmontado</small>', fala: 'Este droid já voltou à fábrica, mestre. A sessão dele acabou.', corpo: '' };
     const f = fabrica(d.ia); const n = d.nave; const carta = cartaoDe(n, d.s.cartao);
     const acoes = [...d.s.acoes].reverse().slice(0, 8);
     const idas = d.s.acoes.filter((x) => x.tipo === 'consultar');
@@ -82,7 +82,7 @@ export function conteudo(a) {
         <dt>Cartão</dt><dd>${carta ? `${esc(carta[1])} · ${esc(carta[2])}` : '—'}</dd>
         <dt>Sessão</dt><dd class="hg-mono">${esc(d.id.slice(0, 8))}</dd></dl>
         <h4>Últimas ações · só ferramenta e arquivo</h4>
-        ${acoes.length ? `<ul class="hg-linhas">${acoes.map((x) => `<li>${chip(COR_TIPO[x.tipo] ?? '#8fa3c9', VERBO[x.tipo] ?? esc(x.tipo))}<span class="hg-mono">${alvoDaAcao(x, n)}</span><span class="hg-apagado hg-mono">${haQuanto(Date.now() - Date.parse(x.em))}</span></li>`).join('')}</ul>` : vazio('Nenhuma nos últimos 15 minutos.')}
+        ${acoes.length ? `<ul class="hg-linhas">${acoes.map((x) => `<li>${chip(COR_TIPO[x.tipo] ?? '#ac9b81', VERBO[x.tipo] ?? esc(x.tipo))}<span class="hg-mono">${alvoDaAcao(x, n)}</span><span class="hg-apagado hg-mono">${haQuanto(Date.now() - Date.parse(x.em))}</span></li>`).join('')}</ul>` : vazio('Nenhuma nos últimos 15 minutos.')}
         <h4>Idas à Oficina</h4>
         ${idas.length ? `<ul class="hg-linhas">${idas.slice(-4).reverse().map((x) => { const it = acervoItem(`${x.setor}:${x.item}`); return `<li>${chip(setor(x.setor).cor, setor(x.setor).nome)}${it ? linkAlvo({ tipo: 'acervo', id: it.id }, esc(x.item)) : esc(x.item)}</li>`; }).join('')}</ul>` : vazio('Nenhuma nesta janela.')}`,
     };
@@ -97,13 +97,13 @@ export function conteudo(a) {
   }
   if (a.tipo === 'baia') {
     const b = BAIAS[a.i];
-    return { cor: '#8299b8', olho: 'C-3PO · docas', titulo: `Doca ${b.i + 1}<small>livre</small>`, fala: 'Esta doca está livre, mestre. A próxima nave em que um droid começar a trabalhar vem para cá.', corpo: '' };
+    return { cor: '#ac9b81', olho: 'C-3PO · docas', titulo: `Doca ${b.i + 1}<small>livre</small>`, fala: 'Esta doca está livre, mestre. A próxima nave em que um droid começar a trabalhar vem para cá.', corpo: '' };
   }
   if (a.tipo === 'patio') {
     const docadas = H.naves.filter((n) => n.estado !== 'estacionada'); const est = H.naves.filter((n) => n.estado === 'estacionada');
     const linha = (n) => `<li>${linkAlvo({ tipo: 'vaga', nave: n.id }, esc(n.nome))} <span class="hg-mono hg-apagado">${pct(n.pct)} · ${situacao(n)}</span></li>`;
     return {
-      cor: '#7c9cff', olho: 'C-3PO · pátio do Plane, a oeste', titulo: `Pátio do Plane<small>${H.naves.length} projetos do catálogo, um por vaga</small>`,
+      cor: '#e3a86b', olho: 'C-3PO · pátio do Plane, a oeste', titulo: `Pátio do Plane<small>${H.naves.length} projetos do catálogo, um por vaga</small>`,
       fala: `Todas as naves moram aqui, mestre, com a pilha de cartões de cada uma. ${docadas.length} ${plural(docadas.length, 'está', 'estão')} nas docas agora; as outras ${est.length} esperam um droid.${H.erroHangar ? ' O Plane não respondeu na última leitura.' : ''}`,
       corpo: `<h4>Nas docas</h4><ul class="hg-linhas">${docadas.map(linha).join('') || '<li class="hg-vazio">Nenhuma.</li>'}</ul><h4>Estacionadas</h4><ul class="hg-linhas">${est.map(linha).join('')}</ul>`,
     };
@@ -112,7 +112,7 @@ export function conteudo(a) {
   if (a.tipo === 'oficina') {
     const recentes = H.acervo.reduce((s, x) => s + x.consultas.filter((c) => H.T - c.T < 300).length, 0);
     return {
-      cor: '#c4b5fd', olho: 'C-3PO · oficina central, a leste', titulo: 'Oficina central<small>definições compartilhadas por todos os projetos</small>',
+      cor: '#c9a9e8', olho: 'C-3PO · oficina central, a leste', titulo: 'Oficina central<small>definições compartilhadas por todos os projetos</small>',
       fala: `Aqui ficam ${H.acervo.length} definições que valem para todos os projetos: padrões, orientações, skills e lições vivas. ${recentes ? `Nos últimos cinco minutos, ${recentes === 1 ? 'uma consulta' : `${recentes} consultas`}.` : 'Nenhum droid passou aqui nos últimos minutos.'}`,
       corpo: SETORES.map((s) => `<h4 style="color:${s.cor}">${s.nome}</h4><ul class="hg-linhas">${H.acervo.filter((x) => x.setor === s.id).map((x) => `<li>${linkAlvo({ tipo: 'acervo', id: x.id }, esc(x.nome))} <span class="hg-mono hg-apagado" data-consulta="${esc(x.id)}"></span></li>`).join('')}</ul>`).join(''),
     };
@@ -129,7 +129,7 @@ export function conteudo(a) {
     };
   }
   const n = nave(a.nave);
-  if (!n) return { cor: '#8299b8', olho: 'C-3PO', titulo: 'Sumiu<small>não está mais no catálogo</small>', fala: 'Esta nave não está mais no catálogo, mestre.', corpo: '' };
+  if (!n) return { cor: '#ac9b81', olho: 'C-3PO', titulo: 'Sumiu<small>não está mais no catálogo</small>', fala: 'Esta nave não está mais no catálogo, mestre.', corpo: '' };
   if (a.tipo === 'vaga') {
     const semPlane = n.estadoBacklog !== 'ok';
     return {
@@ -177,7 +177,7 @@ export function conteudo(a) {
   if (a.tipo === 'estacao') {
     const k = n.produto.length;
     return {
-      cor: '#e8b54a', olho: 'C-3PO · estação de planejamento', titulo: `Planejamento<small>${esc(n.nome)}</small>`,
+      cor: '#f4b446', olho: 'C-3PO · estação de planejamento', titulo: `Planejamento<small>${esc(n.nome)}</small>`,
       fala: `${k ? `${k === 1 ? 'Uma decisão de produto espera' : `${k} decisões de produto esperam`} por você, mestre.` : 'Nenhuma decisão de produto pendente. Que raridade.'} ${DIF_PRODUTO}`,
       corpo: (k ? n.produto.map((x) => blocoDecisao(x, true)).join('') : vazio('Nada para decidir aqui. Para marcar uma decisão como de produto, ponha a label PRODUTO na carta do Plane.'))
         + (n.chao.length ? `<h4>No chão da doca</h4><p class="hg-vazio">${n.chao.length + n.chaoExtra} ${plural(n.chao.length + n.chaoExtra, 'módulo travado', 'módulos travados')} por decisão; clique nas peças no chão.</p>` : ''),
@@ -187,7 +187,7 @@ export function conteudo(a) {
     const x = n.chao.find((y) => y.id === a.id);
     if (!x) return conteudo({ tipo: 'doca', nave: n.id });
     return {
-      cor: '#fbbf24', olho: 'C-3PO · peça no chão', titulo: `Decisão<small>trava ${esc(x.modulo)} · ${esc(n.nome)}</small>`,
+      cor: '#ffcc4d', olho: 'C-3PO · peça no chão', titulo: `Decisão<small>trava ${esc(x.modulo)} · ${esc(n.nome)}</small>`,
       fala: `Esta peça está no chão porque espera ${x.decisoes.length === 1 ? 'uma decisão sua' : `${x.decisoes.length} decisões suas`}, mestre. Sem ${plural(x.decisoes.length, 'ela', 'elas')}, o módulo ${x.modulo} não entra na nave. ${DIF_CHAO}`,
       corpo: x.decisoes.map((y) => blocoDecisao(y, false)).join(''),
     };
@@ -214,14 +214,14 @@ export function conteudo(a) {
       corpo: `<dl class="hg-campos"><dt>Cartão</dt><dd>${c ? linkAlvo({ tipo: 'item', nave: n.id, chave: `carta:${b.carta}` }, `${esc(c[1])} · ${esc(c[2])}`) : '—'}</dd><dt>Uso</dt><dd data-uso></dd></dl>`,
     };
   }
-  return { cor: '#8299b8', olho: 'C-3PO', titulo: '—', fala: '', corpo: '' };
+  return { cor: '#ac9b81', olho: 'C-3PO', titulo: '—', fala: '', corpo: '' };
 }
 
 function conteudoBerco(a) {
   const v = H.naves.length + 1;
   if (a.pedido) {
     return {
-      cor: '#e8b54a', olho: 'C-3PO · berço de encomendas', titulo: `Pedido pronto<small>${esc(a.dados.nome)} · vaga ${v}</small>`,
+      cor: '#f4b446', olho: 'C-3PO · berço de encomendas', titulo: `Pedido pronto<small>${esc(a.dados.nome)} · vaga ${v}</small>`,
       fala: 'Criar projeto no Plane é ação privilegiada, mestre, e o painel só lê. Copie o pedido e entregue ao orquestrador. Quando o Plane responder, a quilha aparece sozinha nesta vaga.',
       corpo: `<pre class="hg-pedido" id="hg-pedido">${esc(pedidoDeNave(a.dados))}</pre>
         <div class="hg-botoes"><button type="button" class="hg-decidir" data-acao="copiar">Copiar pedido</button><button type="button" class="hg-voltar" data-acao="voltar">Voltar</button></div>
@@ -231,16 +231,16 @@ function conteudoBerco(a) {
   if (a.dados) {
     const d = a.dados;
     return {
-      cor: '#e8b54a', olho: 'C-3PO · berço de encomendas', titulo: `${esc(d.nome)}<small>sigla ${esc(d.sigla)} · vaga ${v} do pátio</small>`,
+      cor: '#f4b446', olho: 'C-3PO · berço de encomendas', titulo: `${esc(d.nome)}<small>sigla ${esc(d.sigla)} · vaga ${v} do pátio</small>`,
       fala: `Confira, mestre: a ${d.nome} nasce com ${d.modulos.length === 1 ? 'uma peça' : `${d.modulos.length} peças`} em planta e nenhuma carta concluída. Confirma?`,
       corpo: `<h4>Cada módulo vira uma peça</h4>
-        <ul class="hg-linhas">${d.modulos.map((m, i) => `<li>${chip('#e8b54a', formaDe(i).nome)}${esc(m)}</li>`).join('')}</ul>
+        <ul class="hg-linhas">${d.modulos.map((m, i) => `<li>${chip('#f4b446', formaDe(i).nome)}${esc(m)}</li>`).join('')}</ul>
         <div class="hg-botoes"><button type="button" class="hg-decidir" data-acao="confirmar">Confirmar encomenda</button><button type="button" class="hg-voltar" data-acao="voltar">Voltar</button></div>`,
     };
   }
   const r = a.rascunho ?? {};
   return {
-    cor: '#e8b54a', olho: 'C-3PO · berço de encomendas', titulo: `Nova nave<small>vaga ${v} do pátio do Plane</small>`,
+    cor: '#f4b446', olho: 'C-3PO · berço de encomendas', titulo: `Nova nave<small>vaga ${v} do pátio do Plane</small>`,
     fala: 'Quer encomendar uma nave nova, mestre? Diga o nome e os módulos planejados. Cada módulo vira uma peça, e a nave fica no pátio até um droid começar a trabalhar nela.',
     corpo: `<form class="hg-encomenda" id="hg-form-encomenda" novalidate>
         <label for="hg-enc-nome">Nome do projeto</label>

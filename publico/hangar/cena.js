@@ -32,7 +32,7 @@ function linhas(pontos, cor, opac = 1) {
   return new T3.LineSegments(g, new T3.LineBasicMaterial({ color: cor, transparent: opac < 1, opacity: opac }));
 }
 const retangulo = (w, d, y = 0.05) => [[-w, y, -d], [w, y, -d], [w, y, -d], [w, y, d], [w, y, d], [-w, y, d], [-w, y, d], [-w, y, -d]];
-const emissivo = (cor, intens = 0.6, base = 0x0b1322) => new T3.MeshStandardMaterial({ color: base, emissive: cor, emissiveIntensity: intens, metalness: 0.5, roughness: 0.45 });
+const emissivo = (cor, intens = 0.6, base = 0x17120d) => new T3.MeshStandardMaterial({ color: base, emissive: cor, emissiveIntensity: intens, metalness: 0.5, roughness: 0.45 });
 function marcar(o, alvo) { o.traverse((x) => { x.userData.alvo = alvo; }); clicaveis.push(o); }
 function desmarcar(raiz) {
   for (let i = clicaveis.length - 1; i >= 0; i--) {
@@ -51,22 +51,22 @@ function montarFabricas() {
   for (const f of FABRICAS) {
     const g = new T3.Group(); g.position.set(f.x, 0, f.z); g.rotation.y = -Math.PI / 2;
     const corpo = new T3.BoxGeometry(12, 5, 10);
-    const m = new T3.Mesh(corpo, new T3.MeshStandardMaterial({ color: 0x0d1626, metalness: 0.5, roughness: 0.6 })); m.position.y = 2.5;
+    const m = new T3.Mesh(corpo, new T3.MeshStandardMaterial({ color: 0x1a140d, metalness: 0.5, roughness: 0.6 })); m.position.y = 2.5;
     const ar = new T3.LineSegments(new T3.EdgesGeometry(corpo), new T3.LineBasicMaterial({ color: f.cor })); ar.position.y = 2.5;
-    const chamine = new T3.Mesh(new T3.CylinderGeometry(1, 1.2, 5, 16), new T3.MeshStandardMaterial({ color: 0x111b2c })); chamine.position.set(-3.5, 7, -2.5);
+    const chamine = new T3.Mesh(new T3.CylinderGeometry(1, 1.2, 5, 16), new T3.MeshStandardMaterial({ color: 0x1e170f })); chamine.position.set(-3.5, 7, -2.5);
     const anelCh = new T3.Mesh(new T3.TorusGeometry(1.05, 0.14, 8, 24), emissivo(f.cor, 1.4)); anelCh.rotation.x = Math.PI / 2; anelCh.position.set(-3.5, 9.5, -2.5);
-    const esteira = new T3.Mesh(new T3.BoxGeometry(6, 0.4, 2.2), new T3.MeshStandardMaterial({ color: 0x141f33 })); esteira.position.set(8.5, 0.2, 0);
+    const esteira = new T3.Mesh(new T3.BoxGeometry(6, 0.4, 2.2), new T3.MeshStandardMaterial({ color: 0x241b11 })); esteira.position.set(8.5, 0.2, 0);
     const listras = [];
     for (let i = 0; i < 4; i++) { const l = new T3.Mesh(new T3.BoxGeometry(0.25, 0.06, 2), emissivo(f.cor, 0.9)); l.position.set(6 + i * 1.5, 0.44, 0); g.add(l); listras.push(l); }
     const anel = new T3.Mesh(new T3.RingGeometry(1.9, 2.3, 40), new T3.MeshBasicMaterial({ color: f.cor, side: T3.DoubleSide, transparent: true, opacity: 0.9 }));
     anel.rotation.x = -Math.PI / 2; anel.position.set(11, 0.05, 0);
-    const base = new T3.Mesh(new T3.CylinderGeometry(0.6, 0.8, 1.4, 12), new T3.MeshStandardMaterial({ color: 0x1a2740 })); base.position.set(3, 5.7, 3.2);
+    const base = new T3.Mesh(new T3.CylinderGeometry(0.6, 0.8, 1.4, 12), new T3.MeshStandardMaterial({ color: 0x2e2216 })); base.position.set(3, 5.7, 3.2);
     const braco = new T3.Group(); braco.position.set(3, 6.4, 3.2);
     const lanca = new T3.Mesh(new T3.BoxGeometry(6, 0.5, 0.5), emissivo(f.cor, 0.5)); lanca.position.x = 3; braco.add(lanca);
     const porta = new T3.Mesh(new T3.PlaneGeometry(4, 3.4), new T3.MeshBasicMaterial({ color: f.cor, transparent: true, opacity: 0.55 }));
     porta.rotation.y = Math.PI / 2; porta.position.set(6.02, 1.7, 0);
     const barreira = new T3.Group();
-    for (let i = 0; i < 4; i++) { const s = new T3.Mesh(new T3.BoxGeometry(0.06, 0.5, 4.2), new T3.MeshBasicMaterial({ color: i % 2 ? 0x1a1a1a : 0xfbbf24 })); s.position.set(6.06, 0.6 + i * 0.8, 0); barreira.add(s); }
+    for (let i = 0; i < 4; i++) { const s = new T3.Mesh(new T3.BoxGeometry(0.06, 0.5, 4.2), new T3.MeshBasicMaterial({ color: i % 2 ? 0x1a1a1a : 0xffcc4d })); s.position.set(6.06, 0.6 + i * 0.8, 0); barreira.add(s); }
     const luz = new T3.PointLight(f.cor, 1.3, 34); luz.position.set(13, 4, 0);
     g.add(m, ar, chamine, anelCh, esteira, anel, base, braco, porta, barreira, luz);
     cena.add(g); marcar(m, { tipo: 'fabrica', id: f.id });
@@ -77,22 +77,22 @@ function montarFabricas() {
 function montarDocas() {
   for (const b of BAIAS) {
     const g = new T3.Group(); g.position.set(b.x, 0, b.z);
-    const piso = new T3.Mesh(new T3.PlaneGeometry(42, 36), new T3.MeshStandardMaterial({ color: 0x08101d, roughness: 0.9 }));
+    const piso = new T3.Mesh(new T3.PlaneGeometry(42, 36), new T3.MeshStandardMaterial({ color: 0x110c08, roughness: 0.9 }));
     piso.rotation.x = -Math.PI / 2; piso.position.y = 0.01; g.add(piso);
     const bw = 21; const bd = 18; const gp = 5;
-    const borda = linhas([[-bw, 0.05, -bd], [bw, 0.05, -bd], [bw, 0.05, -bd], [bw, 0.05, bd], [bw, 0.05, bd], [gp, 0.05, bd], [-gp, 0.05, bd], [-bw, 0.05, bd], [-bw, 0.05, bd], [-bw, 0.05, -bd]], 0x2a3b55);
-    const interna = linhas(retangulo(bw - 1.5, bd - 1.5), 0x2a3b55, 0.25);
-    const alarme = linhas(retangulo(bw + 1, bd + 1, 0.06), 0xff4d6d, 0.9);
-    const parede = new T3.Mesh(new T3.BoxGeometry(42, 6, 0.6), new T3.MeshStandardMaterial({ color: 0x0c1525, metalness: 0.4, roughness: 0.7 })); parede.position.set(0, 3, -bd - 0.3);
-    const topo = linhas([[-bw, 6, -bd], [bw, 6, -bd]], 0x2a3b55);
+    const borda = linhas([[-bw, 0.05, -bd], [bw, 0.05, -bd], [bw, 0.05, -bd], [bw, 0.05, bd], [bw, 0.05, bd], [gp, 0.05, bd], [-gp, 0.05, bd], [-bw, 0.05, bd], [-bw, 0.05, bd], [-bw, 0.05, -bd]], 0x5a4630);
+    const interna = linhas(retangulo(bw - 1.5, bd - 1.5), 0x5a4630, 0.25);
+    const alarme = linhas(retangulo(bw + 1, bd + 1, 0.06), 0xff795b, 0.9);
+    const parede = new T3.Mesh(new T3.BoxGeometry(42, 6, 0.6), new T3.MeshStandardMaterial({ color: 0x19130c, metalness: 0.4, roughness: 0.7 })); parede.position.set(0, 3, -bd - 0.3);
+    const topo = linhas([[-bw, 6, -bd], [bw, 6, -bd]], 0x5a4630);
     g.add(borda, interna, alarme, parede, topo);
     const postes = [];
     for (const s of [-1, 1]) {
-      const p = new T3.Mesh(new T3.BoxGeometry(1, 5, 1), new T3.MeshStandardMaterial({ color: 0x141f33 })); p.position.set(s * (gp + 0.5), 2.5, bd);
-      const luz = new T3.Mesh(new T3.SphereGeometry(0.45, 12, 8), new T3.MeshBasicMaterial({ color: s < 0 ? 0xff4d6d : 0x4ade80 })); luz.position.set(s * (gp + 0.5), 5.4, bd);
+      const p = new T3.Mesh(new T3.BoxGeometry(1, 5, 1), new T3.MeshStandardMaterial({ color: 0x241b11 })); p.position.set(s * (gp + 0.5), 2.5, bd);
+      const luz = new T3.Mesh(new T3.SphereGeometry(0.45, 12, 8), new T3.MeshBasicMaterial({ color: s < 0 ? 0xff795b : 0x7fd6be })); luz.position.set(s * (gp + 0.5), 5.4, bd);
       g.add(p, luz); postes.push(luz);
     }
-    for (const x of [-4, 4]) { const c = new T3.Mesh(new T3.BoxGeometry(1.4, 0.9, 7), new T3.MeshStandardMaterial({ color: 0x1a2740 })); c.position.set(x, 0.45, 0); g.add(c); }
+    for (const x of [-4, 4]) { const c = new T3.Mesh(new T3.BoxGeometry(1.4, 0.9, 7), new T3.MeshStandardMaterial({ color: 0x2e2216 })); c.position.set(x, 0.45, 0); g.add(c); }
     cena.add(g); marcar(piso, { tipo: 'baia', i: b.i });
     obj.baias.push({ b, linhas: [borda.material, interna.material, topo.material], alarme, postes });
   }
@@ -100,38 +100,38 @@ function montarDocas() {
 
 function montarPatio() {
   const g = new T3.Group(); g.position.set(PATIO.x, 0, PATIO.z);
-  const piso = new T3.Mesh(new T3.PlaneGeometry(PATIO.w, PATIO.d), new T3.MeshStandardMaterial({ color: 0x080c1c, roughness: 0.9 }));
+  const piso = new T3.Mesh(new T3.PlaneGeometry(PATIO.w, PATIO.d), new T3.MeshStandardMaterial({ color: 0x100b07, roughness: 0.9 }));
   piso.rotation.x = -Math.PI / 2; piso.position.y = 0.01;
-  g.add(piso, linhas(retangulo(PATIO.w / 2, PATIO.d / 2), 0x7c9cff), linhas([[0, 0.05, -PATIO.d / 2 + 2], [0, 0.05, PATIO.d / 2 - 2]], 0x7c9cff, 0.3));
-  const torre = new T3.Mesh(new T3.CylinderGeometry(1.2, 1.8, 9, 12), new T3.MeshStandardMaterial({ color: 0x121a33, metalness: 0.5 })); torre.position.set(0, 4.5, -PATIO.d / 2 - 4);
-  const farol = new T3.Mesh(new T3.SphereGeometry(0.8, 16, 10), new T3.MeshBasicMaterial({ color: 0x7c9cff })); farol.position.set(0, 9.6, -PATIO.d / 2 - 4);
+  g.add(piso, linhas(retangulo(PATIO.w / 2, PATIO.d / 2), 0xe3a86b), linhas([[0, 0.05, -PATIO.d / 2 + 2], [0, 0.05, PATIO.d / 2 - 2]], 0xe3a86b, 0.3));
+  const torre = new T3.Mesh(new T3.CylinderGeometry(1.2, 1.8, 9, 12), new T3.MeshStandardMaterial({ color: 0x231a12, metalness: 0.5 })); torre.position.set(0, 4.5, -PATIO.d / 2 - 4);
+  const farol = new T3.Mesh(new T3.SphereGeometry(0.8, 16, 10), new T3.MeshBasicMaterial({ color: 0xe3a86b })); farol.position.set(0, 9.6, -PATIO.d / 2 - 4);
   g.add(torre, farol);
   cena.add(g); marcar(piso, { tipo: 'patio' }); marcar(torre, { tipo: 'patio' }); obj.farolPatio = farol;
   const bg = new T3.Group();
   const cruz = new T3.Group();
-  cruz.add(new T3.Mesh(new T3.BoxGeometry(3.2, 0.3, 0.6), emissivo(0xe8b54a, 0.9)), new T3.Mesh(new T3.BoxGeometry(0.6, 0.3, 3.2), emissivo(0xe8b54a, 0.9)));
+  cruz.add(new T3.Mesh(new T3.BoxGeometry(3.2, 0.3, 0.6), emissivo(0xf4b446, 0.9)), new T3.Mesh(new T3.BoxGeometry(0.6, 0.3, 3.2), emissivo(0xf4b446, 0.9)));
   cruz.position.y = 1.4;
-  const anel = new T3.Mesh(new T3.RingGeometry(2.6, 2.9, 40), new T3.MeshBasicMaterial({ color: 0xe8b54a, side: T3.DoubleSide, transparent: true, opacity: 0.6 }));
+  const anel = new T3.Mesh(new T3.RingGeometry(2.6, 2.9, 40), new T3.MeshBasicMaterial({ color: 0xf4b446, side: T3.DoubleSide, transparent: true, opacity: 0.6 }));
   anel.rotation.x = -Math.PI / 2; anel.position.y = 0.06;
-  bg.add(linhas(retangulo(7.4, 4.8, 0.04), 0xe8b54a, 0.7), cruz, anel); cena.add(bg); marcar(bg, { tipo: 'berco' });
+  bg.add(linhas(retangulo(7.4, 4.8, 0.04), 0xf4b446, 0.7), cruz, anel); cena.add(bg); marcar(bg, { tipo: 'berco' });
   obj.berco = { g: bg, cruz, anel };
 }
 
 function montarOficina() {
   const ag = new T3.Group(); ag.position.set(ARQ.x, 0, ARQ.z);
   const L = ARQ.r + 3;
-  const piso = new T3.Mesh(new T3.PlaneGeometry(L * 2, L * 2), new T3.MeshStandardMaterial({ color: 0x0a0d1d, roughness: 0.9 }));
+  const piso = new T3.Mesh(new T3.PlaneGeometry(L * 2, L * 2), new T3.MeshStandardMaterial({ color: 0x120d0a, roughness: 0.9 }));
   piso.rotation.x = -Math.PI / 2; piso.position.y = 0.01;
-  const salao = new T3.Mesh(new T3.CylinderGeometry(3.4, 4.2, 3, 24), new T3.MeshStandardMaterial({ color: 0x121a30, metalness: 0.5, roughness: 0.5 })); salao.position.y = 1.5;
-  const aro = new T3.Mesh(new T3.TorusGeometry(3.5, 0.1, 8, 64), emissivo(0xc4b5fd, 0.8)); aro.rotation.x = Math.PI / 2; aro.position.y = 3.05;
+  const salao = new T3.Mesh(new T3.CylinderGeometry(3.4, 4.2, 3, 24), new T3.MeshStandardMaterial({ color: 0x231a12, metalness: 0.5, roughness: 0.5 })); salao.position.y = 1.5;
+  const aro = new T3.Mesh(new T3.TorusGeometry(3.5, 0.1, 8, 64), emissivo(0xc9a9e8, 0.8)); aro.rotation.x = Math.PI / 2; aro.position.y = 3.05;
   const nucleo = new T3.Mesh(new T3.OctahedronGeometry(1.4, 0), emissivo(0xd8c8ff, 0.9, 0x1a1030)); nucleo.position.y = ARQ.y;
-  const nucleoFio = new T3.Mesh(new T3.OctahedronGeometry(1.9, 0), new T3.MeshBasicMaterial({ color: 0xc4b5fd, wireframe: true, transparent: true, opacity: 0.45 })); nucleoFio.position.y = ARQ.y;
+  const nucleoFio = new T3.Mesh(new T3.OctahedronGeometry(1.9, 0), new T3.MeshBasicMaterial({ color: 0xc9a9e8, wireframe: true, transparent: true, opacity: 0.45 })); nucleoFio.position.y = ARQ.y;
   const aro2 = new T3.Mesh(new T3.TorusGeometry(2.5, 0.06, 8, 64), new T3.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.6 })); aro2.rotation.x = Math.PI / 2; aro2.position.y = ARQ.y;
-  ag.add(piso, linhas(retangulo(L, L), 0xc4b5fd), salao, aro, nucleo, nucleoFio, aro2);
+  ag.add(piso, linhas(retangulo(L, L), 0xc9a9e8), salao, aro, nucleo, nucleoFio, aro2);
   for (const s of SETORES) {
     const [lx, lz] = LADOS[s.id];
     const comp = 18.8;
-    const bancada = new T3.Mesh(new T3.BoxGeometry(lz ? comp : 1.2, 1.1, lz ? 1.2 : comp), new T3.MeshStandardMaterial({ color: 0x141b30, metalness: 0.5, roughness: 0.5 }));
+    const bancada = new T3.Mesh(new T3.BoxGeometry(lz ? comp : 1.2, 1.1, lz ? 1.2 : comp), new T3.MeshStandardMaterial({ color: 0x261c13, metalness: 0.5, roughness: 0.5 }));
     bancada.position.set(lx * (ARQ.r + 0.6), 0.55, lz * (ARQ.r + 0.6));
     const m = comp / 2; const d = ARQ.r - 1.4;
     ag.add(bancada, linhas(lz ? [[-m, 0.05, lz * d], [m, 0.05, lz * d]] : [[lx * d, 0.05, -m], [lx * d, 0.05, m]], s.cor));
@@ -155,10 +155,10 @@ function montarOficina() {
 
 function montarVaga(n) {
   const v = vagaPos(n.vaga); const vg = new T3.Group(); vg.position.set(v.x, 0, v.z);
-  vg.add(linhas(retangulo(7.4, 4.8, 0.04), n.congelado ? 0x2a3045 : 0x34437a));
-  const cores = { aberto: 0x60708f, andamento: 0xfbbf24, feito: 0x4ade80 };
+  vg.add(linhas(retangulo(7.4, 4.8, 0.04), n.congelado ? 0x3a3128 : 0x7a5c34));
+  const cores = { aberto: 0x8f7c60, andamento: 0xffcc4d, feito: 0x7fd6be };
   const pilhas = ['aberto', 'andamento', 'feito'].map((k, j) => {
-    const pilha = new T3.Mesh(new T3.BoxGeometry(0.9, 1, 0.9), emissivo(cores[k], k === 'andamento' ? 0.7 : 0.35, 0x10162a));
+    const pilha = new T3.Mesh(new T3.BoxGeometry(0.9, 1, 0.9), emissivo(cores[k], k === 'andamento' ? 0.7 : 0.35, 0x1f170f));
     pilha.position.set(5.9, 0, -1.6 + j * 1.6); vg.add(pilha);
     return { k, pilha };
   });
@@ -170,20 +170,20 @@ function montarItem(n, b, extras) {
   const bg = new T3.Group(); bg.position.set(b.lx, 0, b.lz);
   const cor = COR_TIPO[b.tipo]; const it = { b, g: bg, mats: [], extra: null };
   if (b.tipo === 'cartao') {
-    const caixa = new T3.Mesh(new T3.BoxGeometry(2.8, 1.3, 1.8), new T3.MeshStandardMaterial({ color: 0x1a2740, metalness: 0.6, roughness: 0.4 })); caixa.position.y = 0.65;
+    const caixa = new T3.Mesh(new T3.BoxGeometry(2.8, 1.3, 1.8), new T3.MeshStandardMaterial({ color: 0x2e2216, metalness: 0.6, roughness: 0.4 })); caixa.position.y = 0.65;
     const faixa = new T3.Mesh(new T3.BoxGeometry(2.84, 0.18, 1.84), emissivo(cor, 0.3)); faixa.position.y = 0.95;
     const tampa = new T3.Group(); tampa.position.set(0, 1.3, -0.9);
-    const tm = new T3.Mesh(new T3.BoxGeometry(2.8, 0.2, 1.8), new T3.MeshStandardMaterial({ color: 0x223352, metalness: 0.6, roughness: 0.4 })); tm.position.z = 0.9; tampa.add(tm);
+    const tm = new T3.Mesh(new T3.BoxGeometry(2.8, 0.2, 1.8), new T3.MeshStandardMaterial({ color: 0x3a2b1a, metalness: 0.6, roughness: 0.4 })); tm.position.z = 0.9; tampa.add(tm);
     const ficha = new T3.Mesh(new T3.PlaneGeometry(1.6, 1), new T3.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0, side: T3.DoubleSide })); ficha.position.set(0, 2.2, 0);
     bg.add(caixa, faixa, tampa, ficha); it.mats.push(faixa.material); it.extra = tampa; it.ficha = ficha;
   } else if (b.tipo === 'editar') {
-    const corpo = new T3.Mesh(new T3.BoxGeometry(2.6, 2.4, 2.2), new T3.MeshStandardMaterial({ color: 0x141f33, metalness: 0.5, roughness: 0.5 })); corpo.position.y = 1.2;
+    const corpo = new T3.Mesh(new T3.BoxGeometry(2.6, 2.4, 2.2), new T3.MeshStandardMaterial({ color: 0x241b11, metalness: 0.5, roughness: 0.5 })); corpo.position.y = 1.2;
     const tela = new T3.Mesh(new T3.PlaneGeometry(1.8, 0.9), emissivo(cor, 0.3)); tela.position.set(0, 1.5, 1.11);
-    const pistao = new T3.Mesh(new T3.CylinderGeometry(0.35, 0.35, 1.4, 12), emissivo(cor, 0.2, 0x2a3a55)); pistao.position.y = 3;
-    const bandeja = new T3.Mesh(new T3.BoxGeometry(1.8, 0.2, 1), new T3.MeshStandardMaterial({ color: 0x1a2740 })); bandeja.position.set(0, 0.3, 1.7);
+    const pistao = new T3.Mesh(new T3.CylinderGeometry(0.35, 0.35, 1.4, 12), emissivo(cor, 0.2, 0x4a3824)); pistao.position.y = 3;
+    const bandeja = new T3.Mesh(new T3.BoxGeometry(1.8, 0.2, 1), new T3.MeshStandardMaterial({ color: 0x2e2216 })); bandeja.position.set(0, 0.3, 1.7);
     bg.add(corpo, tela, pistao, bandeja); it.mats.push(tela.material, pistao.material); it.extra = pistao;
   } else {
-    const pilar = new T3.Mesh(new T3.CylinderGeometry(0.7, 0.9, 2.6, 16), new T3.MeshStandardMaterial({ color: 0x141f33, metalness: 0.5 })); pilar.position.y = 1.3;
+    const pilar = new T3.Mesh(new T3.CylinderGeometry(0.7, 0.9, 2.6, 16), new T3.MeshStandardMaterial({ color: 0x241b11, metalness: 0.5 })); pilar.position.y = 1.3;
     const anel = new T3.Mesh(new T3.TorusGeometry(1.1, 0.12, 8, 32), emissivo(cor, 0.3)); anel.rotation.x = Math.PI / 2; anel.position.y = 2.7;
     bg.add(pilar, anel); it.mats.push(anel.material); it.extra = anel;
   }
@@ -203,7 +203,7 @@ function montarProjeto(n) {
   n.pecas.forEach((pc, i) => {
     const F = pc.F;
     const N = F.cells.length;
-    const solida = new T3.InstancedMesh(geoCel, new T3.MeshStandardMaterial({ color: 0x0d1626, emissive: n.cor, emissiveIntensity: 0.35, metalness: 0.6, roughness: 0.35 }), N);
+    const solida = new T3.InstancedMesh(geoCel, new T3.MeshStandardMaterial({ color: 0x1a140d, emissive: n.cor, emissiveIntensity: 0.35, metalness: 0.6, roughness: 0.35 }), N);
     const fantasma = new T3.InstancedMesh(geoCel, new T3.MeshBasicMaterial({ color: n.cor, wireframe: true, transparent: true, opacity: 0.2 }), N);
     F.cells.forEach((k, j) => {
       mxm.makeScale(1, F.h, 1); mxm.setPosition(k.x + 0.5, F.y0 + F.h / 2, k.y + 0.5); solida.setMatrixAt(j, mxm);
@@ -224,26 +224,26 @@ function montarProjeto(n) {
 
   for (const b of n.bancada) montarItem(n, b, extras);
   const eg = new T3.Group(); eg.position.set(n.estacao.lx, 0, n.estacao.lz);
-  const ebase = new T3.Mesh(new T3.CylinderGeometry(1.4, 1.8, 1.2, 20), new T3.MeshStandardMaterial({ color: 0x141f33, metalness: 0.5 })); ebase.position.y = 0.6;
-  const etampo = new T3.Mesh(new T3.CylinderGeometry(2.2, 2.2, 0.14, 32), emissivo(0xe8b54a, 0.22)); etampo.position.y = 1.27;
-  const econe = new T3.Mesh(new T3.ConeGeometry(1.6, 2.4, 24, 1, true), new T3.MeshBasicMaterial({ color: 0xe8b54a, transparent: true, opacity: 0.1, side: T3.DoubleSide, depthWrite: false }));
+  const ebase = new T3.Mesh(new T3.CylinderGeometry(1.4, 1.8, 1.2, 20), new T3.MeshStandardMaterial({ color: 0x241b11, metalness: 0.5 })); ebase.position.y = 0.6;
+  const etampo = new T3.Mesh(new T3.CylinderGeometry(2.2, 2.2, 0.14, 32), emissivo(0xf4b446, 0.22)); etampo.position.y = 1.27;
+  const econe = new T3.Mesh(new T3.ConeGeometry(1.6, 2.4, 24, 1, true), new T3.MeshBasicMaterial({ color: 0xf4b446, transparent: true, opacity: 0.1, side: T3.DoubleSide, depthWrite: false }));
   econe.rotation.x = Math.PI; econe.position.y = 2.5;
-  const eholo = new T3.Mesh(new T3.IcosahedronGeometry(1.1, 0), new T3.MeshBasicMaterial({ color: 0xe8b54a, wireframe: true, transparent: true, opacity: 0.9 })); eholo.position.y = 3.3;
+  const eholo = new T3.Mesh(new T3.IcosahedronGeometry(1.1, 0), new T3.MeshBasicMaterial({ color: 0xf4b446, wireframe: true, transparent: true, opacity: 0.9 })); eholo.position.y = 3.3;
   eg.add(ebase, etampo, econe, eholo);
   extras.add(eg); marcar(eg, { tipo: 'estacao', nave: n.id });
   const chao = [];
   for (const x of n.chao) {
     const dg = new T3.Group(); dg.position.set(x.lx, 0, x.lz);
     const r = aleatorio(x.peca * 31 + 100);
-    const mat = new T3.MeshStandardMaterial({ color: 0x1c1606, emissive: 0xfbbf24, emissiveIntensity: 0.25, metalness: 0.5, roughness: 0.5 });
+    const mat = new T3.MeshStandardMaterial({ color: 0x1c1606, emissive: 0xffcc4d, emissiveIntensity: 0.25, metalness: 0.5, roughness: 0.5 });
     [new T3.BoxGeometry(2.2, 0.5, 1.4), new T3.ConeGeometry(0.9, 1.6, 4), new T3.BoxGeometry(1, 0.9, 1)].forEach((geo, i) => {
       const m = new T3.Mesh(geo, mat); m.position.set((r() - 0.5) * 2.4, 0.4 + i * 0.1, (r() - 0.5) * 1.8); m.rotation.set(r() * 0.5, r() * 3, r() * 0.6);
-      const aresta = new T3.LineSegments(new T3.EdgesGeometry(geo), new T3.LineBasicMaterial({ color: 0xfbbf24 }));
+      const aresta = new T3.LineSegments(new T3.EdgesGeometry(geo), new T3.LineBasicMaterial({ color: 0xffcc4d }));
       aresta.position.copy(m.position); aresta.rotation.copy(m.rotation);
       dg.add(m, aresta);
     });
     const haste = new T3.Mesh(new T3.CylinderGeometry(0.07, 0.07, 3, 6), new T3.MeshStandardMaterial({ color: 0x3a3320 })); haste.position.set(1.6, 1.5, -0.6);
-    const farol = new T3.Mesh(new T3.SphereGeometry(0.32, 12, 8), new T3.MeshBasicMaterial({ color: 0xfbbf24 })); farol.position.set(1.6, 3.1, -0.6);
+    const farol = new T3.Mesh(new T3.SphereGeometry(0.32, 12, 8), new T3.MeshBasicMaterial({ color: 0xffcc4d })); farol.position.set(1.6, 3.1, -0.6);
     dg.add(haste, farol);
     extras.add(dg); marcar(dg, { tipo: 'decisao', nave: n.id, id: x.id }); chao.push({ mat, farol });
   }
@@ -253,11 +253,11 @@ function montarProjeto(n) {
 
 function montarDroid(d) {
   const f = fabrica(d.ia); const g = new T3.Group();
-  const corpo = new T3.Mesh(new T3.CylinderGeometry(0.6, 0.6, 1, 18), new T3.MeshStandardMaterial({ color: 0xdfe7f2, metalness: 0.6, roughness: 0.3 }));
+  const corpo = new T3.Mesh(new T3.CylinderGeometry(0.6, 0.6, 1, 18), new T3.MeshStandardMaterial({ color: 0xefe4d0, metalness: 0.6, roughness: 0.3 }));
   const domo = new T3.Mesh(new T3.SphereGeometry(0.6, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), emissivo(f.cor, 0.9, 0x222222)); domo.position.y = 0.5;
-  const olho = new T3.Mesh(new T3.SphereGeometry(0.17, 8, 6), new T3.MeshBasicMaterial({ color: 0x4ade80 })); olho.position.set(0.5, 0.62, 0);
-  const carga = new T3.Mesh(new T3.BoxGeometry(0.8, 0.8, 0.8), emissivo(0xffb347, 1.1, 0x2a1a05)); carga.position.y = -1;
-  const feixe = new T3.Mesh(new T3.ConeGeometry(3.2, 7, 24, 1, true), new T3.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.16, side: T3.DoubleSide, depthWrite: false }));
+  const olho = new T3.Mesh(new T3.SphereGeometry(0.17, 8, 6), new T3.MeshBasicMaterial({ color: 0x7fd6be })); olho.position.set(0.5, 0.62, 0);
+  const carga = new T3.Mesh(new T3.BoxGeometry(0.8, 0.8, 0.8), emissivo(0xff9b54, 1.1, 0x2a1a05)); carga.position.y = -1;
+  const feixe = new T3.Mesh(new T3.ConeGeometry(3.2, 7, 24, 1, true), new T3.MeshBasicMaterial({ color: 0x7fd6be, transparent: true, opacity: 0.16, side: T3.DoubleSide, depthWrite: false }));
   feixe.position.y = -3.8;
   g.add(corpo, domo, olho, carga, feixe); cena.add(g);
   marcar(corpo, { tipo: 'droid', id: d.id }); marcar(domo, { tipo: 'droid', id: d.id });
@@ -292,18 +292,18 @@ export async function montarCena(camada, aviso, aoClicar, aoFundo) {
   aviso.remove();
   R.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   camada.appendChild(R.domElement);
-  cena = new T3.Scene(); cena.background = new T3.Color(0x03060c); cena.fog = new T3.Fog(0x03060c, 260, 520);
+  cena = new T3.Scene(); cena.background = new T3.Color(0x070504); cena.fog = new T3.Fog(0x070504, 260, 520);
   const cam = new T3.PerspectiveCamera(48, 16 / 9, 0.1, 900); C.cam = cam;
   cam.position.set(GERAL.posicao.x, GERAL.posicao.y, GERAL.posicao.z);
-  cena.add(new T3.AmbientLight(0x7d93b8, 0.45));
-  const sol = new T3.DirectionalLight(0xbfd6ff, 0.7); sol.position.set(-40, 80, 50); cena.add(sol);
-  const chao = new T3.Mesh(new T3.PlaneGeometry(420, 320), new T3.MeshStandardMaterial({ color: 0x060b15, roughness: 1 }));
+  cena.add(new T3.AmbientLight(0xb8a07d, 0.45));
+  const sol = new T3.DirectionalLight(0xffe2bf, 0.7); sol.position.set(-40, 80, 50); cena.add(sol);
+  const chao = new T3.Mesh(new T3.PlaneGeometry(420, 320), new T3.MeshStandardMaterial({ color: 0x0b0806, roughness: 1 }));
   chao.rotation.x = -Math.PI / 2; chao.position.y = -0.02; cena.add(chao);
-  cena.add(new T3.GridHelper(420, 105, 0x123050, 0x0a1a2c));
+  cena.add(new T3.GridHelper(420, 105, 0x3a2a16, 0x1c140b));
   const est = new Float32Array(900 * 3); const ra = aleatorio(5);
   for (let i = 0; i < 900; i++) { const a = ra() * Math.PI * 2; const e = ra() * 0.9 + 0.08; const dd = 330; est[i * 3] = Math.cos(a) * Math.cos(e) * dd; est[i * 3 + 1] = Math.sin(e) * dd; est[i * 3 + 2] = Math.sin(a) * Math.cos(e) * dd; }
   const ge = new T3.BufferGeometry(); ge.setAttribute('position', new T3.BufferAttribute(est, 3));
-  cena.add(new T3.Points(ge, new T3.PointsMaterial({ color: 0x9fc3ff, size: 0.8, fog: false })));
+  cena.add(new T3.Points(ge, new T3.PointsMaterial({ color: 0xffd9a8, size: 0.8, fog: false })));
 
   montarFabricas(); montarDocas(); montarPatio(); montarOficina();
   for (const n of H.naves) montarProjeto(n);
@@ -377,8 +377,8 @@ export function projetar(x, y, z) {
   return { x: (v3.x + 1) / 2 * C.W, y: (1 - v3.y) / 2 * C.H, ok: v3.z < 1 && v3.x > -1.1 && v3.x < 1.1 && v3.y > -1.1 && v3.y < 1.1 };
 }
 
-const COR_LIVRE = 0x2a3b55;
-const CINZA = 0x3b4157;
+const COR_LIVRE = 0x5a4630;
+const CINZA = 0x57504a;
 export function desenhar(dt) {
   if (!C.pronto) return;
   const T = H.T; const cam = C.cam; const ct = C.controles;
@@ -429,7 +429,7 @@ export function desenhar(dt) {
       const escolhida = H.popup && H.popup.alvo.tipo === 'peca' && H.popup.alvo.nave === n.id && n.pecas[H.popup.alvo.i] === q.pc;
       q.solida.count = feitas; q.fantasma.count = q.N - feitas;
       q.solida.material.emissiveIntensity = n.congelado ? 0.12 : escolhida ? 0.75 + 0.2 * Math.sin(T * 6) : T - q.pc.tocada < 0.2 ? 0.7 + 0.3 * Math.sin(T * 30) : (q.pc.p >= 1 ? 0.55 : 0.3);
-      q.fantasma.material.color.set(trava && naDoca(n) ? 0xfbbf24 : n.cor);
+      q.fantasma.material.color.set(trava && naDoca(n) ? 0xffcc4d : n.cor);
       q.fantasma.material.opacity = n.estado === 'estacionada' ? 0.1 : escolhida ? 0.55 : trava ? 0.3 + 0.2 * Math.sin(T * 3) : 0.2;
     }
     const motor = n.pecas[1];

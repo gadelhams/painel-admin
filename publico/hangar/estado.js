@@ -5,8 +5,8 @@ import { suave } from './util.js';
 // Centro: docas; norte: fábricas de droids; leste: Oficina central; oeste: pátio do Plane.
 export const BAIAS = [{ x: -22, z: -19 }, { x: 22, z: -19 }, { x: -22, z: 19 }, { x: 22, z: 19 }].map((b, i) => ({ ...b, i, ocupante: null }));
 export const FABRICAS = [
-  { id: 'claude', nome: 'Claude', x: -32, z: -60, cor: '#ff9d5c', ativa: false },
-  { id: 'codex', nome: 'Codex', x: 0, z: -60, cor: '#5cf2ff', ativa: false },
+  { id: 'claude', nome: 'Claude', x: -32, z: -60, cor: '#ff8a5c', ativa: false },
+  { id: 'codex', nome: 'Codex', x: 0, z: -60, cor: '#7cc8dc', ativa: false },
   { id: 'grok', nome: 'Grok', x: 32, z: -60, cor: '#b28cff', ativa: false },
 ];
 export const fabrica = (id) => FABRICAS.find((f) => f.id === id);
@@ -20,15 +20,15 @@ export const ARQ = { x: 66, y: 5, z: 0, r: 9 };
 export const LADOS = { padroes: [0, -1], orientacoes: [1, 0], skills: [0, 1], licoes: [-1, 0] };
 export const SETORES = [
   { id: 'padroes', nome: 'Padrões', cor: '#a78bfa' },
-  { id: 'orientacoes', nome: 'Orientações', cor: '#93c5fd' },
+  { id: 'orientacoes', nome: 'Orientações', cor: '#f2c58a' },
   { id: 'skills', nome: 'Skills', cor: '#e879f9' },
   { id: 'licoes', nome: 'Lições vivas', cor: '#5eead4' },
 ];
 export const setor = (id) => SETORES.find((s) => s.id === id);
 
-export const COR_TIPO = { cartao: '#5cf2ff', editar: '#ffb347', testar: '#4ade80', consultar: '#c4b5fd', ler: '#8fa3c9', comando: '#8fa3c9' };
+export const COR_TIPO = { cartao: '#e9d8b4', editar: '#ff9b54', testar: '#7fd6be', consultar: '#c9a9e8', ler: '#ac9b81', comando: '#ac9b81' };
 export const NOME_TIPO = { cartao: 'caixa de ferramentas', editar: 'fábrica de peças', testar: 'banco de provas', consultar: 'Oficina central' };
-const CORES = ['#5cf2ff', '#ffc857', '#ff5c8a', '#a3e635', '#f0abfc', '#fb923c', '#60a5fa', '#f87171', '#86efac', '#818cf8', '#22d3ee', '#facc15', '#94a3b8', '#fda4af', '#bef264', '#d8b4fe'];
+const CORES = ['#7fd6be', '#ffc857', '#ff6f91', '#a3e635', '#f0abfc', '#fb923c', '#6fb3d9', '#f87171', '#86efac', '#b39ddb', '#4fc3a1', '#facc15', '#c8b49a', '#fda4af', '#bef264', '#d8b4fe'];
 export const corDoIndice = (i) => CORES[i % CORES.length];
 
 // Quanto tempo uma nave fica na doca depois do último droid sair.

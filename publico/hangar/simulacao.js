@@ -314,19 +314,19 @@ export function passo(dt) {
 
 export function estadoDroid(d) {
   if (d.fase === 'montagem') return { r: 'sendo montado', c: 'var(--hg-pensa)', hex: 0xc084fc };
-  if (d.fase === 'volta' || d.encerrar) return { r: 'voltando à fábrica', c: 'var(--hg-ciano)', hex: 0x5cf2ff };
-  if (d.fase === 'desmonte') return { r: 'sendo desmontado', c: 'var(--hg-apagado)', hex: 0x8299b8 };
-  if (d.fase === 'ida') return { r: 'a caminho', c: 'var(--hg-ciano)', hex: 0x5cf2ff };
+  if (d.fase === 'volta' || d.encerrar) return { r: 'voltando à fábrica', c: 'var(--hg-realce)', hex: 0xffd89a };
+  if (d.fase === 'desmonte') return { r: 'sendo desmontado', c: 'var(--hg-apagado)', hex: 0xac9b81 };
+  if (d.fase === 'ida') return { r: 'a caminho', c: 'var(--hg-realce)', hex: 0xffd89a };
   const t = d.passo && d.acao?.tipo;
-  if (t === 'consultar') return { r: d.passo === 'consultar' ? 'consultando a Oficina' : 'indo à Oficina', c: 'var(--hg-oficina)', hex: 0xc4b5fd };
+  if (t === 'consultar') return { r: d.passo === 'consultar' ? 'consultando a Oficina' : 'indo à Oficina', c: 'var(--hg-oficina)', hex: 0xc9a9e8 };
   if (d.passo) {
     const r = { ir: 'indo à bancada', usar: t === 'cartao' ? 'lendo o cartão' : t === 'editar' ? 'prensando peça' : 'preparando teste', levar: 'levando peça', instalar: 'instalando', testar_ir: 'indo testar', testar: 'testando', inspecionar: 'inspecionando', olhar: 'inspecionando' }[d.passo];
-    return { r, c: 'var(--hg-ok)', hex: 0x4ade80 };
+    return { r, c: 'var(--hg-ok)', hex: 0x7fd6be };
   }
-  if (d.s.estado === 'aguardando') return { r: 'aguardando você', c: 'var(--hg-alerta)', hex: 0xfbbf24 };
-  if (d.s.estado === 'ocioso') return { r: 'ocioso', c: 'var(--hg-apagado)', hex: 0x8299b8 };
-  if (d.nave && !naDoca(d.nave)) return { r: 'esperando doca livre', c: 'var(--hg-alerta)', hex: 0xfbbf24 };
-  return { r: d.s.estado === 'pensando' ? 'pensando' : 'trabalhando', c: d.s.estado === 'pensando' ? 'var(--hg-pensa)' : 'var(--hg-ok)', hex: d.s.estado === 'pensando' ? 0xc084fc : 0x4ade80 };
+  if (d.s.estado === 'aguardando') return { r: 'aguardando você', c: 'var(--hg-alerta)', hex: 0xffcc4d };
+  if (d.s.estado === 'ocioso') return { r: 'ocioso', c: 'var(--hg-apagado)', hex: 0xac9b81 };
+  if (d.nave && !naDoca(d.nave)) return { r: 'esperando doca livre', c: 'var(--hg-alerta)', hex: 0xffcc4d };
+  return { r: d.s.estado === 'pensando' ? 'pensando' : 'trabalhando', c: d.s.estado === 'pensando' ? 'var(--hg-pensa)' : 'var(--hg-ok)', hex: d.s.estado === 'pensando' ? 0xc084fc : 0x7fd6be };
 }
 
 export const ativas = () => FABRICAS.filter((f) => f.ativa).length;

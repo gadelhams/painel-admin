@@ -23,8 +23,8 @@ function rotulosNave(n) {
   for (const [k, e] of el.dec) if (k.startsWith(`${n.id}:`)) { e.remove(); el.dec.delete(k); }
   el.doca.set(n.id, rotulo('hg-r-doca hg-preench', n.cor, `<span>${esc(n.nome)}</span><span class="dec"></span><span class="pct"></span>`, { tipo: 'doca', nave: n.id }));
   el.vaga.set(n.id, rotulo('hg-r-vaga hg-preench', n.cor, '', { tipo: 'vaga', nave: n.id }));
-  el.est.set(n.id, rotulo('hg-r-est', '#e8b54a', 'planejamento <span></span>', { tipo: 'estacao', nave: n.id }));
-  for (const x of n.chao) el.dec.set(x.id, rotulo('hg-r-dec', '#fbbf24', `decisão · ${esc(x.modulo)}${x.decisoes.length > 1 ? ` · ${x.decisoes.length}` : ''}`, { tipo: 'decisao', nave: n.id, id: x.id }));
+  el.est.set(n.id, rotulo('hg-r-est', '#f4b446', 'planejamento <span></span>', { tipo: 'estacao', nave: n.id }));
+  for (const x of n.chao) el.dec.set(x.id, rotulo('hg-r-dec', '#ffcc4d', `decisão · ${esc(x.modulo)}${x.decisoes.length > 1 ? ` · ${x.decisoes.length}` : ''}`, { tipo: 'decisao', nave: n.id, id: x.id }));
 }
 
 function rotuloItem(n, b) {
@@ -34,12 +34,12 @@ function rotuloItem(n, b) {
 export function iniciarRotulos(container, clicar) {
   raiz = container; aoClicar = clicar;
   for (const n of H.naves) { rotulosNave(n); for (const b of n.bancada) rotuloItem(n, b); }
-  el.berco = rotulo('hg-r-berco', '#e8b54a', '+ nova nave', { tipo: 'berco' });
-  for (const b of BAIAS) el.livre[b.i] = rotulo('hg-r-livre', '#8299b8', `doca ${b.i + 1} · livre`, { tipo: 'baia', i: b.i });
+  el.berco = rotulo('hg-r-berco', '#f4b446', '+ nova nave', { tipo: 'berco' });
+  for (const b of BAIAS) el.livre[b.i] = rotulo('hg-r-livre', '#ac9b81', `doca ${b.i + 1} · livre`, { tipo: 'baia', i: b.i });
   for (const f of FABRICAS) el.fab.set(f.id, rotulo('hg-r-fab', f.cor, `Fábrica ${f.nome}<small></small>`, { tipo: 'fabrica', id: f.id }));
   for (const d of H.droids) el.droid.set(d.id, rotulo('hg-r-droid', fabrica(d.ia).cor, esc(d.rotulo), { tipo: 'droid', id: d.id }));
-  el.oficina = rotulo('hg-r-zona', '#c4b5fd', 'Oficina central <small></small>', { tipo: 'oficina' });
-  el.patio = rotulo('hg-r-zona', '#7c9cff', 'Pátio do Plane <small></small>', { tipo: 'patio' });
+  el.oficina = rotulo('hg-r-zona', '#c9a9e8', 'Oficina central <small></small>', { tipo: 'oficina' });
+  el.patio = rotulo('hg-r-zona', '#e3a86b', 'Pátio do Plane <small></small>', { tipo: 'patio' });
   for (const x of H.acervo) el.acervo.set(x.id, rotulo('hg-r-acervo', setor(x.setor).cor, esc(x.nome.replace(/^~\/\.claude\//, '~/')), { tipo: 'acervo', id: x.id }));
   ouvir('naveMontada', rotulosNave);
   ouvir('itemNovo', rotuloItem);

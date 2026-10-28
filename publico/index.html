@@ -86,7 +86,7 @@
         <header class="hg-topo">
           <div class="hg-marca"><h2>Hangar <span>·</span> estaleiro</h2><span class="hg-olho">naves = projetos · droids = sessões de IA vivas · só leitura</span></div>
           <div class="hg-acoes">
-            <button type="button" class="hg-btn" id="hg-geral" aria-pressed="true" style="--c:var(--hg-ciano)">Visão geral</button>
+            <button type="button" class="hg-btn" id="hg-geral" aria-pressed="true" style="--c:var(--hg-realce)">Visão geral</button>
             <button type="button" class="hg-btn" id="hg-btn-patio" aria-pressed="false" style="--c:var(--hg-patio)">Pátio do Plane</button>
             <button type="button" class="hg-btn" id="hg-btn-oficina" aria-pressed="false" style="--c:var(--hg-oficina)">Oficina</button>
             <button type="button" class="hg-btn hg-ajuda" id="hg-abrir-ajuda" aria-label="Legenda e comandos">?</button>
@@ -100,11 +100,11 @@
           <div class="hg-camada" id="hg-camada"><div class="hg-aviso" id="hg-aviso">Carregando o motor 3D…</div></div>
           <div class="hg-rotulos" id="hg-rotulos"></div>
           <svg class="hg-rosa" viewBox="-30 -30 60 60" aria-hidden="true">
-            <g id="hg-rosa-g" fill="none" stroke="#8299b8" stroke-width="1.2">
+            <g id="hg-rosa-g" fill="none" stroke="#ac9b81" stroke-width="1.2">
               <circle r="20" stroke-opacity=".5"/>
-              <path d="M0 -20 L4 0 L0 20 L-4 0 Z" fill="rgba(130,153,184,.15)"/>
-              <path d="M0 -20 L4 0 L-4 0 Z" fill="#5cf2ff" stroke="#5cf2ff"/>
-              <text y="-23" text-anchor="middle" fill="#5cf2ff" stroke="none" font-size="9" font-family="IBM Plex Mono, monospace">N</text>
+              <path d="M0 -20 L4 0 L0 20 L-4 0 Z" fill="rgba(172,155,129,.15)"/>
+              <path d="M0 -20 L4 0 L-4 0 Z" fill="#f4b446" stroke="#f4b446"/>
+              <text y="-23" text-anchor="middle" fill="#f4b446" stroke="none" font-size="9" font-family="IBM Plex Mono, monospace">N</text>
             </g>
           </svg>
           <span class="hg-mira" id="hg-mira" hidden></span>
@@ -132,14 +132,14 @@
       <dialog class="hg-ajuda-dlg" id="hg-ajuda" aria-labelledby="hg-ajuda-titulo">
         <div class="hg-ajuda-topo"><h2 id="hg-ajuda-titulo">Como ler o Hangar</h2><button type="button" class="hg-fechar" id="hg-fechar-ajuda" aria-label="Fechar">×</button></div>
         <div class="hg-mapa-mini" aria-label="Mapa do estaleiro">
-          <div class="n" style="--c:#ff9d5c">norte · fábricas de droids</div>
+          <div class="n" style="--c:#ff8a5c">norte · fábricas de droids</div>
           <div class="w" style="--c:var(--hg-patio)">oeste · pátio do Plane</div>
-          <div class="c" style="--c:var(--hg-ciano)">centro · docas (naves em trabalho)</div>
+          <div class="c" style="--c:var(--hg-realce)">centro · docas (naves em trabalho)</div>
           <div class="e" style="--c:var(--hg-oficina)">leste · Oficina central</div>
         </div>
         <dl class="hg-legenda">
-          <div><i style="--cor:#ff9d5c"></i><dt>Fábricas de droids</dt><dd>Uma por IA. Cada droid é uma sessão de Claude Code ou Codex viva nesta máquina (ativa nos últimos 15 minutos); quando a sessão some, ele volta e é desmontado. Sem a CLI rodando, a fábrica fica offline.</dd></div>
-          <div><i style="--cor:var(--hg-ciano)"></i><dt>Docas</dt><dd>Quatro, no centro: só as naves em que algum droid trabalha agora. A cor da doca é a do projeto.</dd></div>
+          <div><i style="--cor:#ff8a5c"></i><dt>Fábricas de droids</dt><dd>Uma por IA. Cada droid é uma sessão de Claude Code ou Codex viva nesta máquina (ativa nos últimos 15 minutos); quando a sessão some, ele volta e é desmontado. Sem a CLI rodando, a fábrica fica offline.</dd></div>
+          <div><i style="--cor:var(--hg-realce)"></i><dt>Docas</dt><dd>Quatro, no centro: só as naves em que algum droid trabalha agora. A cor da doca é a do projeto.</dd></div>
           <div><i style="--cor:var(--hg-patio)"></i><dt>Pátio do Plane</dt><dd>Todos os projetos do catálogo, com a pilha de cartas abertas, em andamento e feitas. A nave é rebocada para uma doca quando um droid começa a trabalhar nela.</dd></div>
           <div><i class="tracejado" style="--cor:var(--hg-ouro)"></i><dt>Berço de encomendas</dt><dd>A próxima vaga do pátio. Monta o pedido de um projeto novo para o orquestrador; o painel só lê o Plane.</dd></div>
           <div><i style="--cor:var(--hg-oficina)"></i><dt>Oficina central</dt><dd>Padrões, orientações, skills e lições vivas. O droid vai até lá quando a sessão chama uma skill ou lê um desses arquivos.</dd></div>

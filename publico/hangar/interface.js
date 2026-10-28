@@ -161,7 +161,7 @@ export function atualizarPaineis(dt = 0) {
     const alvo = b.querySelector('[data-sinais]');
     if (alvo) {
       const k = n.chao.length + n.chaoExtra + n.produto.length; const aqui = H.droids.filter((d) => d.nave === n && !d.encerrar).length;
-      const s = [`<span class="hg-chip" style="--c:var(--hg-ciano)">${esc(situacao(n))}</span>`, `<span class="hg-chip" style="--c:var(--hg-ok)">${aqui} ${plural(aqui, 'droid', 'droids')}</span>`];
+      const s = [`<span class="hg-chip" style="--c:var(--hg-realce)">${esc(situacao(n))}</span>`, `<span class="hg-chip" style="--c:var(--hg-ok)">${aqui} ${plural(aqui, 'droid', 'droids')}</span>`];
       if (k) s.push(`<span class="hg-chip" style="--c:var(--hg-alerta)">${k} ${plural(k, 'decisão', 'decisões')}</span>`);
       if (n.sonda) s.push(`<span class="hg-chip" style="--c:${n.sonda === 'falha' ? 'var(--hg-falha)' : 'var(--hg-ok)'}">sonda ${n.sonda === 'falha' ? 'falhou' : 'ok'}</span>`);
       const html = s.join(''); if (alvo.innerHTML !== html) alvo.innerHTML = html;

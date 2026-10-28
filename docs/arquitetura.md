@@ -434,7 +434,9 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   6 acessórios e contêineres do 13º módulo em diante). O preenchimento da
   peça é sempre a fração do Plane; os droids não mexem nele. Fora da aba ou
   com a janela oculta, poll e animação param. `prefers-reduced-motion`
-  desliga os voos.
+  desliga os voos. Paleta: sempre escura, no cobre-âmbar do tema escuro de
+  `protocolo.css` (tokens `--hg-*` em `hangar.css`; as cores da cena em
+  `cena.js` e `estado.js`, que precisam acompanhar à mão).
 
 #### vendor/mermaid.min.js
 
