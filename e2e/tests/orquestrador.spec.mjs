@@ -63,6 +63,10 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoModelosMs = 0, opcoe
       return;
     }
     if (!url.pathname.startsWith('/api/')) { await route.continue(); return; }
+    // Diagnóstico da voz (25/10/2026): o navegador manda telemetria do
+    // microfone/áudio ao carregar — não é escrita privilegiada nem Plane; fica
+    // fora da auditoria de "nenhuma chamada que não seja GET".
+    if (url.pathname === '/api/diagnostico/voz') { await route.fulfill({ status: 204, body: '' }); return; }
     let corpo = null;
     if (req.postData()) {
       try { corpo = req.postDataJSON(); } catch { corpo = null; }
@@ -72,6 +76,10 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoModelosMs = 0, opcoe
       contentType: 'application/json; charset=utf-8', body: JSON.stringify(dados) });
     if (req.method() === 'GET') {
       if (url.pathname === '/api/projetos') return responder({ projetos: [] });
+      // Rotas só-leitura que a página nova consulta ao carregar (25/10/2026):
+      // presença da transcrição xAI e a rotina de alinhamento da aba Docs.
+      if (url.pathname === '/api/orquestracao/voz') return responder({ xai: false });
+      if (url.pathname === '/api/alinhamento') return responder({ varridoEm: '2026-10-25T00:00:00Z', duracaoMs: 0, erroPlane: null, cartasMedidas: 0, limiarFio: 8, totais: {}, total: 0, projetos: [] });
       if (url.pathname === '/api/backlog') return responder({ projetos: [] });
       if (url.pathname === '/api/decisoes') return responder({ decisoes: [] });
       if (url.pathname === '/api/producao') return responder({ sondas: [] });
