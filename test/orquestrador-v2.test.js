@@ -95,3 +95,17 @@ test('Codex: rate_limits da sessão viram amostra da assinatura; velha vira "úl
   await fs.writeFile(path.join(raiz, '2026', '10', '27', 'rollout-a.jsonl'), `${JSON.stringify({ timestamp: '2026-10-27T10:00:00Z', payload: { type: 'user_message' } })}\n${JSON.stringify(evento)}\n${JSON.stringify({ timestamp: '2026-10-29T11:31:00Z', payload: { type: 'agent_message' } })}\n`);
   assert.deepEqual((await criarFonteCodex({ raiz, agora: () => Date.parse('2026-10-29T12:00:00Z') })()).map(a => a.percentualUsado), [26, 61.5], 'acha a sessão aberta há dias, no diretório do dia em que nasceu');
 });
+
+test('Claude: o arquivo da statusLine vira amostra; ausente ou ilegível não inventa número', async () => {
+  const { amostrasDoArquivo, criarFonteClaude } = await import('../orquestrador/fonte-consumo-claude.js');
+  const dados = { versao: 1, atualizadoEm: '2026-10-29T12:00:00Z', cincoHoras: { percentual: 23.5, reiniciaEm: '2026-10-29T15:00:00Z' }, semana: { percentual: 41, reiniciaEm: null } };
+  assert.deepEqual(amostrasDoArquivo(dados).map(a => [a.janela, a.percentualUsado]), [['5 h', 23.5], ['semana', 41]]);
+  assert.deepEqual(amostrasDoArquivo({ ...dados, versao: 2 }), [], 'formato desconhecido não vira número');
+  const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-uso-'));
+  assert.deepEqual(await criarFonteClaude({ arquivo: path.join(raiz, 'nao-existe.json') })(), []);
+  await fs.writeFile(path.join(raiz, 'ruim.json'), '{');
+  assert.deepEqual(await criarFonteClaude({ arquivo: path.join(raiz, 'ruim.json') })(), []);
+  await fs.writeFile(path.join(raiz, 'ok.json'), JSON.stringify(dados));
+  const consumo = await criarLeitorConsumo({ agora: () => Date.parse('2026-10-29T12:05:00Z'), fontes: { claude: criarFonteClaude({ arquivo: path.join(raiz, 'ok.json') }) } })();
+  assert.deepEqual(consumo.claude.janelas.map(j => j.percentual), [23.5, 41]);
+});

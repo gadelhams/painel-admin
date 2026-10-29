@@ -27,7 +27,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   varre o Plane ([plano](plano-frota-do-hangar.md)).
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
-- **Consumo** (PAINEL-40): Codex lido das sessões (29/10); Claude sem fonte.
+- **Consumo** (PAINEL-40): Codex pelas sessões, Claude pela statusLine (29/10).
 - **Fase 3 do C-3PO** (ações): motor só-leitura; a 1ª ação é a mesa de
   decisão, desenhada e não construída ([plano](plano-mesa-de-decisao.md)).
   Voz: xAI se o navegador não reconhece; falar por cima corta.
