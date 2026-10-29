@@ -201,11 +201,13 @@ export const PROJETOS = [
     // A pasta Anya/ não é repo: o código é o clone Anya/app (gadelhams/anya)
     // e o acervo o Anya/dados — por isso o `subRepo`.
     // SupervisorHandoff entrou no catálogo em 01/10/2026, com o projeto SUPER
-    // no Plane (PLANO-SUPERVISOR-LOREENGINE.md).
+    // no Plane (PLANO-SUPERVISOR-LOREENGINE.md). Congelado em 29/10/2026: o plano foi
+    // para o histórico (RAIZ-19), superado pela frota do Hangar.
     pasta: 'SupervisorHandoff',
     area: 'ProjetosPessoais',
+    congelado: true,
     titulo: 'SupervisorHandoff',
-    descricao: 'Supervisor determinístico que orquestra agentes: um faz, outro supervisiona; alvo novo é o LoreEngine do Felipe.',
+    descricao: 'Supervisor determinístico que orquestrava agentes; superado pela frota do Hangar em 29/10/2026, só leitura.',
     stack: 'Python 3.12 puro · codex exec + claude -p',
     entrada: 'AGENTS.md',
     plane: 'e2a3c301-7597-42f7-a2c1-9b4b4b3d3f29', // SUPER

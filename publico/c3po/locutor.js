@@ -24,6 +24,7 @@ class Locutor {
       'elevenlabs-inalcancavel': 'ElevenLabs fora de alcance',
       'elevenlabs-recusou': 'ElevenLabs recusou a síntese',
       'elevenlabs-ocupada': 'ElevenLabs no limite de sínteses simultâneas',
+      'sem-sessao': 'voz da ElevenLabs só com login (painel.vpn.astargne.com)',
     };
 
     fetch('/api/tts')
@@ -146,6 +147,7 @@ class Locutor {
           } catch { /* resposta sem JSON: fica o motivo genérico */ }
           const erro = new Error(motivo);
           erro.ocupada = ocupada;
+          erro.semSessao = resposta.status === 401 || resposta.status === 403;
           throw erro;
         }
         return resposta.blob();
@@ -160,7 +162,8 @@ class Locutor {
         try {
           return await tentarSintese(texto);
         } catch (erro) {
-          if (abortador.signal.aborted || !vivo) throw erro;
+          // Sem sessão, repetir não muda nada: cai direto para a voz do navegador.
+          if (abortador.signal.aborted || !vivo || erro.semSessao) throw erro;
           ultimo = erro;
           const passo = dono.RetentativaEleven.decidir({ ocupada: Boolean(erro.ocupada), tentativa });
           if (passo.agir === 'desistir') throw erro;

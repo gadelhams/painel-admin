@@ -387,3 +387,28 @@ test('escritor de estado acha o estado pelo grupo, confere versão, aplica, tira
   await assert.rejects(escritor({ projetoId: PROJETO, cartaId, grupo: 'started', versaoCarta: 'v0' }), /carta mudou/);
   await assert.rejects(escritor({ projetoId: randomUUID(), cartaId, grupo: 'started', versaoCarta: 'v1' }), /fora do escopo/);
 });
+
+test('R1: carta parada duas vezes pela frota em 24 h sai da varredura até a janela passar; outra carta segue', async () => {
+  let tempo = Date.parse('2026-10-24T10:00:00Z');
+  let modo = 'limite';
+  const a = await ambiente({ agora: () => tempo, executar: async () => modo === 'limite'
+    ? { resultado: 'impedido', causa: { tipo: 'limite', provedor: 'claude' }, resumo: 'limite de uso', evidencia: ['limite de uso do provedor claude'] }
+    : ok() });
+  try {
+    a.novaCarta(1, { grupo: 'started', nome: 'In Progress' });
+    await a.vigilia.alternar(PROJETO, true, '1');
+    assert.match((await a.vigilia.varrer())[0].motivoOciosa, /frota pausada até/);
+    tempo += 61 * 60_000;
+    assert.match((await a.vigilia.varrer())[0].motivoOciosa, /frota pausada até/);
+    tempo += 61 * 60_000;
+    const [presa] = await a.vigilia.varrer();
+    assert.match(presa.motivoOciosa, /PAINEL-1: parada 2 vezes pela frota em 24 h/);
+    assert.equal(a.execucoes(), 2, 'a terceira volta não despacha a mesma carta');
+    // Outra carta do projeto não fica presa pela primeira.
+    a.novaCarta(2, { grupo: 'started', nome: 'In Progress' });
+    modo = 'ok';
+    assert.equal((await a.vigilia.varrer())[0].proximaCarta, 'PAINEL-2');
+    tempo += 24 * 60 * 60_000;
+    assert.equal((await a.vigilia.varrer())[0].proximaCarta, 'PAINEL-1', 'passadas 24 h a carta volta');
+  } finally { await a.limpar(); }
+});

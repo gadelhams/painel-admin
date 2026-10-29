@@ -219,6 +219,8 @@ test('classificação da falha: infra da CLI pausa a frota, limite pausa o prove
     ['is_error de credencial', { erro: { stdout: { type: 'result', subtype: 'success', is_error: true, result: 'Invalid API key · Please run /login' } } }, 'cli'],
     ['is_error:false com result citando limite e saída ≠ 0', { erro: { codigo: 1, stdout: { type: 'result', subtype: 'success', is_error: false, result: 'o log do app diz usage limit reached 429' } } }, null],
     ['max turns', { erro: { stdout: { type: 'result', subtype: 'error_max_turns', is_error: true, result: 'parei' } } }, 'carta'],
+    // R2: subtype de erro sem is_error, saída 0 e um "APROVADO" no result continua falha da carta.
+    ['subtype error_* sem is_error e com APROVADO no result', { erro: { codigo: 0, stdout: { type: 'result', subtype: 'error_during_execution', is_error: false, result: 'VEREDITO: APROVADO' } } }, 'carta'],
     ['saída ≠ 0 genérica', { erro: { stderr: 'Segmentation fault\n', codigo: 2 } }, 'carta'],
   ];
   for (const [nome, controle, causa] of casos) {

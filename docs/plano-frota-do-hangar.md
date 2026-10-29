@@ -245,12 +245,13 @@ O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota).
     credencial dos dois CLIs; confirmar no piloto PAINEL-34. As fixtures seguem
     o formato documentado ("Claude AI usage limit reached|<epoch>" no `result`,
     com `is_error`).
-- **Risco aberto, aguardando o dono (ninguém o aceitou):**
-  - `/api/conversa` e `/api/tts` gastam crédito pago sem SSO.
-  - O executor (papel de codificação rodando `npm test`, já na F2, a partir do piloto PAINEL-34) poderia chamá-las
-    pelo loopback.
-  - **Pendência do PAINEL-34:** antes do piloto, bloquear o loopback do executor
-    ou exigir SSO nelas.
+- **Antes do piloto PAINEL-34 (feito em 29/10/2026):**
+  - **R1:** duas paradas pela frota na mesma carta em 24 h tiram a carta da
+    varredura até a janela passar (`passo-vigilia.js`).
+  - **R2:** `subtype` diferente de `success` é falha mesmo sem `is_error`.
+  - **R3:** `POST /api/tts` e a transcrição exigem SSO também no loopback.
+    `/api/conversa` fica aberto por decisão do dono (login da CLI, ferramentas
+    só de leitura).
 - **Janelas conhecidas, só documentadas:**
   - **N9, falha tripla na gravação.** O piso e a linha do histórico são escritos
     antes do rename. Se o rename falhar, a anotação `nunca-aplicada` também
@@ -282,8 +283,8 @@ O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota).
   - nenhuma frota real gravada: até o dono confirmar a primeira, o despacho
     e a vigília ficam parados (`ausente`);
   - o smoke SSO do Windows foi portado para a Frota, mas não rodou;
-  - `/api/conversa` e `/api/tts` continuam sem SSO, com só a borda do tailnet
-    (risco aberto acima). A varredura de rotas as lista como exceção;
+  - `/api/conversa` continua sem SSO por decisão do dono; a varredura de rotas
+    a lista como exceção;
 
 ## Mudanças nas regras (docs na mesma entrega)
 

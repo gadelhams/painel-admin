@@ -23,7 +23,7 @@ import { criarApiNativo, criarConfirmacoesNativo } from './orquestrador/api-nati
 import { LiberacaoNativa } from './orquestrador/liberacao-nativa.js';
 import { criarEscritorHandoffPlane } from './orquestrador/handoff-plane.js';
 import { criarApiHandoff, criarConfirmacoesHandoff } from './orquestrador/api-handoff.js';
-import { criarApiVoz, criarAutorizadorVoz } from './orquestrador/voz-xai.js';
+import { criarApiVoz } from './orquestrador/voz-xai.js';
 import { ProxyElevenLabs } from './orquestrador/voz-eleven.js';
 import { criarEscritorGatePlane } from './orquestrador/gate-plane.js';
 import { criarApiGate, criarConfirmacoesGate } from './orquestrador/api-gate.js';
@@ -136,11 +136,10 @@ alinhamento.iniciar();
 const apiChaves = criarApiChaves({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesChaves({ servico: chaves }) });
 const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) });
-const apiVoz = criarApiVoz({ autorizar: criarAutorizadorVoz({
-  privilegiado: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
-    tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }),
-  porta: PORTA,
-}) });
+// Voz paga (xAI e ElevenLabs) só com a sessão do dono, também no loopback: com o executor
+// rodando nesta máquina, "quem alcança a porta é o dono" deixou de ser verdade (R3, PAINEL-34).
+const apiVoz = criarApiVoz({ autorizar: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
+  tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }) });
 
 
 const resposta = new RespostaHttp({ publico: PUBLICO, maxCorpo: MAX_CORPO });
@@ -149,7 +148,7 @@ const roteador = new RoteadorPainel({
   recusa: recusaDaGuarda,
   resposta,
   conversa: new ConversaHttp({ resposta, conversar, maxMensagem: MAX_MENSAGEM }),
-  voz: new RotasVoz({ resposta, proxyEleven }),
+  voz: new RotasVoz({ resposta, proxyEleven, autorizarTts: autorizarPrivilegiado }),
   painel: new RotasPainel({
     resposta,
     coletores: { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes },

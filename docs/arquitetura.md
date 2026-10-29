@@ -57,8 +57,8 @@ motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 `voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
 varre toda rota pelo roteador real com POST, PUT, PATCH e DELETE sem sessão — 401 ou 405 no próprio handler,
-sem ler corpo nem chamar serviço; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` e `/api/tts`
-gastam API paga sem SSO, guardadas só pela borda do tailnet — risco aberto, aguardando o dono; as
+sem ler corpo nem chamar serviço; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
+ferramentas só de leitura, sem SSO por decisão do dono (29/10/2026); `/api/tts` e a transcrição pedem SSO desde a mesma data; as
 escritas da aba Contas exigem SSO desde 29/10/2026; handler só-leitura responde HEAD e o 405 leva `Allow`)
 e estáticos de `publico/` (dashboard na raiz, chat em `/c3po/`).
 
@@ -541,8 +541,8 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   resposta em SSE entra como texto puro. A sessão é a `c3po-sessao` do
   `sessionStorage`, a mesma do `/c3po/`, que continua a conversa com voz. O
   parser de SSE é o de `c3po/fluxo-sse.js`, importado como módulo. Trocar de
-  objeto ou fechar o popup aborta a resposta em curso. A rota tem o mesmo
-  risco aberto do `/c3po/` (sem SSO, `docs/invariants.md`).
+  objeto ou fechar o popup aborta a resposta em curso. A rota é a mesma do
+  `/c3po/`, aberta sem SSO por decisão do dono (`docs/invariants.md`).
 - **Jogo nativo por nave** (`nativo.js`, PAINEL-59, 29/10/2026). Projeto com
   `jogoNativo` no catálogo (hoje só o CKBL) ganha no popup da vaga e da doca
   o interruptor "Steam livre": o teste no jogo toma a tela e a conta da Steam
@@ -649,11 +649,11 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   que o conteúdo é seguro), mata o grupo de processos no timeout, capa a saída
   e devolve `impedido` para qualquer falha de infraestrutura. O que ele não
   garante: o comando de aceite roda sem sandbox, como o usuário do serviço.
-  **Risco aberto, aguardando o dono (29/10/2026):** `/api/conversa` e
-  `/api/tts` não mudam estado mas gastam crédito pago sem SSO, e o executor (papel de codificação, a partir do piloto PAINEL-34)
-  (papel de codificação rodando `npm test`) poderia chamá-los pelo loopback
-  `127.0.0.1:7777`. Pendência explícita do PAINEL-34: antes do piloto, bloquear o
-  loopback do executor ou exigir SSO nessas duas rotas.
+  **Fechado antes do piloto (R3, 29/10/2026):** o que gasta crédito pago
+  (`POST /api/tts` e a transcrição) exige a sessão SSO também no loopback, e o
+  executor não tem o cookie. `/api/conversa` fica aberto por decisão do dono:
+  roda pelo login da CLI, com as ferramentas só de leitura do C-3PO; o pior que
+  o executor faz por ali é gastar cota da assinatura.
 - **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` da identidade
   Guest de leitura e, se habilitado, `PLANE_ORQ_WRITE_KEY` de serviço distinta;
   coberto pelo `.gitignore`). A escrita de gate e handoff exige projeto único, SSO do

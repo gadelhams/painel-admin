@@ -31,13 +31,11 @@ import { criarManipuladorContas, ROTAS_CONTAS } from '../contas.js';
 
 const HTTP = path.join(import.meta.dirname, '..', 'http');
 const METODOS = ['POST', 'PUT', 'PATCH', 'DELETE'];
-const PAGO = 'não muda estado, mas gasta API paga sem SSO; a guarda é a borda do tailnet (invariante 1)';
 // Exceções, "MÉTODO caminho" → motivo. Desde a N5 (29/10/2026) as escritas da aba Contas
 // exigem SSO e não são mais exceção.
 const EXCECOES = new Map([
   ['POST /api/orquestracao/simular', 'prévia sem lease, processo ou escrita no Plane'],
-  ['POST /api/conversa', PAGO],
-  ['POST /api/tts', PAGO],
+  ['POST /api/conversa', 'roda pelo login da CLI (assinatura) com ferramentas só de leitura; aberto por decisão do dono (29/10/2026)'],
   ['POST /api/diagnostico/voz', 'telemetria do microfone no log local; não muda estado nem gasta API'],
 ]);
 
@@ -75,7 +73,7 @@ function montar() {
   const roteador = new RoteadorPainel({
     porta: 7777, recusa: criarGuarda(7777), resposta,
     conversa: new ConversaHttp({ resposta, conversar: async () => { chamadas.push('conversar'); }, maxMensagem: 8000 }),
-    voz: new RotasVoz({ resposta, proxyEleven: espiao('eleven') }),
+    voz: new RotasVoz({ resposta, proxyEleven: espiao('eleven'), autorizarTts: negar }),
     painel: new RotasPainel({ resposta, coletores: espiao('coletores'), ssh: espiao('ssh'), autorizarContas: negar,
       contas: criarManipuladorContas({ cliente: espiao('contas') }) }),
     orquestracao: new RotasOrquestracao({ resposta, orquestracao, triagemDev: espiao('triagem'), lerConsumo: espiao('consumo'),

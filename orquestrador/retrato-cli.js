@@ -55,7 +55,9 @@ export class RetratoCli {
   static claude(retrato, r, papel) {
     let dados;
     try { dados = JSON.parse(r.stdout); } catch { dados = null; }
-    if (!dados || typeof dados.result !== 'string' || dados.is_error) {
+    // `subtype` diferente de `success` (error_max_turns, error_during_execution…) é falha mesmo
+    // sem `is_error` e com `result` presente: o texto pode ser um "APROVADO" pela metade (R2).
+    if (!dados || typeof dados.result !== 'string' || dados.is_error || (dados.subtype && dados.subtype !== 'success')) {
       return { ...retrato, impedimento: `CLI claude do papel ${papel} não devolveu resultado (código ${r.codigo}): ${cortar(r.stderr.trim() || r.stdout.trim(), 200)}` };
     }
     return { ...retrato, texto: dados.result, custoUsd: Number.isFinite(dados.total_cost_usd) ? dados.total_cost_usd : null, turnos: dados.num_turns ?? null };

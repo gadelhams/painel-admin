@@ -76,9 +76,10 @@ remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 - **xAI** (gravação + `POST /api/orquestracao/voz/transcrever`): entra
   sozinho no primeiro erro fatal do navegador ou quando ele não tem
   reconhecimento (`GET /api/orquestracao/voz` diz se a chave existe). Exige
-  a **sessão do painel** na borda (`painel.vpn.astargne.com`, logado). No
-  loopback (`127.0.0.1` ou `localhost`) a mesma origem do painel transcreve
-  sem essa sessão — a guarda já recusa POST de outro site. Push-to-talk grava até o
+  a **sessão do painel** na borda (`painel.vpn.astargne.com`, logado), também
+  a partir do loopback desde 29/10/2026 (R3 do PAINEL-34: o executor roda nesta
+  máquina). O mesmo vale para a síntese da ElevenLabs (`POST /api/tts`); sem
+  sessão, o C-3PO fala com a voz do navegador. Push-to-talk grava até o
   silêncio; o copiloto fatia por detecção de voz (energia). **Custo:** em
   copiloto por xAI tudo que se fala perto do microfone é transcrito, pago,
   inclusive em espera (o gatilho "C3PO" só se detecta no texto) — o status

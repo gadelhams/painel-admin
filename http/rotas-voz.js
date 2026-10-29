@@ -1,14 +1,24 @@
 // ElevenLabs, diagnóstico do navegador e presença da transcrição.
 
+import { ErroAcesso } from '../orquestrador/sso.js';
+
 export class RotasVoz {
-  constructor({ resposta, proxyEleven }) {
+  constructor({ resposta, proxyEleven, autorizarTts }) {
     this.resposta = resposta;
     this.proxyEleven = proxyEleven;
+    this.autorizarTts = autorizarTts;
   }
 
   async tentar(req, res, url) {
     const { pathname } = url;
     if (pathname === '/api/tts' && req.method === 'POST') {
+      // A síntese gasta crédito pago da ElevenLabs: só com a sessão do dono, antes de ler o corpo.
+      try { await this.autorizarTts(req); }
+      catch (erro) {
+        const status = erro instanceof ErroAcesso ? erro.status : 502;
+        this.resposta.json(res, { erro: erro instanceof ErroAcesso ? erro.message : 'verificação de sessão indisponível', motivo: 'sem-sessao' }, status);
+        return true;
+      }
       await this.proxyEleven.responder(req, res, { lerCorpo: (pedido) => this.resposta.corpo(pedido), responderJson: (destino, corpo, status) => this.resposta.json(destino, corpo, status) });
     } else if (pathname === '/api/tts' && req.method === 'GET') {
       const sonda = this.proxyEleven.sondar();

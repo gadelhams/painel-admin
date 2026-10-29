@@ -22,6 +22,16 @@ export function tentativasDaCarta(historico = []) {
   return historico.filter(e => e.tipo === 'TENTATIVA' && !daFrota.has(e.tentativaId)).length;
 }
 
+// Paradas pela frota (limite, CLI) na mesma carta nas últimas 24 h. Elas não gastam tentativa,
+// então uma carta que provoca sempre a mesma parada (ex.: a saída dela lida como limite de uso)
+// voltaria a cada fim de pausa, para sempre. Duas no dia tiram a carta da varredura até a
+// janela passar (R1 do piloto PAINEL-34): a segunda já não é coincidência.
+export const MAX_PARADAS_DA_FROTA = 2;
+export function paradasDaFrota(historico = [], agoraMs) {
+  return historico.filter(e => e.tipo === 'RESULTADO_EXECUTOR' && CAUSAS_DA_FROTA.has(e.causa?.tipo)
+    && agoraMs - Date.parse(e.quando) < 24 * 60 * 60_000).length;
+}
+
 export class PassoVigilia {
   constructor({ servico, registrarLog, livro, memoria, controle }) {
     this.servico = servico;
@@ -52,8 +62,15 @@ export class PassoVigilia {
     const doProjeto = (await this.servico.fila()).itens.filter(i => i.projetoId === id);
     if (doProjeto.some(i => i.leaseSituacao === 'ativo')) return nota({ motivoOciosa: 'tentativa em curso (lease ativo)' });
     const tentativasDe = item => tentativasDaCarta(item.historico);
-    const candidatas = doProjeto.filter(i => i.elegivel && GATES.includes(i.gate) && tentativasDe(i) < cfg.maxTentativasPorCarta);
-    if (!candidatas.length) return nota({ motivoOciosa: 'nenhuma carta elegível', proximaCarta: null });
+    const agoraMs = Date.parse(this.livro.iso());
+    const aptas = doProjeto.filter(i => i.elegivel && GATES.includes(i.gate) && tentativasDe(i) < cfg.maxTentativasPorCarta);
+    const candidatas = aptas.filter(i => paradasDaFrota(i.historico, agoraMs) < MAX_PARADAS_DA_FROTA);
+    if (!candidatas.length) {
+      const presas = aptas.map(i => i.identificador);
+      return nota({ proximaCarta: null, motivoOciosa: presas.length
+        ? `${presas.join(', ')}: parada ${MAX_PARADAS_DA_FROTA} vezes pela frota em 24 h; fora da varredura até a janela passar`
+        : 'nenhuma carta elegível' });
+    }
     const carta = candidatas[0];
     nota({ proximaCarta: carta.identificador, motivoOciosa: null });
     const gate = carta.gate;
