@@ -17,7 +17,7 @@ export class ProntidaoDespacho {
     if (gates[0] === 'READY TO DEV' && !['unstarted', 'started'].includes(grupo)) motivos.push('estado inadequado para desenvolvimento');
     if (gates[0] === 'READY TO TEST' && grupo !== 'started') motivos.push('estado inadequado para teste');
     if (gates.length === 0 && !['unstarted', 'started'].includes(grupo)) motivos.push('estado não executável');
-    for (const marca of BLOQUEIOS) if (nomes.includes(marca)) motivos.push(`marcador ${marca} espera o dono`);
+    for (const marca of BLOQUEIOS) if (nomes.includes(marca)) motivos.push(`marcador ${marca} exige decisão humana`);
     if (DECISAO_HUMANA_NA_DESCRICAO.test(descricao) && !nomes.some(x => x === 'ASTARGNE' || x === 'BLOQUEADA')) motivos.push('decisão ou bloqueio humano descrito na carta');
     if (/bloquead|blocked|em espera|aguardando/i.test(carta.state?.name ?? '')) motivos.push('estado bloqueado');
     if (!contrato) motivos.push('contrato local ausente');
