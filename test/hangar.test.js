@@ -250,6 +250,9 @@ test('nave: só o que espera o dono vira decisão; bloqueio por outra carta não
   const nave = montarNave({ pasta: 'alfa', titulo: 'Alfa', plane: 'P' }, backlog);
   assert.deepEqual(nave.pecas[0].decisoes.map((d) => d.id), ['ALFA-3']);
   assert.deepEqual(nave.decisoesProduto.map((d) => d.id), ['ALFA-4']);
+  const congelada = montarNave({ pasta: 'alfa', titulo: 'Alfa', plane: 'P', congelado: true }, backlog);
+  assert.deepEqual([congelada.pecas[0].decisoes.length, congelada.decisoesProduto.length], [0, 0], 'congelado não põe peça no chão');
+  assert.equal(congelada.cartas.abertas + congelada.cartas.andamento + congelada.cartas.feitas, 6, 'mas as cartas continuam contadas');
 });
 
 test('nave: semente estável por pasta; sem backlog vira casco vazio, não erro', async () => {

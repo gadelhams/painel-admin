@@ -411,7 +411,7 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   do Plane), decisões e o mapa UUID da carta → peça. Decisão = carta aberta
   que espera o dono: label `PRODUTO` vai para a **estação de planejamento**,
   `ASTARGNE` (ou a legada `DONO`) vira **peça no chão** do módulo; bloqueio por
-  outra carta, `TAREFA DONO`, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`). Mais o
+  outra carta, `TAREFA DONO`, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`), e nave congelada não tem peça no chão. Mais o
   inventário da Oficina (`acervo.js`: `PADROES-*`, orientações da raiz,
   skills, `licoes-vivas/`). `GET /api/hangar/sessoes` (`coletores/sessoes.js`,
   feito para poll de 5 s, memo por mtime): processo vivo em `/proc` é só

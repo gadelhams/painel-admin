@@ -37,7 +37,8 @@ function resumoItem(n) {
 // Decisão = carta aberta que espera o dono (decidido por ele em 28/10/2026):
 // label PRODUTO vai para a estação de planejamento; ASTARGNE (ou `(DONO)` em
 // texto antigo) trava o módulo e vira peça no chão. BLOQUEADA esperando outra
-// carta, EMPÍRICA e SEM ESCOPO não são decisão e ficam fora do chão.
+// carta, TAREFA DONO, EMPÍRICA e SEM ESCOPO não são decisão e ficam fora do chão.
+// Projeto congelado não espera decisão de ninguém: a nave fica sem peça no chão.
 function decisao(n, modulo) {
   return { ...resumoItem(n), modulo, tags: n.tags.map((t) => t.tag), detalhe: n.tags.find((t) => t.detalhe)?.detalhe ?? null };
 }
@@ -72,7 +73,7 @@ export function montarNave(projeto, backlog) {
       cont[grupoDe(n)] += 1;
       if (n.identificador && !nave.sigla) nave.sigla = n.identificador.replace(/-\d+$/, '');
       if (n.idRastreador) nave.cartoes[n.idRastreador] = [indice, n.identificador ?? null, n.texto];
-      if (n.estado === 'pronto') continue;
+      if (n.estado === 'pronto' || nave.congelado) continue;
       if (n.produto) nave.decisoesProduto.push(decisao(n, f.titulo));
       else if (n.tags?.some((t) => t.tag === 'ASTARGNE')) decisoes.push(decisao(n, f.titulo));
     }
