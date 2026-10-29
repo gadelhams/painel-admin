@@ -62,6 +62,40 @@ projeto com contrato e despacha com a frota. Os freios de hoje continuam:
 uma tentativa por vez, teto por dia, pausa por limite de uso, sem push e sem
 merge.
 
+## A aba Orquestração vira o Hangar (dono, 29/10/2026)
+
+O dono revisou a aba sub-aba por sub-aba e disse que ela está confusa e
+ainda pensa por carta. O destino de cada parte:
+
+| Hoje | Vira |
+|---|---|
+| Demanda (carta + pré-checar READY TO DEV/TEST + portão) | **Mesa de decisão** (PAINEL-53): a carta discutida com o C-3PO. A pré-checagem sai da tela: quem a roda é o zelador, sozinho. |
+| Conversa no card (cópia do fio do Plane) | **Resumo** da carta: o bloco Estado da descrição (compactação do fio, `PADROES-BACKLOG.md`), o último handoff e o próximo passo. O fio inteiro fica no Plane, num link. |
+| Papéis e modelos (por carta, `PERFIL-IA/v1`) | **Frota**: uma configuração do painel, papel → CLI, modelo e esforço. |
+| Consumo (sempre "indisponível") | **Consumo** com fonte real. O Codex grava `rate_limits` em cada sessão (`~/.codex/sessions`: `used_percent`, janela, `resets_at`; 26% da semana em 29/10). No Claude, o CLI mostra o uso no `/usage`; falta escolher a leitura. |
+| Tentativas (lease e histórico da carta) | **Diário da frota**: o que cada droid fez, em que carta e com que resultado. É o mesmo diário que o C-3PO narra. |
+| Canal legado (doc 59) | Sai. O dono não quer mais. A porta 7791 do SupervisorHandoff sai com ele (PAINEL-35). |
+| Vigília (por projeto) | O **Hangar**. |
+
+**Droids por papel, com uma cor cada.** Orquestração, codificação, validação
+e zelador (revisão e atualização do Plane). O zelador também pode ser o
+orquestrador fechando a demanda. A fábrica continua dizendo de qual CLI o
+droid veio (Claude ou Codex). A cor diz o que ele está fazendo.
+
+**Play por nave estacionada.** No pátio, cada nave tem um botão play. Ele
+libera a frota para puxar cartas daquele projeto e substitui a chave da
+vigília por projeto. Com o play ligado:
+- os jobs automáticos de limpeza, revisão e atualização rodam sem o dono;
+- quando o piloto PAINEL-34 tiver passado, entra também o check de
+  `READY TO DEV` (desenvolver) e de `READY TO TEST` (testar).
+
+Quando o job termina, a nave volta à vaga (dono, 29/10/2026). Se ela não
+está 100% feita e não sobrou nada que a frota possa fazer, ou seja, nada a
+orquestrar, atualizar, revisar, desenvolver ou testar, então só restam
+decisões do dono: de produto ou outras que dependem dele. Nesse caso o
+**bloqueio fica em destaque no painel lateral do projeto**, com as cartas
+que o seguram.
+
 ## Mudanças nas regras (docs na mesma entrega)
 
 - `ProjetosPessoais/ORQUESTRADOR-PROJETOS.md`: hoje só a marcação de gate
@@ -75,18 +109,32 @@ merge.
   administração. Não usa o Painel Admin (admin demais) nem as chaves técnicas
   de CKBL e PLAYER (projeto único).
 
-## Ordem proposta
+## Ordem (dono, 29/10/2026: a frota vem antes da mesa)
 
-1. **Feito em 28 e 29/10:** o padrão (`PADROES-BACKLOG.md` § Zeladoria), a
-   skill e a label `TAREFA DONO`. Na primeira passada manual, 30 das 32 cartas
-   com `ASTARGNE` fora do Anya mudaram; com o dono ficaram CAD-21 e KHOR-18.
-2. A mesa de decisão (PAINEL-53, `plano-mesa-de-decisao.md`). Ela recebe só o
-   que sobra pela régua.
-3. A frota no Hangar: a configuração, a fábrica clicável e o despacho lendo a
-   frota no lugar do `PERFIL-IA/v1`.
-4. O zelador em modo limpeza.
-5. O zelador em modo puxar e a vigília do Hangar. Isso depende do piloto real
-   do executor (PAINEL-34), porque nenhuma CLI paga rodou pelo Painel ainda.
+1. **Feito em 28 e 29/10:**
+   - o padrão (`PADROES-BACKLOG.md` § Zeladoria);
+   - a skill;
+   - a label `TAREFA DONO`;
+   - a primeira passada manual, que deixou só CAD-21 e KHOR-18 com o dono.
+2. **F1, limpeza da aba (sem escrita nova):**
+   - Consumo com fonte real (Codex agora, Claude quando a leitura for
+     escolhida);
+   - o Canal legado sai;
+   - Tentativas vira o diário da frota;
+   - Conversa vira resumo.
+3. **F2, a frota:** a configuração geral, gravada com SSO e duas ações. O
+   executor lê a frota no lugar do `PERFIL-IA/v1`. No Hangar, a cor do droid
+   passa a ser a do papel.
+4. **F3, o play por nave e o zelador:**
+   - **Liberação do projeto:** cada projeto é liberado pelo play.
+   - **Identidade nova "Zelador (Hangar)":** Member em cada projeto. O
+     escritor estreito dela segue a lista fechada.
+   - **Jobs de limpeza:** rodam sem o dono, numa CLI real, pela frota.
+   - **Destaque do bloqueio:** aparece no painel lateral quando a nave fica
+     sem nada a fazer.
+5. **F4, puxar:** `READY TO DEV` e `READY TO TEST` pelo zelador e despacho pela
+   frota, depois do piloto PAINEL-34.
+6. **A mesa (PAINEL-53)** absorve a aba Demanda.
 
 ## Decisões do dono (28/10/2026)
 

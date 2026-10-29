@@ -5,6 +5,10 @@ class ConsumoOrquestracao {
 
   get n() { return this.painel.n; }
 
+  static zera(j) {
+    return j.reiniciaEm ? ` · zera em ${new Date(j.reiniciaEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '';
+  }
+
   async carregar() {
     this.n.mensagem('orq-consumo', 'Lendo fontes de consumo…');
     try {
@@ -20,9 +24,14 @@ class ConsumoOrquestracao {
             const barra = this.n.criar('progress');
             barra.max = 100;
             barra.value = janela.percentual;
-            caixa.append(this.n.criar('span', `${janela.percentual}% da assinatura · ${janela.janela} · ${janela.fonte}`), barra);
+            caixa.append(this.n.criar('span', `${janela.percentual}% da assinatura · ${janela.janela}${ConsumoOrquestracao.zera(janela)} · ${janela.fonte}`), barra);
           }
-        } else caixa.append(this.n.criar('span', `— · ${item.motivo}`));
+        } else {
+          caixa.append(this.n.criar('span', `— · ${item.motivo}`));
+          for (const u of item.ultimasLeituras ?? []) {
+            caixa.append(this.n.criar('span', `última leitura: ${u.percentual}% · ${u.janela} · ${new Date(u.atualizadoEm).toLocaleString('pt-BR')}${ConsumoOrquestracao.zera(u)}`, 'discreto'));
+          }
+        }
         alvo.append(caixa);
       }
     } catch (erro) { this.n.mensagem('orq-consumo', erro.message); }

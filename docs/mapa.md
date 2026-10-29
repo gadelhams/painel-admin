@@ -179,6 +179,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `executor-cli.js` — Sequência da tentativa: isola, instala, pede os três papéis, roda o aceite e fecha o veredito.
 - `fila-leitura.js` — Junta as cartas do Plane com o contrato local.
 - `fila.js` — Porta da fila.
+- `fonte-consumo-codex.js` — Cota da assinatura do Codex.
 - `forma-canal-legado.js` — Forma do JSON do leitor legado.
 - `gate-plane.js` — Entrada do gate no card.
 - `gate-servico.js` — Junta a pré-checagem e a marcação do gate.

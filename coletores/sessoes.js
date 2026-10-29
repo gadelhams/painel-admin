@@ -38,7 +38,7 @@ export async function iasVivas(raizProc = '/proc') {
   return vivas;
 }
 
-async function recentes(dir, desde, profundidade = 1) {
+export async function recentes(dir, desde, profundidade = 1) {
   const achados = [];
   let entradas = [];
   try {

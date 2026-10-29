@@ -14,6 +14,7 @@ import { criarGuarda } from './guarda.js';
 import { criarServicoOrquestracao } from './orquestrador/fila.js';
 import { criarTriagemDev } from './orquestrador/triagem.js';
 import { criarLeitorConsumo } from './orquestrador/consumo.js';
+import { criarFonteCodex } from './orquestrador/fonte-consumo-codex.js';
 import { criarEscritorPerfilPlane } from './orquestrador/perfil-plane.js';
 import { criarVerificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
 import { criarConfirmacoes } from './orquestrador/confirmacoes.js';
@@ -114,7 +115,7 @@ const vigilia = criarVigilia({ servico: orquestracao, diretorioEstado: path.join
   registrarLog: mensagem => console.error(mensagem) });
 vigilia.iniciar();
 const triagemDev = criarTriagemDev();
-const lerConsumoIas = criarLeitorConsumo();
+const lerConsumoIas = criarLeitorConsumo({ fontes: { openai: criarFonteCodex() } });
 const lerCanalLegado = criarLeitorCanalLegado();
 const autorizarPrivilegiado = criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId });
 const apiPerfil = criarApiPerfil({

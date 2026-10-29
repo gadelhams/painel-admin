@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { lerCanalPlane, normalizarInteracao, validarAlvoCanal } from '../orquestrador/canal-plane.js';
 import { catalogoModelos, prepararPlanoExecucao, validarSelecoes } from '../orquestrador/modelos.js';
 import { criarLeitorConsumo, percentualDeConsumo } from '../orquestrador/consumo.js';
@@ -69,4 +72,26 @@ test('consumo mostra somente assinatura, com janela atual; API e amostra antiga 
   const consumo = await ler();
   assert.deepEqual(consumo.openai.janelas.map(x => x.percentual), [75, 20]);
   assert.equal(consumo.claude.disponivel, false);
+});
+
+test('Codex: rate_limits da sessão viram amostra da assinatura; velha vira "última leitura", zerada some', async () => {
+  const { amostrasDoEvento, nomeJanela, criarFonteCodex } = await import('../orquestrador/fonte-consumo-codex.js');
+  const evento = { timestamp: '2026-10-29T11:30:00Z', payload: { type: 'token_count', rate_limits: {
+    primary: { used_percent: 26, window_minutes: 10080, resets_at: Date.parse('2026-11-04T06:35:27Z') / 1000 },
+    secondary: { used_percent: 61.5, window_minutes: 300, resets_at: Date.parse('2026-10-29T14:00:00Z') / 1000 } } } };
+  const amostras = amostrasDoEvento(evento);
+  assert.deepEqual(amostras.map(a => [a.percentualUsado, a.janela]), [[26, 'semana'], [61.5, '5 h']]);
+  assert.equal(nomeJanela(120), '2 h');
+  assert.deepEqual(amostrasDoEvento({ timestamp: 'x', payload: { rate_limits: evento.payload.rate_limits } }), [], 'sem instante não vira amostra');
+  const ler = (agora) => criarLeitorConsumo({ agora: () => Date.parse(agora), fontes: { openai: async () => amostras } })();
+  assert.deepEqual((await ler('2026-10-29T11:40:00Z')).openai.janelas.map(j => j.percentual), [26, 61.5]);
+  const velha = (await ler('2026-10-29T13:00:00Z')).openai;
+  assert.equal(velha.disponivel, false, 'leitura de 1h30 atrás não é consumo atual');
+  assert.deepEqual(velha.ultimasLeituras.map(u => u.janela), ['semana', '5 h']);
+  const depois = (await ler('2026-10-29T15:00:00Z')).openai;
+  assert.deepEqual(depois.ultimasLeituras.map(u => u.janela), ['semana'], 'a janela de 5 h zerou: a leitura antiga dela não serve mais');
+  const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-'));
+  await fs.mkdir(path.join(raiz, '2026', '10', '27'), { recursive: true });
+  await fs.writeFile(path.join(raiz, '2026', '10', '27', 'rollout-a.jsonl'), `${JSON.stringify({ timestamp: '2026-10-27T10:00:00Z', payload: { type: 'user_message' } })}\n${JSON.stringify(evento)}\n${JSON.stringify({ timestamp: '2026-10-29T11:31:00Z', payload: { type: 'agent_message' } })}\n`);
+  assert.deepEqual((await criarFonteCodex({ raiz, agora: () => Date.parse('2026-10-29T12:00:00Z') })()).map(a => a.percentualUsado), [26, 61.5], 'acha a sessão aberta há dias, no diretório do dia em que nasceu');
 });

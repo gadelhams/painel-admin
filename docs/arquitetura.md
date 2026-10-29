@@ -71,7 +71,7 @@ flags de CLI), `canal-plane.js` (a forma do comentário em `interacao-canal.js`)
 (sessão do Cadastro Único por ssh, desafio de confirmação, rotas; desde 28/10/2026 o esqueleto das duas ações é um só, `desafio-duas-acoes.js` + `api-duas-acoes.js`, e perfil, gate, handoff, despacho, vigília e a troca de chaves só declaram o que validam e o que gravam), `triagem.js` (classificação em `classificar-prontidao-dev.js`, varredura em `varredura-triagem.js`)
 e `consulta-c3po.js` (pendências DEV e a ferramenta do motor), `voz-xai.js` (transcrição),
 `voz-eleven.js` (`ProxyElevenLabs`, a síntese; a chave não sai do processo),
-`consumo.js`, **`executor-cli.js`** (o executor real; ambiente em `ambiente-cli.js`,
+`consumo.js` (a fonte do Codex em `fonte-consumo-codex.js`: `rate_limits` do evento mais recente das sessões; leitura com mais de 15 min vira "última leitura", e some quando a janela zera), **`executor-cli.js`** (o executor real; ambiente em `ambiente-cli.js`,
 gramática de `scripts.test` em `gramatica-cli.js`, processo em `processo-cli.js`,
 papel em `papel-cli.js` (argumentos em `argumentos-cli.js`, retrato em `retrato-cli.js`), briefing em `briefing-papel.js`, worktree em
 `isolamento-git.js` e instalação em `dependencias-worktree.js`; três papéis de IA como
