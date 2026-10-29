@@ -5,14 +5,6 @@
 // mesma chave usada em todo o resto do sistema, sem duplicar identidade.
 export const RELACOES = [
   {
-    // Prova de equivalência do dashboard 7791 (PAINEL-35, 24/10/2026): leitura
-    // pura por processo python descartável; as ações do ciclo não migram.
-    de: 'painel-admin',
-    para: 'SupervisorHandoff',
-    tipo: 'leitura',
-    rotulo: 'lê os dois canais do doc 59 por scripts/estado_canal.py (só leitura, sem fetch) na aba Orquestração',
-  },
-  {
     // A integração espacial só existe no repo congelado; o LoreEngine novo
     // resolve viagem por dado informado pelo Mestre (ADR-0047 dele).
     de: '_oldSistemaLoreEngine',

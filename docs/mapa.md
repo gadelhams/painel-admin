@@ -117,7 +117,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-orq-fila.js` — Fila, pré-checagem e simulação.
 - `rotas-orq-gate.js` — Preparar e confirmar a marca de gate.
 - `rotas-orq-handoff.js` — Preparar e confirmar o handoff.
-- `rotas-orq-legado.js` — Leitura do canal legado.
 - `rotas-orq-modelos.js` — Leitura, validação e registro do perfil de modelos.
 - `rotas-orq-triagem.js` — Triagem das folhas sem gate.
 - `rotas-orq-vigilia.js` — Estado e alternância da vigília.
@@ -153,7 +152,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `autorizador.js` — Autoriza uma ação privilegiada: origem, cookie, sessão e dono.
 - `briefing-papel.js` — O texto que cada papel recebe: carta, contrato e o molde do briefing.
 - `canal-carta.js` — Leitura do card: interações, handoffs e gates.
-- `canal-legado.js` — Escolhe as configs do canal legado e guarda o cache.
 - `canal-plane.js` — Lê os comentários do card.
 - `carta-da-fila.js` — Julga uma carta já carregada: lease, proveniência do gate e a pré-checagem pedida.
 - `checagem-despacho.js` — Checagem do despacho real.
@@ -180,7 +178,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `fila-leitura.js` — Junta as cartas do Plane com o contrato local.
 - `fila.js` — Porta da fila.
 - `fonte-consumo-codex.js` — Cota da assinatura do Codex.
-- `forma-canal-legado.js` — Forma do JSON do leitor legado.
 - `gate-plane.js` — Entrada do gate no card.
 - `gate-servico.js` — Junta a pré-checagem e a marcação do gate.
 - `gramatica-cli.js` — Gramática estática do scripts.test e dos scripts do contrato.
@@ -197,7 +194,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `perfil-servico.js` — Junta a consulta e o registro do perfil.
 - `politica.js` — Porta da política da orquestração.
 - `preavaliacao-gate.js` — Pré-checagem só-leitura do gate.
-- `processo-canal-legado.js` — Um processo do leitor legado.
 - `processo-cli.js` — Um processo filho: sem shell, grupo morto no tempo, saída capada e log em disco.
 - `prontidao-despacho.js` — Pode despachar esta carta.
 - `prontidao-gate.js` — Pode marcar este gate.
@@ -323,7 +319,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `fila-triagem.js` — Classifica as folhas sem gate.
 - `fila.js` — Carrega a fila e abre a carta.
 - `gate.js` — Preparar e confirmar a etiqueta de gate.
-- `legado.js` — Canal legado do SupervisorHandoff.
 - `modelos-confirmacao.js` — Validar, preparar e confirmar o perfil.
 - `modelos-seletores.js` — Desenha os seletores de um papel.
 - `modelos.js` — Liga os seletores à confirmação em duas ações.
@@ -342,7 +337,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 - `alinhamento.test.js` — Rotina de alinhamento com Plane, git e portão de docs FALSOS.
 - `caminhos.test.js`
-- `canal-legado.test.js` — Adaptador do canal legado: python falso em node; nada do SupervisorHandoff real é tocado.
 - `chaves.test.js` — Tela Chaves: só nomes saem; valor só entra pela confirmação; escrita local atômica 0600; servidor por ssh falso com valor no stdin; portão SSO.
 - `consulta-c3po.test.js`
 - `contas.test.js` — Testes do módulo contas.js (aba Contas).

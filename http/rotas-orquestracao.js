@@ -9,11 +9,10 @@ import { RotasOrqGate } from './rotas-orq-gate.js';
 import { RotasOrqDespacho } from './rotas-orq-despacho.js';
 import { RotasOrqConsumo } from './rotas-orq-consumo.js';
 import { RotasOrqVigilia } from './rotas-orq-vigilia.js';
-import { RotasOrqLegado } from './rotas-orq-legado.js';
 import { RotasOrqVoz } from './rotas-orq-voz.js';
 
 export class RotasOrquestracao {
-  constructor({ resposta, orquestracao, triagemDev, lerConsumo, vigilia, lerCanalLegado, apiPerfil, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz, xai }) {
+  constructor({ resposta, orquestracao, triagemDev, lerConsumo, vigilia, apiPerfil, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz, xai }) {
     this.resposta = resposta;
     this.fila = new RotasOrqFila({ resposta, orquestracao });
     this.triagem = new RotasOrqTriagem({ resposta, triagemDev });
@@ -24,13 +23,12 @@ export class RotasOrquestracao {
     this.despacho = new RotasOrqDespacho({ resposta, apiDespacho });
     this.consumo = new RotasOrqConsumo({ resposta, lerConsumo });
     this.vigilia = new RotasOrqVigilia({ resposta, vigilia, apiVigilia });
-    this.legado = new RotasOrqLegado({ resposta, lerCanalLegado });
     this.voz = new RotasOrqVoz({ resposta, apiVoz, xai });
   }
 
   async tentar(req, res, url) {
     if (!url.pathname.startsWith('/api/orquestracao')) return false;
-    for (const grupo of [this.fila, this.triagem, this.canal, this.modelos, this.handoff, this.gate, this.despacho, this.consumo, this.vigilia, this.legado, this.voz]) {
+    for (const grupo of [this.fila, this.triagem, this.canal, this.modelos, this.handoff, this.gate, this.despacho, this.consumo, this.vigilia, this.voz]) {
       if (await grupo.tentar(req, res, url)) return true;
     }
     this.resposta.json(res, { erro: 'escrita e execução indisponíveis nesta etapa' }, 405);

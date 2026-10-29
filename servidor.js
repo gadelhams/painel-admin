@@ -27,7 +27,6 @@ import { criarEscritorGatePlane } from './orquestrador/gate-plane.js';
 import { criarApiGate, criarConfirmacoesGate } from './orquestrador/api-gate.js';
 import { criarApiDespacho, criarConfirmacoesDespacho } from './orquestrador/api-despacho.js';
 import { criarExecutorCli } from './orquestrador/executor-cli.js';
-import { criarLeitorCanalLegado } from './orquestrador/canal-legado.js';
 import { criarEscritorEstadoPlane } from './orquestrador/estado-plane.js';
 import { criarVigilia } from './orquestrador/vigilia.js';
 import { criarApiVigilia, criarConfirmacoesVigilia } from './orquestrador/api-vigilia.js';
@@ -116,7 +115,6 @@ const vigilia = criarVigilia({ servico: orquestracao, diretorioEstado: path.join
 vigilia.iniciar();
 const triagemDev = criarTriagemDev();
 const lerConsumoIas = criarLeitorConsumo({ fontes: { openai: criarFonteCodex() } });
-const lerCanalLegado = criarLeitorCanalLegado();
 const autorizarPrivilegiado = criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId });
 const apiPerfil = criarApiPerfil({
   autorizar: autorizarPrivilegiado,
@@ -157,7 +155,7 @@ const roteador = new RoteadorPainel({
     ssh: new LeituraSsh({ chave: CHAVE_SSH }),
   }),
   orquestracao: new RotasOrquestracao({
-    resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas, vigilia, lerCanalLegado,
+    resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas, vigilia,
     apiPerfil, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz,
     xai: () => Boolean(process.env.XAI_API_KEY),
   }),

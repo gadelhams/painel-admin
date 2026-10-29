@@ -81,10 +81,8 @@ ou deploy para cumprir esta matriz.
 
 ## Canal legado (doc 59)
 
-| ID | Cenário | Passos | Resultado esperado | Prova automática |
-|---|---|---|---|---|
-| L01 | Leitura dos dois canais | Abrir o tópico "Canal legado (doc 59)" | Cards, quem tem a vez, trava, pausas, touchpoints por config; nenhum fetch, ciclo ou escrita | `canal-legado.test.js`, `SupervisorHandoff/tests/test_estado_canal.py`; leitura real na 7787 em 24/10 (19 e 30 cards) |
-| L02 | Falhas do leitor | Config ausente, JSON ruim, código ≠ 0, timeout | `disponivel: false` com motivo; cache evita um python por clique | `canal-legado.test.js` |
+Retirado em 29/10/2026 por decisão do dono (PAINEL-35). Os casos L01 e L02
+saíram junto com o leitor.
 
 ## Interface e integrações
 
@@ -96,7 +94,6 @@ ou deploy para cumprir esta matriz.
 | I04 | Consumo de assinatura sem fonte atual | Abrir tópico Consumo | “Indisponível”; não mostrar uso de API como percentual do plano | `orquestrador-v2.test.js` |
 | I05 | Identidade técnica ausente em instância de teste | Preparar gate, perfil e handoff | UI informa indisponibilidade; Guest não ganha escrita | `perfil-plane.test.js`, `gate-plane.test.js` |
 | I06 | Portão real desligado | Abrir card elegível | UI informa que nenhum comando será iniciado | `despacho-controlado.test.js`; conferência humana |
-| I07 | Doc 59 e dashboard 7791 | Ler status legado sem iniciar ciclo | Permanecem operacionais até equivalência comprovada | Inspeção, sem ciclo real |
 | I08 | Claude e OpenAI selecionáveis no PLAYER-38 | Abrir Papéis; escolher provedor, modelo filtrado e esforço em cada papel; validar combinações homogêneas e mista, sem confirmar perfil | Ambos aparecem disponíveis; fila lista os dois, mas não atribui responsável; cada prévia conserva provedor/modelo/esforço, sem fallback ou escrita no card | `orquestrador-v2.test.js`, `orquestrador-core-v2.test.js`, Playwright; API ativa em leitura |
 | I09 | Configuração final do perfil no card | Com SSO do dono, selecionar os três papéis, preparar, revisar carta/versão/esforços e confirmar uma vez | Antes de confirmar, nenhum perfil; depois, um comentário `PERFIL-IA/v1` de autoria técnica PLAYER e GET mostra a seleção exata; nenhum lease ou comando iniciado | `perfil-plane.test.js`, `orquestrador-sso.test.js`; smoke SSO Windows de preparo passou em v3; confirmação real pendente |
 | I10 | Confirmação não abre despacho | Após I09, consultar fila e tentativa, sem clicar em despacho | `execucaoHabilitada: false`, lease ausente e histórico sem nova tentativa; `PLAYER-39`–`41` intactas | `despacho-controlado.test.js`; leitura da API/Plane na etapa final |

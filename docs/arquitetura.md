@@ -79,9 +79,7 @@ CLIs descartáveis — `claude -p` / `codex exec` — num worktree `orq/<carta>-
 fora da árvore principal, comando de aceite do contrato sem shell, ambiente por
 lista branca, timeout que mata o grupo, logs em `~/.local/state/painel-admin/orquestracao/saidas/<tentativa>/`;
 moldes dos papéis em `briefings/`; só é construído com `ORQ_EXECUCAO_HABILITADA=true`)
-**`canal-legado.js`** (a forma em `forma-canal-legado.js`, o processo em `processo-canal-legado.js`; daqui a escolha da config e o cache de 60 s — lê `SupervisorHandoff/scripts/estado_canal.py`, python
-só-leitura, um processo por config — a prova de equivalência
-do dashboard 7791 pedida por PAINEL-35), **`vigilia.js`** + **`api-vigilia.js`**
+**`vigilia.js`** + **`api-vigilia.js`**
 (varredura automática por projeto: o controle em `vigilia-controle.js`, a passada em `vigilia-varredura.js`, o passo de uma carta em `passo-vigilia.js`, o diário em `vigilia-diario.js` e `vigilia.js` só compõe; a cada dois minutos escolhe a primeira carta
 elegível do projeto ligado, muda Todo → In Progress, grava o perfil padrão do
 contrato se faltar, chama `iniciarDespacho` e, em `concluido`, troca `READY TO

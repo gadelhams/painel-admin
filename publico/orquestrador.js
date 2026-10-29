@@ -8,7 +8,6 @@ class PainelOrquestracao {
     this.conversa = new ConversaOrquestracao(this);
     this.modelos = new ModelosOrquestracao(this);
     this.vigilia = new VigiliaOrquestracao(this);
-    this.legado = new LegadoOrquestracao(this);
     this.consumo = new ConsumoOrquestracao(this);
     this.voz = new VozCartaOrquestracao(this);
   }
@@ -22,7 +21,6 @@ class PainelOrquestracao {
     if (nome === 'conversa') this.conversa.carregar();
     if (nome === 'modelos') this.modelos.carregar();
     if (nome === 'consumo') this.consumo.carregar();
-    if (nome === 'legado') this.legado.carregar();
     if (nome === 'vigilia') this.vigilia.carregar();
   }
 
@@ -36,7 +34,6 @@ class PainelOrquestracao {
     });
     $('orq-triagem-carregar').addEventListener('click', () => this.fila.carregarTriagem());
     $('orq-atualizar').addEventListener('click', () => this.fila.carregar());
-    $('orq-legado-atualizar').addEventListener('click', () => this.legado.carregar());
     $('orq-vigilia-atualizar').addEventListener('click', () => this.vigilia.carregar());
     $('orq-validar-modelos').addEventListener('click', () => this.modelos.validar());
     $('orq-preparar-modelos').addEventListener('click', () => this.modelos.preparar());
