@@ -5,6 +5,7 @@ export const CATEGORIAS_DEV = Object.freeze([
   { codigo: 'CARTA_PAI', nome: 'Carta-pai / épica', tipo: 'estrutura' },
   { codigo: 'RASCUNHO', nome: 'Rascunho', tipo: 'estrutura' },
   { codigo: 'ASTARGNE', nome: 'Intervenção humana indicada', tipo: 'revisao-humana' },
+  { codigo: 'TAREFA_DONO', nome: 'Tarefa do dono', tipo: 'revisao-humana' },
   { codigo: 'BLOQUEADA', nome: 'Bloqueio explícito', tipo: 'revisao-humana' },
   { codigo: 'ESCOPO_SUSPENSO', nome: 'Fora de escopo ou congelada', tipo: 'revisao-humana' },
   { codigo: 'POS_PLAYTEST', nome: 'Após playtest', tipo: 'revisao-humana' },
@@ -21,6 +22,7 @@ export function classificarProntidaoDev(carta, dependencias = []) {
   const categorias = [];
   if (carta.is_draft) categorias.push('RASCUNHO');
   if (etiquetas.has('ASTARGNE') || /\((ASTARGNE|DONO)(?:[: )])/i.test(carta.description_html ?? '')) categorias.push('ASTARGNE');
+  if (etiquetas.has('TAREFA DONO')) categorias.push('TAREFA_DONO');
   if (etiquetas.has('BLOQUEADA') || /\(BLOQUEADA(?:[: )])/i.test(carta.description_html ?? '')) categorias.push('BLOQUEADA');
   if (etiquetas.has('SEM ESCOPO') || etiquetas.has('CONGELADA')) categorias.push('ESCOPO_SUSPENSO');
   if (etiquetas.has('PÓS-PLAYTEST')) categorias.push('POS_PLAYTEST');

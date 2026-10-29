@@ -23,6 +23,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## O que falta
 
+- **Frota do Hangar**: CLIs no Hangar, não por carta; droid zelador
+  varre o Plane ([plano](plano-frota-do-hangar.md)).
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo de assinatura** (PAINEL-40): sem fonte verificável, "indisponível".

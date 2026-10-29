@@ -15,7 +15,7 @@ export class ProntidaoGate {
     const gatesAtuais = GATES.filter(g => nomes.includes(g));
     if (gatesAtuais.length > 1) motivos.push('dois gates de prontidão');
     if (gatesAtuais.length === 1 && gatesAtuais[0] !== gate) motivos.push('troca de gate exige decisão humana registrada');
-    for (const marca of BLOQUEIOS) if (nomes.includes(marca)) motivos.push(`marcador ${marca} exige decisão humana`);
+    for (const marca of BLOQUEIOS) if (nomes.includes(marca)) motivos.push(`marcador ${marca} espera o dono`);
     if (DECISAO_HUMANA_NA_DESCRICAO.test(carta.description_html ?? '')) motivos.push('decisão ou bloqueio humano descrito na carta');
     if (/bloquead|blocked|em espera|aguardando/i.test(carta.state?.name ?? '')) motivos.push('estado bloqueado');
     for (const d of dependencias) if (d.estado !== 'concluida') motivos.push(`dependência ${d.id ?? '?'}: ${d.motivo ?? d.estado}`);

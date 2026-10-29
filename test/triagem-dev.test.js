@@ -15,6 +15,8 @@ test('categorias distinguem decisão, dependência, estado e conteúdo não revi
   const tipos = classificarProntidaoDev({ labels: [{ name: 'ASTARGNE' }, { name: 'PÓS-PLAYTEST' }],
     state: { group: 'backlog' } }, [{ id: 'PAINEL-30', estado: 'pendente' }]);
   assert.deepEqual(tipos, ['ASTARGNE', 'POS_PLAYTEST', 'DEPENDENCIA_PENDENTE', 'ESTADO_INADEQUADO']);
+  assert.deepEqual(classificarProntidaoDev({ labels: [{ name: 'TAREFA DONO' }], state: { group: 'unstarted' },
+    description_html: '<p>(TAREFA DONO: playtest) Sem dependências.</p>' }), ['TAREFA_DONO'], 'tarefa do dono trava o DEV sem virar decisão');
   assert.deepEqual(classificarProntidaoDev({ labels: [], state: { group: 'unstarted' } },
     [{ id: '?', estado: 'desconhecida' }]), ['DEPENDENCIA_INDISPONIVEL']);
   assert.deepEqual(classificarProntidaoDev({ labels: [], state: { group: 'backlog' } },

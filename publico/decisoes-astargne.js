@@ -22,11 +22,11 @@ class BlocoAstargne {
     const feitaPorCard = new Map(feitas.map(f => [f.card, f]));
     const grupos = { chaves: [], feitas: [], push: [], provas: [], produto: [] };
     for (const d of decisoes) {
-      if (d.estado !== 'aberto' || !['ASTARGNE', 'EMPÍRICA'].includes(d.tag) || projetoCongelado(d.projeto)) continue;
+      if (d.estado !== 'aberto' || !['ASTARGNE', 'TAREFA DONO', 'EMPÍRICA'].includes(d.tag) || projetoCongelado(d.projeto)) continue;
       if (feitaPorCard.has(d.identificador)) grupos.feitas.push({ ...d, feita: feitaPorCard.get(d.identificador) });
       else if (cardsDeChave.has(d.identificador)) grupos.chaves.push(d);
       else if (this.PUSH.test(d.texto)) grupos.push.push(d);
-      else if (d.tag === 'EMPÍRICA' || this.PROVA.test(d.texto)) grupos.provas.push(d);
+      else if (d.tag === 'TAREFA DONO' || d.tag === 'EMPÍRICA' || this.PROVA.test(d.texto)) grupos.provas.push(d);
       else grupos.produto.push(d);
     }
     return grupos;
@@ -49,7 +49,7 @@ class BlocoAstargne {
       el('summary', { class: 'astargne-cab' }, el('span', { class: 'chev' }, '›'), el('span', { class: 'pagina-kicker' }, 'ASTARGNE · O QUE DEPENDE DE VOCÊ'), el('span', { class: 'selo-contagem' }, String(total))),
       el('h3', {}, `Chaves e contas externas (${pendentes.length})`), chaves, ...(feitas ? [feitas] : []),
       el('h3', {}, `Push, deploy e sudo (${grupos.push.length})`), lista(grupos.push, 'nada esperando push, deploy ou sudo.'),
-      el('h3', {}, `Provas suas (${grupos.provas.length})`), lista(grupos.provas, 'nenhuma prova humana pendente.'),
+      el('h3', {}, `Tarefas suas (${grupos.provas.length})`), lista(grupos.provas, 'nenhuma tarefa sua pendente.'),
       el('h3', {}, `Decisões de produto (${grupos.produto.length})`), lista(grupos.produto, 'nenhuma decisão de produto pendente.'),
       el('p', { class: 'kicker' }, 'classificação por etiqueta e verbo do título; projetos congelados ficam de fora; o resto da aba é o orquestrador quem resolve.'));
     painel.addEventListener('toggle', () => { try { localStorage.setItem(this.ABERTO, painel.open ? 'sim' : 'nao'); } catch { /* sem armazenamento: só não lembra */ } });

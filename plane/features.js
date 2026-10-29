@@ -1,8 +1,9 @@
 // Projeção pura do workspace do Plane para a forma do backlog.
 
-export const TAGS_CANONICAS = ['ASTARGNE', 'EMPÍRICA', 'BLOQUEADA', 'SEM ESCOPO', 'CONGELADA', 'PÓS-PLAYTEST'];
+// TAREFA DONO (28/10/2026): ação que só o dono faz (playtest, aparelho, conta); ASTARGNE fica só para decisão.
+export const TAGS_CANONICAS = ['ASTARGNE', 'TAREFA DONO', 'EMPÍRICA', 'BLOQUEADA', 'SEM ESCOPO', 'CONGELADA', 'PÓS-PLAYTEST'];
 const LEGADO = { DONO: 'ASTARGNE' };
-const RE_TAG = /\((ASTARGNE|DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]{0,200})\)/gu;
+const RE_TAG = /\((ASTARGNE|TAREFA DONO|DONO|EMPÍRICA|SEM ESCOPO|CONGELADA|BLOQUEADA|PÓS-PLAYTEST)(?![\p{L}])([^)]{0,200})\)/gu;
 const VARREDURA_MAX = 4000;
 export const ROTULO_PRODUTO = 'PRODUTO';
 

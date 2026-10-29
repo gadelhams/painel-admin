@@ -2,7 +2,7 @@
 // classificação da aba Decisões e do bloco "Astargne", em texto para a conversa
 // — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
 // Só leitura; nunca escreve no Plane.
-const TAGS_DONO = new Set(['ASTARGNE', 'EMPÍRICA']);
+const TAGS_DONO = new Set(['ASTARGNE', 'TAREFA DONO', 'EMPÍRICA']);
 const RE_TERCEIRO = /\b(autor|felipe|feljin|colaborador|provedor|samsung|amazon|google|youtubei)\b/i;
 const RE_PUSH = /\b(push|deploy|publicar|sudo|instalar|borda|unit de usu)/i;
 
@@ -24,7 +24,7 @@ export function resumirDecisoes({ decisoes, projetos = [], chaves = { pendentes:
       if (feitas.has(d.identificador)) grupos.rotacao_registrada.push(linha(d));
       else if (cardsDeChave.has(d.identificador)) grupos.dono_chaves.push(linha(d));
       else if (RE_PUSH.test(d.texto)) grupos.dono_push.push(linha(d));
-      else if (d.tag === 'EMPÍRICA') grupos.dono_provas.push(linha(d));
+      else if (d.tag === 'EMPÍRICA' || d.tag === 'TAREFA DONO') grupos.dono_provas.push(linha(d));
       else grupos.dono_produto.push(linha(d));
     } else if (d.tag === 'BLOQUEADA') {
       if (/\b(dono|astargne|vai\b|aceite)/i.test(detalhe)) grupos.bloqueada_pelo_dono.push(linha(d));
@@ -37,7 +37,7 @@ export function resumirDecisoes({ decisoes, projetos = [], chaves = { pendentes:
   return {
     atualizadoEm: new Date().toISOString(),
     projetosCongeladosIgnorados: [...congelados],
-    leitura: 'Grupos "dono_*" dependem de Astargne; "bloqueada_pelo_dono" são cadeias que uma decisão dele destrava; "bloqueada_por_terceiro" esperam outra pessoa ou fornecedor; "rotacao_registrada" já foi feita na aba Chaves e o card só espera o orquestrador fechar. O vínculo entre cards vem do texto do detalhe da etiqueta — não é um grafo formal.',
+    leitura: 'Grupos "dono_*" dependem de Astargne ("dono_provas" são tarefas dele — label TAREFA DONO, prova humana —, não decisões); "bloqueada_pelo_dono" são cadeias que uma decisão dele destrava; "bloqueada_por_terceiro" esperam outra pessoa ou fornecedor; "rotacao_registrada" já foi feita na aba Chaves e o card só espera o orquestrador fechar. O vínculo entre cards vem do texto do detalhe da etiqueta — não é um grafo formal.',
     totais: Object.fromEntries(Object.entries(grupos).map(([k, v]) => [k, Array.isArray(v) ? v.length : v])),
     grupos: Object.fromEntries(Object.entries(grupos).map(([k, v]) => [k, Array.isArray(v) ? corta(v) : v])),
   };

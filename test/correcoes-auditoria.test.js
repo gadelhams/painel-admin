@@ -63,6 +63,12 @@ test('anotação legada (DONO: …) e (ASTARGNE, …) na descrição são decis�
   assert.equal(avaliarCarta({ ...cartaBase, description_html: '<p>(DONOR list)</p>' }, { contrato }).elegivel, true);
 });
 
+test('label TAREFA DONO trava gate e despacho: é ação do dono, a IA não puxa', () => {
+  const tarefa = { ...cartaBase, labels: [{ name: 'TAREFA DONO' }] };
+  assert.match(avaliarCarta(tarefa, { contrato }).motivos.join(' '), /TAREFA DONO/);
+  assert.match(avaliarProntidaoGate(tarefa, { gate: 'READY TO DEV' }).motivos.join(' '), /TAREFA DONO/);
+});
+
 test('lease ativo é motivo e situação "ativo"; vencido não-real é "expirado" (mutação: agora = Date.now sem parênteses)', () => {
   const ativo = { agente: 'Claude', expiraEm: new Date(Date.now() + 60_000).toISOString(), modoReal: true };
   const r = avaliarCarta(cartaBase, { contrato, lease: ativo });

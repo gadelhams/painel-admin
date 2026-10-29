@@ -1,9 +1,10 @@
 // Árvore do backlog: placar, tag e o nó. A aba só escolhe o projeto e o filtro.
 
 class ArvoreBacklog {
-  static TAGS = ['ASTARGNE', 'BLOQUEADA', 'EMPÍRICA', 'CONGELADA', 'SEM ESCOPO', 'PÓS-PLAYTEST'];
+  static TAGS = ['ASTARGNE', 'TAREFA DONO', 'BLOQUEADA', 'EMPÍRICA', 'CONGELADA', 'SEM ESCOPO', 'PÓS-PLAYTEST'];
   static CLASSE = {
     ASTARGNE: 'tag-astargne',
+    'TAREFA DONO': 'tag-empirica',
     BLOQUEADA: 'tag-bloqueada',
     CONGELADA: 'tag-congelada',
     'EMPÍRICA': 'tag-empirica',

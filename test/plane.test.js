@@ -216,3 +216,8 @@ test('label legada DONO e tag "(DONO: motivo)" na descrição viram ASTARGNE com
   const r = montarFeatures(workspace([issue(1, { labels: { nodes: [{ name: 'DONO' }] }, description: 'x (DONO: espera o dado)' })]), 'P1');
   assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'ASTARGNE', detalhe: 'espera o dado' }]);
 });
+
+test('label TAREFA DONO vira tag própria com o motivo; o "(TAREFA DONO" não vira ASTARGNE', async () => {
+  const r = montarFeatures(workspace([issue(1, { labels: { nodes: [{ name: 'TAREFA DONO' }] }, description: 'x (TAREFA DONO: playtest no celular)' })]), 'P1');
+  assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'TAREFA DONO', detalhe: 'playtest no celular' }]);
+});

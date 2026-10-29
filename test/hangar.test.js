@@ -243,6 +243,7 @@ test('nave: só o que espera o dono vira decisão; bloqueio por outra carta não
       issue(3, { labels: { nodes: [{ name: 'DONO' }] }, description: 'Escolher (DONO: o formato)' }),
       issue(4, { labels: { nodes: [{ name: 'PRODUTO' }] } }),
       issue(5, { labels: { nodes: [{ name: 'SEM ESCOPO' }] } }),
+      issue(6, { labels: { nodes: [{ name: 'TAREFA DONO' }] }, description: '(TAREFA DONO: playtest no celular)' }),
     ],
   };
   const backlog = { pasta: 'alfa', fonte: 'plane', estado: 'ok', features: montarFeatures(ws, 'P').features };

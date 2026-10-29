@@ -172,8 +172,8 @@ apaga os anteriores do mesmo arquivo (`.env.bak-*` também no `.gitignore`).
 Residual aceito: restart de compose acima de 180 s vira `ROTACAO_INCERTA` falsa. Eventos em `~/.local/state/painel-admin/chaves.jsonl` nunca
 levam valor; a pendência some quando há evento posterior à data do catálogo. O
 bloco **Astargne** da aba Decisões (`publico/decisoes.js`) junta as rotações
-pendentes com os cards abertos `ASTARGNE`/`EMPÍRICA` em quatro grupos — chaves e
-contas externas, push/deploy/sudo, provas suas, decisões de produto — por etiqueta
+pendentes com os cards abertos `ASTARGNE`/`TAREFA DONO`/`EMPÍRICA` em quatro grupos — chaves e
+contas externas, push/deploy/sudo, tarefas suas (`TAREFA DONO` sempre cai aqui), decisões de produto — por etiqueta
 e verbo do título (heurística dita na tela). O bloco é um `<details>` (aberto por
 padrão; estado lembrado em `localStorage`), ignora projetos com `congelado: true`
 no catálogo (`projetos.js`, propagado por `coletores.js`) e lista à parte as
@@ -411,7 +411,7 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   do Plane), decisões e o mapa UUID da carta → peça. Decisão = carta aberta
   que espera o dono: label `PRODUTO` vai para a **estação de planejamento**,
   `ASTARGNE` (ou a legada `DONO`) vira **peça no chão** do módulo; bloqueio por
-  outra carta, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`). Mais o
+  outra carta, `TAREFA DONO`, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`). Mais o
   inventário da Oficina (`acervo.js`: `PADROES-*`, orientações da raiz,
   skills, `licoes-vivas/`). `GET /api/hangar/sessoes` (`coletores/sessoes.js`,
   feito para poll de 5 s, memo por mtime): processo vivo em `/proc` é só
