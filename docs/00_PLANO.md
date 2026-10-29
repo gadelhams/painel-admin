@@ -31,7 +31,7 @@ em 14/08/2026; **upgrade de voz camada 3 (ElevenLabs) + fluidez entregue em
 14/08/2026, noite** — chave viva e caminho feliz provado na fusão
 (`GET /api/tts` → disponível; `POST` devolve MP3 real — evidências em
 [`01_ESTADO.md`](01_ESTADO.md)). Nasceu plan-first, conforme o padrão geral
-da raiz (`PADROES-DESENVOLVIMENTO.md` §5).
+da raiz (`padroes/fluxo.md`).
 
 ## Persona — C-3PO, droid de protocolo (renomeado 21/08/2026; era "Severino, o peão sabido do nordeste")
 
