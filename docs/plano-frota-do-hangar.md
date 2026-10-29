@@ -1,6 +1,6 @@
 # Frota do Hangar — droids configurados no Hangar, zelador varrendo o Plane
 
-Plano de 28/10/2026, ainda não construído. Pedido do dono: "os CLIs têm que ser
+Plano de 28/10/2026, ainda não construído (PAINEL-54). Pedido do dono: "os CLIs têm que ser
 configurados para o hangar e não por task. A ideia do hangar é ter um droid
 que valida o Plane procurando cards para serem feitos, seja limpeza do card
 (atualizar definições, diminuir pendências) ou puxar para desenvolver." O
@@ -77,8 +77,9 @@ merge.
 
 ## Ordem proposta
 
-1. **Feito em 28/10:** o padrão (`PADROES-BACKLOG.md` § Zeladoria), a skill e
-   a primeira passada manual sobre as cartas com `ASTARGNE`.
+1. **Feito em 28 e 29/10:** o padrão (`PADROES-BACKLOG.md` § Zeladoria), a
+   skill e a label `TAREFA DONO`. Na primeira passada manual, 30 das 32 cartas
+   com `ASTARGNE` fora do Anya mudaram; com o dono ficaram CAD-21 e KHOR-18.
 2. A mesa de decisão (PAINEL-53, `plano-mesa-de-decisao.md`). Ela recebe só o
    que sobra pela régua.
 3. A frota no Hangar: a configuração, a fábrica clicável e o despacho lendo a
