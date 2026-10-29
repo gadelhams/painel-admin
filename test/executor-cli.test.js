@@ -118,9 +118,10 @@ test('execução completa: três papéis com flags exatas, prompt com a carta, w
     assert.deepEqual(regs.map(x => x.papel), ['orquestracao', 'codificacao_testes', 'validacao']);
     const worktree = path.join(a.estado, 'worktrees', `PAINEL-99-${p.tentativaId.slice(0, 8)}`);
     const [orq, dev, val] = regs;
-    assert.deepEqual(orq.argv, ['-p', '--output-format', 'json', '--permission-mode', 'dontAsk', '--model', 'claude-opus-5', '--effort', 'max', '--bare',
-      '--setting-sources', 'project', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--no-session-persistence', '--disable-slash-commands',
-      '--max-turns', '60', '--max-budget-usd', '15', '--restricted', '--allowedTools', 'Read', 'Glob', 'Grep', 'LS']);
+    assert.deepEqual(orq.argv, ['-p', '--output-format', 'json', '--permission-mode', 'dontAsk', '--model', 'claude-opus-5', '--effort', 'max', '--restricted',
+      '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--no-session-persistence', '--disable-slash-commands',
+      '--max-turns', '60', '--max-budget-usd', '15', '--tools', 'Read', 'Glob', 'Grep', 'LS', '--allowedTools', 'Read', 'Glob', 'Grep', 'LS']);
+    for (const reg of regs) assert.equal(reg.argv.includes('--bare'), false, '--bare não usa a assinatura: o papel Claude não autenticaria');
     assert.deepEqual(dev.argv, ['exec', '-C', worktree, '--sandbox', 'workspace-write', '--color', 'never', '--ignore-user-config', '--ignore-rules',
       '--ephemeral', '--skip-git-repo-check', '-o', path.join(a.estado, 'saidas', p.tentativaId, 'codificacao_testes.ultima.md'),
       '-m', 'gpt-6-astra', '-c', 'model_reasoning_effort="xhigh"', '-']);

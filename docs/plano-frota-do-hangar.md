@@ -103,11 +103,17 @@ O parecer foi NÃO RATIFICÁVEL: 50 janelas, 7 que bloqueiam e 5 contradições
 de documento (já corrigidas). As regras abaixo entram no desenho, e o número
 é o da janela no parecer.
 
-**Achado que vale também para o executor de hoje (J7).** O `claude -p --bare`
-autentica só por chave de API e nunca pelo OAuth da assinatura. Por isso o
-papel Claude do executor não autentica. O isolamento tem de ser refeito sem
-`--bare` e provado numa execução real autorizada pelo dono, antes do PAINEL-34
-e antes da F3.
+**Achado que vale também para o executor de hoje (J7), resolvido em 29/10.**
+O `claude -p --bare` autentica só por chave de API e nunca pelo OAuth da
+assinatura, então o papel Claude do executor não autenticava. O dono
+autorizou uma prova mínima.
+- O executor passou a usar `--restricted --strict-mcp-config` com `--tools`
+  explícito. Isso foi provado numa chamada real: resposta pela assinatura,
+  com ~5 mil tokens de contexto, contra ~178 mil no modo normal.
+- O Codex já estava certo: sandbox só-leitura, aprovação "never", ~2 mil
+  tokens.
+- O papel de codificação com Bash não rodou de verdade. Isso fica para o
+  PAINEL-34.
 
 **F2, a frota:**
 - **Projetos (J1):** a frota só escolhe modelos e nunca habilita um projeto.

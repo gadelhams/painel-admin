@@ -526,9 +526,10 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   confirmação em duas ações. O executor cria um worktree (`git worktree add -b
   orq/<carta>-<id>`) fora da árvore principal, lança cada papel sem shell com
   ambiente construído por lista branca (nenhuma `PLANE_*`, `*_KEY`, `*TOKEN*`),
-  `claude -p --bare --setting-sources project --strict-mcp-config
-  --mcp-config '{"mcpServers":{}}' --permission-mode dontAsk` com `allowedTools`
-  fechada (papéis só-leitura com `--restricted`) ou `codex exec --sandbox
+  `claude -p --restricted --strict-mcp-config --mcp-config
+  '{"mcpServers":{}}' --permission-mode dontAsk` com `--tools` e `allowedTools`
+  fechadas (sem `--bare`, que não autentica pela assinatura — provado em
+  29/10/2026: restrito ~5 mil tokens de contexto, normal ~178 mil) ou `codex exec --sandbox
   read-only|workspace-write --ignore-user-config --ignore-rules --ephemeral`,
   roda só o comando do contrato (inspeção estática e heurística do
   `scripts.test`/script: metacaracteres e tokens proibidos recusam — não prova
