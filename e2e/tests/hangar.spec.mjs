@@ -24,6 +24,10 @@ const hangar = {
   ],
   acervo: [{ id: 'padroes', titulo: 'Padrões', itens: ['PADROES-BACKLOG.md'] }, { id: 'orientacoes', titulo: 'Orientações', itens: [] }, { id: 'skills', titulo: 'Skills', itens: ['fecho-de-entrega'] }, { id: 'licoes', titulo: 'Lições vivas', itens: [] }],
 };
+const T = (provedor, modelo, esforco) => ({ provedor, modelo, esforco });
+const frota = { estado: 'ok', versao: 5, hash: 'f'.repeat(64), papeis: { executor: ['orquestracao', 'codificacao_testes', 'validacao'], zelador: ['zelador'] },
+  conteudo: { executor: { orquestracao: T('claude', 'claude-opus-5', 'max'), codificacao_testes: T('openai', 'gpt-6-astra', 'xhigh'), validacao: T('claude', 'claude-opus-5', 'high') },
+    zelador: { zelador: T('claude', 'claude-opus-5', 'medium') } } };
 const agora = () => new Date().toISOString();
 const sessoes = () => ({
   em: agora(),
@@ -51,6 +55,7 @@ async function fixtures(page) {
     if (url.pathname === '/api/producao') return json({ sondas: [] });
     if (url.pathname === '/api/alinhamento') return json({ projetos: [], totais: {}, total: 0 });
     if (url.pathname === '/api/orquestracao/voz') return json({ xai: false });
+    if (url.pathname === '/api/orquestracao/frota') return json(frota);
     if (url.pathname === '/api/tts') return json({ disponivel: false });
     return json({});
   });
@@ -117,5 +122,21 @@ test('fora da aba o Hangar para o poll de sessões', async ({ page }) => {
   expect(audit.chamadas.filter((c) => c.caminho === '/api/hangar/sessoes' && c.em > marco)).toEqual([]);
   await page.locator('.barra-abas .aba', { hasText: 'Hangar' }).click();
   await expect.poll(() => audit.chamadas.filter((c) => c.caminho === '/api/hangar/sessoes' && c.em > marco).length).toBeGreaterThan(0);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('fábrica mostra a frota atual em leitura no popup do C-3PO, sem editar nem escrever', async ({ page }) => {
+  const audit = await fixtures(page);
+  await page.goto('/');
+  await expect(page.locator('#hg-droids [data-droid]')).toHaveCount(1);
+  await page.locator('#hg-fabricas [data-fab="codex"]').click();
+  await expect(page.locator('#hg-holo')).toBeVisible();
+  await expect(page.locator('#hg-holo-titulo')).toContainText('Fábrica Codex');
+  await expect(page.locator('#hg-holo-corpo')).toContainText('Frota v5 · só leitura');
+  await expect(page.locator('#hg-holo-corpo')).toContainText('codificação');
+  await expect(page.locator('#hg-holo-corpo')).toContainText('openai/gpt-6-astra/xhigh');
+  await expect(page.locator('#hg-holo-corpo')).toContainText('claude/claude-opus-5/medium');
+  await expect(page.locator('#hg-holo-corpo select, #hg-holo-corpo input')).toHaveCount(0);
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
   expect(audit.errosPagina).toEqual([]);
 });

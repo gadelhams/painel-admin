@@ -1,4 +1,4 @@
-// Desenha os seletores de um papel. Não valida nem grava perfil.
+// Desenha os seletores provedor → modelo → esforço de cada papel. Não valida nem grava a frota.
 
 class SeletoresModelo {
   constructor(n) { this.n = n; }
@@ -52,9 +52,10 @@ class SeletoresModelo {
     }
   }
 
-  ler() {
+  // `raiz` separa os blocos (executor e zelador) que convivem na mesma tela.
+  ler(raiz = document) {
     const selecoes = {};
-    for (const linha of document.querySelectorAll('.orq-papel')) {
+    for (const linha of raiz.querySelectorAll('.orq-papel')) {
       selecoes[linha.dataset.papel] = {
         provedor: linha.querySelector('.orq-seletor-provedor').value,
         modelo: linha.querySelector('.orq-seletor-modelo').value,

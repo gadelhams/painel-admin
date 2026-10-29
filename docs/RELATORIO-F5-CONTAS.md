@@ -3,7 +3,7 @@
 **Data**: 13/09/2026.
 **Estado**: ENTREGUE PELO EXECUTOR — aguarda cético + integrador; sem commit.
 
-Contrato: Fase 5 do `../../PLANO-CADASTRO-UNICO.md` — aba **Contas** no painel
+Contrato: Fase 5 do `../../../historico/PLANO-CADASTRO-UNICO.md` — aba **Contas** no painel
 para administrar o CadastroUnico (convidar, permissões, desativar/reativar,
 redefinir senha) sem que o `TOKEN_INTERNO` jamais chegue ao PC. Desenho fixado
 pelo contrato e seguido: toda ação roda **no servidor**, via `ssh`, pelo backend

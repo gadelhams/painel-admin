@@ -63,7 +63,9 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
       .find(x => x.tipo === 'TENTATIVA' && x.chaveIdempotencia === chaveIdempotencia) ?? null);
   }
 
-  async function reservar({ cartaId, agente, chaveIdempotencia, modoReal = false, contexto = null }) {
+  // `conferir` roda sob a trava, antes de gravar o lease: é ali que a tentativa relê a
+  // frota (e a vigília, as pausas) para nada mudar entre a checagem e a reserva (J-A).
+  async function reservar({ cartaId, agente, chaveIdempotencia, modoReal = false, contexto = null, frota = null, conferir = null }) {
     leases.nome(cartaId);
     if (!agente || !chaveIdempotencia) throw new Error('agente e chave de idempotência obrigatórios');
     return comTrava(async () => {
@@ -79,12 +81,14 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
       }
       if (reconciliacao.situacao === 'ativo') throw new Error('lease ativo');
       if (reconciliacao.situacao === 'revisao') throw new Error('execução inconclusa exige revisão humana antes de novo despacho');
+      if (conferir) await conferir();
       const tentativaId = randomUUID();
-      const lease = { cartaId, tentativaId, agente, chaveIdempotencia, modoReal,
+      // A frota congelada (J3) viaja no lease e no TENTATIVA: trocar a frota depois não muda esta tentativa.
+      const lease = { cartaId, tentativaId, agente, chaveIdempotencia, modoReal, ...(frota ? { frota } : {}),
         adquiridoEm: new Date(agora()).toISOString(), expiraEm: new Date(agora() + duracaoLeaseMs).toISOString() };
       await leases.gravar(cartaId, lease, tentativaId);
       const tentativa = { tipo: 'TENTATIVA', cartaId, tentativaId, agente, chaveIdempotencia,
-        modoReal, contexto, resultado: 'RESERVADA' };
+        modoReal, contexto, ...(frota ? { frota } : {}), resultado: 'RESERVADA' };
       await diario.anotar(tentativa);
       return { duplicada: false, lease, tentativa };
     });
@@ -121,6 +125,6 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
     });
   }
 
-  return { lerLease: (id) => leases.ler(id), lerHistorico: (id) => diario.daCarta(id), consultarTentativa, reservar, renovar, concluir,
+  return { diretorio, lerLease: (id) => leases.ler(id), lerHistorico: (id) => diario.daCarta(id), consultarTentativa, reservar, renovar, concluir,
     reconciliar, recuperarInterrupcoes, comTrava, registrarEvento: (evento) => diario.anotar(evento) };
 }

@@ -2,15 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { criarAutorizador, criarVerificadorCadastro, ErroAcesso, extrairSessao, recusaOrigemPrivilegiada } from '../orquestrador/sso.js';
-import { criarConfirmacoes } from '../orquestrador/confirmacoes.js';
-import { criarApiPerfil } from '../orquestrador/api-perfil.js';
+import { criarConfirmacoesFrota, criarApiFrota } from '../orquestrador/api-frota.js';
 import { montarComando } from '../contas.js';
 
 const TOKEN = 'x'.repeat(43);
 const IDENTIDADE = { usuarioId: '7', sessaoHash: 'a'.repeat(64) };
 const CARTA = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
-const VERSAO = '2026-10-20T08:00:00Z';
-const SELECOES = { orquestracao: { provedor: 'claude', modelo: 'opus', esforco: 'max' } };
+// Desde a F2 (29/10/2026) o esqueleto das duas ações é provado pela troca da frota; o
+// perfil por carta, que fazia esse papel, saiu por decisão do dono.
+const TUPLA = { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max' };
+const FROTA = { executor: { orquestracao: TUPLA, codificacao_testes: TUPLA, validacao: TUPLA }, zelador: { zelador: TUPLA } };
 
 const req = (cabecalhos = {}) => ({ method: 'POST', headers: {
   host: 'painel.vpn.astargne.com', origin: 'https://painel.vpn.astargne.com',
@@ -61,44 +62,43 @@ test('autorização local usa ID estável e revalida toda requisição', async (
   await assert.rejects(autorizar(req({ cookie: undefined })), e => e.status === 401);
 });
 
-test('preparação não escreve; confirmação usa seleção armazenada e bloqueia concorrência/replay indevido', async () => {
+test('preparação não escreve; confirmação usa a frota armazenada e bloqueia concorrência/replay indevido', async () => {
   let agora = 1000;
   let chamadas = 0;
   let liberar;
   const servico = {
-    modelos: async () => ({ podeRegistrar: true, versaoCarta: VERSAO, carta: 'PAINEL-31' }),
-    validarModelos: async (_carta, selecoes) => ({ selecoes }),
-    registrarModelos: async (...args) => { chamadas++; await new Promise(r => { liberar = r; }); return { carta: 'PAINEL-31', persistida: true, chave: args[3] }; },
+    validarFrota: async (conteudo) => ({ conteudo, base: 'ok:1:x', atual: { estado: 'ok', versao: 1 } }),
+    trocarFrota: async (conteudo, base, usuarioId) => { chamadas++; await new Promise(r => { liberar = r; }); return { versao: 2, base, usuarioId }; },
   };
-  const confirmar = criarConfirmacoes({ servico, agora: () => agora });
-  const preparado = await confirmar.preparar({ carta: CARTA, versaoCarta: VERSAO, selecoes: SELECOES }, IDENTIDADE);
+  const confirmar = criarConfirmacoesFrota({ servico, agora: () => agora });
+  const preparado = await confirmar.preparar(FROTA, IDENTIDADE);
   assert.equal(chamadas, 0);
-  assert.deepEqual(preparado.selecoes, SELECOES);
+  assert.deepEqual(preparado.conteudo, FROTA);
   const primeira = confirmar.confirmar(preparado.confirmacaoId, IDENTIDADE);
   await assert.rejects(confirmar.confirmar(preparado.confirmacaoId, IDENTIDADE), e => e.status === 409);
   assert.equal(chamadas, 1);
   liberar();
   const resultado = await primeira;
+  assert.equal(resultado.base, 'ok:1:x');
   assert.deepEqual(await confirmar.confirmar(preparado.confirmacaoId, IDENTIDADE), resultado);
   assert.equal(chamadas, 1);
-  const p2 = await confirmar.preparar({ carta: CARTA, versaoCarta: VERSAO, selecoes: SELECOES }, IDENTIDADE);
+  const p2 = await confirmar.preparar(FROTA, IDENTIDADE);
   await assert.rejects(confirmar.confirmar(p2.confirmacaoId, { ...IDENTIDADE, sessaoHash: 'b'.repeat(64) }), e => e.status === 403);
   agora += 120_001;
   await assert.rejects(confirmar.confirmar(p2.confirmacaoId, IDENTIDADE), e => [404, 410].includes(e.status));
   assert.equal(chamadas, 1);
 });
 
-test('versão divergente e falha incerta não gravam duas vezes', async () => {
+test('frota recusada no preparar e falha incerta não gravam duas vezes', async () => {
   let chamadas = 0;
   const servico = {
-    modelos: async () => ({ podeRegistrar: true, versaoCarta: VERSAO, carta: 'PAINEL-31' }),
-    validarModelos: async (_carta, selecoes) => ({ selecoes }),
-    registrarModelos: async () => { chamadas++; throw new Error('Plane incerto'); },
+    validarFrota: async () => { throw new Error('modelo ou esforço fora do catálogo para validacao'); },
+    trocarFrota: async () => { chamadas++; throw new Error('disco incerto'); },
   };
-  const confirmacoes = criarConfirmacoes({ servico });
-  await assert.rejects(confirmacoes.preparar({ carta: CARTA, versaoCarta: '2026-10-19T08:00:00Z', selecoes: SELECOES }, IDENTIDADE), e => e.status === 409);
-  const preparado = await confirmacoes.preparar({ carta: CARTA, versaoCarta: VERSAO, selecoes: SELECOES }, IDENTIDADE);
-  await assert.rejects(confirmacoes.confirmar(preparado.confirmacaoId, IDENTIDADE), /Plane incerto/);
+  await assert.rejects(criarConfirmacoesFrota({ servico }).preparar(FROTA, IDENTIDADE), e => e.status === 422);
+  const confirmacoes = criarConfirmacoesFrota({ servico: { ...servico, validarFrota: async (c) => ({ conteudo: c, base: 'ausente', atual: {} }) } });
+  const preparado = await confirmacoes.preparar(FROTA, IDENTIDADE);
+  await assert.rejects(confirmacoes.confirmar(preparado.confirmacaoId, IDENTIDADE), /disco incerto/);
   await assert.rejects(confirmacoes.confirmar(preparado.confirmacaoId, IDENTIDADE), e => e.status === 409);
   assert.equal(chamadas, 1);
 });
@@ -106,17 +106,17 @@ test('versão divergente e falha incerta não gravam duas vezes', async () => {
 test('API exige autenticação antes de ler corpo e confirmação não aceita payload trocado', async () => {
   let leituras = 0;
   let chamadas = 0;
-  const apiNegada = criarApiPerfil({ autorizar: async () => { throw new ErroAcesso('sessão ausente', 401); }, confirmacoes: {} });
+  const apiNegada = criarApiFrota({ autorizar: async () => { throw new ErroAcesso('sessão ausente', 401); }, confirmacoes: {} });
   const ler = async () => { leituras++; return '{}'; };
-  assert.equal((await apiNegada(req(), '/api/orquestracao/modelos/preparar', ler)).status, 401);
+  assert.equal((await apiNegada(req(), '/api/orquestracao/frota/preparar', ler)).status, 401);
   assert.equal(leituras, 0);
-  const api = criarApiPerfil({ autorizar: async () => IDENTIDADE, confirmacoes: {
+  const api = criarApiFrota({ autorizar: async () => IDENTIDADE, confirmacoes: {
     preparar: async corpo => { chamadas++; return corpo; },
     confirmar: async id => { chamadas++; return { id }; },
   } });
-  const preparar = await api(req(), '/api/orquestracao/modelos/preparar', async () => JSON.stringify({ carta: CARTA, versaoCarta: VERSAO, selecoes: SELECOES, comando: 'executar' }));
+  const preparar = await api(req(), '/api/orquestracao/frota/preparar', async () => JSON.stringify({ ...FROTA, base: 'ok:9:x' }));
   assert.equal(preparar.status, 422);
-  const confirmar = await api(req(), '/api/orquestracao/modelos/confirmar', async () => JSON.stringify({ confirmacaoId: CARTA, selecoes: SELECOES }));
+  const confirmar = await api(req(), '/api/orquestracao/frota/confirmar', async () => JSON.stringify({ confirmacaoId: CARTA, ...FROTA }));
   assert.equal(confirmar.status, 422);
   assert.equal(chamadas, 0);
 });

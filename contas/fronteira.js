@@ -19,7 +19,8 @@ export function criarClienteContas({ executar = executarSsh, log = console.error
   return { chamar };
 }
 
-const ROTAS_HTTP = [
+// Exportada para a varredura de rotas (test/rotas-privilegiadas.test.js) listar as de escrita uma a uma.
+export const ROTAS_HTTP = Object.freeze([
   { metodo: 'GET', padrao: /^\/api\/contas\/apps$/, operacao: 'listarApps' },
   { metodo: 'GET', padrao: /^\/api\/contas\/usuarios$/, operacao: 'listarUsuarios' },
   { metodo: 'GET', padrao: /^\/api\/contas\/convites$/, operacao: 'listarConvites' },
@@ -30,7 +31,7 @@ const ROTAS_HTTP = [
   { metodo: 'POST', padrao: /^\/api\/contas\/usuarios\/([^/]+)\/desativar$/, operacao: 'desativarUsuario' },
   { metodo: 'POST', padrao: /^\/api\/contas\/usuarios\/([^/]+)\/reativar$/, operacao: 'reativarUsuario' },
   { metodo: 'POST', padrao: /^\/api\/contas\/usuarios\/([^/]+)\/redefinir$/, operacao: 'redefinirSenha' },
-];
+]);
 
 export function resolverRotaContas(metodo, pathname) {
   for (const rota of ROTAS_HTTP) {

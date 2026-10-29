@@ -11,7 +11,7 @@ import { RotasContas } from './rotas-contas.js';
 import { RedirecionamentoC3po } from './redirecionamento-c3po.js';
 
 export class RotasPainel {
-  constructor({ resposta, coletores, contas, ssh }) {
+  constructor({ resposta, coletores, contas, ssh, autorizarContas }) {
     this.grupos = [
       new RotasProjetos({ resposta, coletores }),
       new RotasProducao({ resposta, coletores }),
@@ -20,7 +20,7 @@ export class RotasPainel {
       new RotasDecisoes({ resposta, coletores }),
       new RotasHangar({ resposta, coletores }),
       new RotasRelacoes({ resposta, coletores }),
-      new RotasContas({ resposta, contas }),
+      new RotasContas({ resposta, contas, autorizar: autorizarContas }),
       new RedirecionamentoC3po(),
     ];
   }

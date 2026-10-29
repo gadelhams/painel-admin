@@ -1,13 +1,12 @@
 // Prova final de SSO em navegador Windows. Não salva sessão, screenshot,
-// storageState ou trace. Bloqueia escritas exceto validar/preparar.
+// storageState ou trace. Bloqueia escritas exceto o preparar da frota.
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
-import { aguardarTresPapeis } from './esperar-modelos.mjs';
+import { aguardarPapeisDaFrota } from './esperar-modelos.mjs';
 import { classificarPedido, ORIGEM_PAINEL } from './politica-post.mjs';
 
 const PAINEL = ORIGEM_PAINEL;
 const LOGIN = 'https://astargne.com/login';
-const CARTA = 'PLAYER-38';
 const canal = process.env.ORQ_E2E_BROWSER ?? 'chrome';
 if (process.platform !== 'win32') throw new Error('Este smoke real deve rodar no Windows autorizado pelo tailnet.');
 if (!['chrome', 'msedge'].includes(canal)) throw new Error('ORQ_E2E_BROWSER deve ser chrome ou msedge.');
@@ -40,57 +39,43 @@ try {
     const rf = await context.request.get(`${PAINEL}/api/orquestracao`);
     assert.equal(rf.status(), 200, 'fila indisponível pelo domínio autorizado');
     const fila = await rf.json();
-    const carta = fila.itens.find(item => item.identificador === CARTA);
-    assert.ok(carta, `${CARTA} ausente da fila`);
-    const rm = await context.request.get(`${PAINEL}/api/orquestracao/modelos?carta=${encodeURIComponent(carta.id)}`);
-    assert.equal(rm.status(), 200, 'modelos indisponíveis pelo domínio autorizado');
-    const modelos = await rm.json();
     assert.equal(fila.execucaoHabilitada, false, 'execução real ligada: abortando smoke');
-    assert.equal(carta.lease, null, 'há lease: abortando smoke');
-    assert.equal(carta.tentativa, null, 'há tentativa: abortando smoke');
-    assert.equal(modelos.perfil, null, 'já há perfil no card: abortando smoke sem alterar');
-    return { carta, modelos };
+    const rfr = await context.request.get(`${PAINEL}/api/orquestracao/frota`);
+    assert.equal(rfr.status(), 200, 'frota indisponível pelo domínio autorizado');
+    return await rfr.json();
   }
 
   const antes = await estado();
-  assert.deepEqual(antes.carta.agentesDisponiveis.map(a => a.id), ['Claude', 'OpenAI']);
-  await page.goto(`${PAINEL}/?carta=${CARTA}#/orquestracao`, { waitUntil: 'domcontentloaded' });
-  await page.locator('#orq-card-cabecalho').getByText(CARTA).waitFor({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Papéis e modelos' }).click();
-  const seletores = await aguardarTresPapeis(page);
+  await page.goto(`${PAINEL}/#/orquestracao`, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-orq-topico="frota"]').click();
+  const seletores = await aguardarPapeisDaFrota(page);
   const provedores = page.locator('.orq-seletor-provedor');
-  assert.equal(await provedores.count(), 3, 'esperados três seletores de provedor');
-  for (let i = 0; i < 3; i++) {
+  assert.equal(await provedores.count(), 4, 'esperados quatro seletores de provedor (executor e zelador)');
+  for (let i = 0; i < 4; i++) {
     const opcoes = await provedores.nth(i).locator('option').evaluateAll(nos => nos.map(no => no.value));
     assert.deepEqual(opcoes, ['claude', 'openai'], 'provedores esperados ausentes');
-    assert.equal(await seletores.nth(i).inputValue(), 'claude-opus-5');
   }
-  console.log('Três papéis carregados; validando a combinação de modelos.');
+  console.log('Quatro papéis carregados; preparando uma frota mista.');
   await provedores.nth(1).selectOption('openai');
   assert.equal(await seletores.nth(1).inputValue(), 'gpt-6-astra');
-  await page.getByRole('button', { name: 'Validar proposta' }).click();
-  await page.waitForFunction(() => document.getElementById('orq-modelos-status')
-    ?.textContent?.includes('ainda não gravada no card'), null, { timeout: 30_000 });
-
-  await page.getByRole('button', { name: 'Preparar registro no card' }).click();
+  await page.getByRole('button', { name: 'Preparar a frota nova' }).click();
   try {
-    await page.locator('#orq-confirmacao-modelos').waitFor({ state: 'visible', timeout: 30_000 });
+    await page.locator('#orq-frota-confirmacao').waitFor({ state: 'visible', timeout: 30_000 });
   } catch {
-    const motivo = (await page.locator('#orq-modelos-status').textContent())?.trim();
+    const motivo = (await page.locator('#orq-frota-status').textContent())?.trim();
     throw new Error(`SSO/preparo falhou: ${motivo ?? 'sem mensagem'}`);
   }
-  const confirmacao = await page.locator('#orq-confirmacao-modelos').textContent();
-  assert.match(confirmacao, /orquestracao: claude\/claude-opus-5\/max/);
-  assert.match(confirmacao, /codificacao_testes: openai\/gpt-6-astra\/xhigh/);
-  assert.match(confirmacao, /validacao: claude\/claude-opus-5\/max/);
+  const confirmacao = await page.locator('#orq-frota-confirmacao').textContent();
+  assert.match(confirmacao, /codificação e testes: openai\/gpt-6-astra/);
   console.log(`Escritas bloqueadas: Painel ${bloqueadasPainel.length}, outras origens ${bloqueadasExternas}.`);
   assert.deepEqual(bloqueadasPainel, [], 'o Painel tentou escrita inesperada');
 
   // Nunca clica em Confirmar. Preparar só cria confirmação em memória.
   const depois = await estado();
-  assert.equal(depois.carta.atualizadoEm, antes.carta.atualizadoEm, 'o card mudou durante o smoke');
-  console.log('PASSOU: SSO real, modelos e preparo em duas etapas; perfil, lease e tentativa continuam ausentes.');
-  console.log('Nenhum comentário foi gravado e nenhum despacho foi iniciado.');
+  assert.equal(depois.estado, antes.estado, 'a frota mudou durante o smoke');
+  assert.equal(depois.versao ?? null, antes.versao ?? null, 'a frota mudou durante o smoke');
+  console.log('PASSOU: SSO real e preparo da frota em duas etapas; a frota continua a mesma.');
+  console.log('Nada foi gravado e nenhum despacho foi iniciado.');
 } catch (erro) {
   console.error(`FALHOU: ${erro.message}`);
   process.exitCode = 1;

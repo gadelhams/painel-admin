@@ -8,7 +8,7 @@ class DespachoOrquestracao {
   async preparar(carta, comando, alvo) {
     this.n.estado.confirmacaoDespacho = null;
     alvo.querySelectorAll('.orq-confirmacao, .orq-preparo').forEach(no => no.remove());
-    const status = this.n.criar('p', 'Revalidando carta, contrato, perfil e executor…', 'orq-preparo');
+    const status = this.n.criar('p', 'Revalidando carta, contrato, frota e executor…', 'orq-preparo');
     alvo.append(status);
     try {
       const dados = await this.n.json('/api/orquestracao/despacho/preparar', { method: 'POST',
@@ -25,7 +25,7 @@ class DespachoOrquestracao {
       botao.type = 'button';
       botao.addEventListener('click', () => this.confirmar(carta.id, dados.confirmacaoId, status, botao));
       caixa.append(this.n.criar('strong', `${dados.carta} · comando ${dados.comando}`), plano,
-        this.n.criar('p', `Perfil do card ${dados.perfilComentarioId}. ${dados.aviso} Expira em ${new Date(dados.expiraEm).toLocaleTimeString('pt-BR')}.`), botao);
+        this.n.criar('p', `Frota v${dados.frota.versao}.${dados.perfilAntigo?.estado === 'ignorado' ? ` Perfil antigo ignorado (era ${dados.perfilAntigo.resumo}; roda a frota v${dados.frota.versao}).` : dados.perfilAntigo?.estado === 'indisponivel' ? ' Perfil antigo indisponível; a frota manda.' : ''} ${dados.aviso} Expira em ${new Date(dados.expiraEm).toLocaleTimeString('pt-BR')}.`), botao);
       alvo.append(caixa);
       status.textContent = 'Confira os três papéis, comando e carta antes de confirmar.';
     } catch (erro) { status.textContent = erro.message; }

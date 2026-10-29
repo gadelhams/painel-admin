@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { criarExecutorCli, validarScriptNpm, ambienteLimpo } from '../orquestrador/executor-cli.js';
-import { prepararPlanoExecucao } from '../orquestrador/modelos.js';
+import { prepararPlanoFrota } from '../orquestrador/modelos.js';
 import { validarHandoff } from '../orquestrador/handoff-plane.js';
 
 const run = promisify(execFile);
@@ -24,6 +24,9 @@ const contrato = {
     { id: 'OpenAI', provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'extreme high', esforcos: ['xhigh', 'max'], disponivel: true }],
 };
 const selecoes = (o, d, v) => ({ orquestracao: o, codificacao_testes: d, validacao: v });
+// O plano vem da frota congelada (F2, 29/10/2026); o contrato só liga cada provedor.
+const congelada = tuplas => ({ versao: 1, hash: '0'.repeat(64), tuplas });
+const planoDe = (c, o, d, v) => prepararPlanoFrota(c, congelada(selecoes(o, d, v)));
 const CLAUDE = { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max' };
 const OPENAI = { provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'xhigh' };
 const carta = { identificador: 'PAINEL-99', id: CARTA, projetoId: PROJETO, gate: 'READY TO DEV', labels: ['READY TO DEV'] };
@@ -68,7 +71,7 @@ async function ambiente({ testeScript = 'node scripts/ok.mjs', controle = null, 
       licoesVivasDir: path.join(raiz, 'sem-licoes') }), executorSemLancador: executor };
 }
 const pedido = (a, plano, extra = {}) => ({ carta: carta.identificador, cartaId: CARTA, projetoId: PROJETO, versaoCarta: 'v1',
-  comandoId: 'testes', comando: contrato.comandos[0], plano, contrato, gate: 'READY TO DEV', perfilComentarioId: randomUUID(),
+  comandoId: 'testes', comando: contrato.comandos[0], plano, contrato, gate: 'READY TO DEV',
   pasta: a.repo, tentativaId: randomUUID(), ...extra });
 
 test('ambiente dos filhos é lista branca: chaves do Painel não passam, CI e NO_COLOR entram', () => {
@@ -89,7 +92,7 @@ test('gramática do scripts.test: aceita encadeamento de testes, recusa shell, p
 test('validar aceita o cenário bom e recusa: sem git, binário ausente, scripts.test perigoso, script com token proibido, modelo fora do contrato', async () => {
   const a = await ambiente();
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, OPENAI, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, OPENAI, CLAUDE);
     const ok = await a.executor.validar({ pasta: a.repo, contrato, comando: contrato.comandos[0], plano, carta });
     assert.match(ok.inspecao, /npm test → node scripts\/ok.mjs/);
     const semGit = await fs.mkdtemp(path.join(a.raiz, 'semgit-'));
@@ -100,20 +103,22 @@ test('validar aceita o cenário bom e recusa: sem git, binário ausente, scripts
     await assert.rejects(a.executor.validar({ pasta: a.repo, contrato, comando: contrato.comandos[0], plano, carta }), /metacaractere/);
     await assert.rejects(a.executor.validar({ pasta: a.repo, contrato, comando: { id: 'x', executavel: 'node', argumentos: ['scripts/perigoso.mjs'] }, plano, carta }), /token proibido: ssh/);
     const semOpenai = { ...contrato, agentes: [contrato.agentes[0]] };
-    assert.throws(() => prepararPlanoExecucao(semOpenai, selecoes(CLAUDE, OPENAI, CLAUDE)), /não permitido/);
+    assert.throws(() => planoDe(semOpenai, CLAUDE, OPENAI, CLAUDE), /openai desligado no contrato/);
     const indisponivel = { ...contrato, agentes: [contrato.agentes[0], { ...contrato.agentes[1], disponivel: false }] };
-    await assert.rejects(a.executor.validar({ pasta: a.repo, contrato: indisponivel, comando: contrato.comandos[0], plano, carta }), /indisponível.*sem fallback/);
+    assert.throws(() => planoDe(indisponivel, CLAUDE, OPENAI, CLAUDE), /desligado no contrato.*não liga/);
+    const foraDoCatalogo = { ...plano, papeis: { ...plano.papeis, validacao: { ...plano.papeis.validacao, modelo: 'claude-inventado' } } };
+    await assert.rejects(a.executor.validar({ pasta: a.repo, contrato, comando: contrato.comandos[0], plano: foraDoCatalogo, carta }), /fora do catálogo/);
   } finally { await a.limpar(); }
 });
 
 test('execução completa: três papéis com flags exatas, prompt com a carta, worktree isolado, commit no ramo e árvore principal intacta → concluido', async () => {
   const a = await ambiente();
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, OPENAI, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, OPENAI, CLAUDE);
     const p = pedido(a, plano);
     const r = await a.executor.executar(p);
     assert.equal(r.resultado, 'concluido', JSON.stringify(r));
-    validarHandoff({ papel: 'orquestracao', tentativaId: p.tentativaId, resultado: r.resultado, resumo: r.resumo, evidencia: r.evidencia });
+    validarHandoff({ papel: 'orquestracao', tentativaId: p.tentativaId, resultado: r.resultado, resumo: r.resumo, evidencia: r.evidencia, origemModelos: { fonte: 'humano' } });
     const regs = await a.registros();
     assert.deepEqual(regs.map(x => x.papel), ['orquestracao', 'codificacao_testes', 'validacao']);
     const worktree = path.join(a.estado, 'worktrees', `PAINEL-99-${p.tentativaId.slice(0, 8)}`);
@@ -156,7 +161,7 @@ test('execução completa: três papéis com flags exatas, prompt com a carta, w
 test('comando de aceite que falha → rejeitado; veredito REPROVADO → rejeitado; sem alterações não há commit', async () => {
   const a = await ambiente();
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, CLAUDE, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, CLAUDE, CLAUDE);
     // O comando de aceite roda de verdade (node do PATH), sem npm falso no meio.
     const r = await a.executor.executar(pedido(a, plano, { comandoId: 'script', comando: { id: 'script', executavel: 'node', argumentos: ['scripts/falha.mjs'] } }));
     assert.equal(r.resultado, 'rejeitado');
@@ -166,7 +171,7 @@ test('comando de aceite que falha → rejeitado; veredito REPROVADO → rejeitad
   } finally { await a.limpar(); }
   const b = await ambiente({ controle: { veredito: 'REPROVADO', escrever: false } });
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, CLAUDE, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, CLAUDE, CLAUDE);
     const r = await b.executor.executar(pedido(b, plano));
     assert.equal(r.resultado, 'rejeitado');
     assert.match(r.evidencia.join('\n'), /VEREDITO: REPROVADO/);
@@ -180,27 +185,89 @@ test('timeout do papel mata o processo e devolve impedido; limite de uso do prov
   try {
     const dormente = criarExecutorCli({ diretorioEstado: a.estado, consultar, binarios: { claude: path.join(a.bin, 'dormente'), codex: path.join(a.bin, 'codex-falso'), npm: path.join(a.bin, 'npm-falso') },
       ambienteBase: process.env, limites: { minutosIa: 0.01, minutosComando: 0.5 } });
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, CLAUDE, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, CLAUDE, CLAUDE);
     const r = await dormente.executar(pedido(a, plano));
     assert.equal(r.resultado, 'impedido');
     assert.match(r.resumo, /excedeu .* min/);
+    // Correção J-C: estourar minutosIa é falha da carta (conta tentativa), não da frota.
+    assert.deepEqual(r.causa, { tipo: 'carta', provedor: 'claude' });
     await new Promise(res => setTimeout(res, 5500));
     assert.equal(await fs.access(path.join(a.bin, 'sobrevivi')).then(() => true, () => false), false, 'processo deveria ter sido morto');
   } finally { await a.limpar(); }
   const b = await ambiente({ controle: { limite: true } });
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, CLAUDE, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, CLAUDE, CLAUDE);
     const r = await b.executor.executar(pedido(b, plano));
     assert.equal(r.resultado, 'impedido');
     assert.match(r.resumo, /limite de uso do provedor claude/);
+    assert.deepEqual(r.causa, { tipo: 'limite', provedor: 'claude' });
     assert.equal((await b.registros()).length, 1, 'para no primeiro papel');
   } finally { await b.limpar(); }
+});
+
+// Correção J-C/J-D (29/10/2026): três baldes. Só stderr e erro estruturado, só com código ≠ 0;
+// o texto do modelo nunca decide. Na dúvida, a falha é da carta.
+test('classificação da falha: infra da CLI pausa a frota, limite pausa o provedor, o resto é da carta; texto do modelo e transcrição não contam', async () => {
+  const casos = [
+    ['texto do modelo cita 429 e sai 0', { textoValidacao: 'Vi um HTTP 429 (too many requests) no log do app; usage limit reached no teste.' }, null],
+    ['modelo recusado pela CLI na partida', { erro: { stderr: 'Error: unknown model claude-opus-5\n' } }, 'cli'],
+    ['sem autenticação', { erro: { stderr: 'Not logged in · Please run /login\n' } }, 'cli'],
+    ['limite no stderr com saída ≠ 0', { erro: { stderr: 'API Error: 429 rate limit\n' } }, 'limite'],
+    // N1 (reescrito): com is_error o result é mensagem do CLI, não do modelo — o limite é limite.
+    ['is_error: o CLI diz o limite no result', { limite: true }, 'limite'],
+    ['is_error com saída 0: "5-hour limit reached"', { erro: { codigo: 0, stdout: { type: 'result', subtype: 'success', is_error: true, result: '5-hour limit reached ∙ resets 3pm' } } }, 'limite'],
+    ['is_error de credencial', { erro: { stdout: { type: 'result', subtype: 'success', is_error: true, result: 'Invalid API key · Please run /login' } } }, 'cli'],
+    ['is_error:false com result citando limite e saída ≠ 0', { erro: { codigo: 1, stdout: { type: 'result', subtype: 'success', is_error: false, result: 'o log do app diz usage limit reached 429' } } }, null],
+    ['max turns', { erro: { stdout: { type: 'result', subtype: 'error_max_turns', is_error: true, result: 'parei' } } }, 'carta'],
+    ['saída ≠ 0 genérica', { erro: { stderr: 'Segmentation fault\n', codigo: 2 } }, 'carta'],
+  ];
+  for (const [nome, controle, causa] of casos) {
+    const a = await ambiente({ controle });
+    try {
+      const r = await a.executor.executar(pedido(a, planoDe(contrato, CLAUDE, CLAUDE, CLAUDE)));
+      if (causa === null) {
+        assert.notEqual(r.resultado, 'impedido', `${nome}: ${JSON.stringify(r)}`);
+        assert.equal(r.causa, undefined, nome);
+      } else {
+        assert.equal(r.resultado, 'impedido', nome);
+        assert.deepEqual(r.causa, { tipo: causa, provedor: 'claude' }, nome);
+      }
+    } finally { await a.limpar(); }
+  }
+  // N2: no Codex só a última linha de erro do próprio CLI conta; a transcrição no meio não.
+  const transcricao = '> npm test\nnpm ERR! 401 Unauthorized (registry)\nError: 429 Too Many Requests from mock\nauthentication failed in fixture\n';
+  for (const [nome, stderr, causa] of [
+    ['transcrição com 401/429 e erro final genérico', `${transcricao}ERROR: stream disconnected before completion\n`, 'carta'],
+    ['transcrição sem linha de erro do CLI', transcricao, 'carta'],
+    ['limite na última linha do CLI', `${transcricao}ERROR: unexpected status 429 Too Many Requests: usage limit reached\n`, 'limite'],
+    ['autenticação na última linha do CLI', `${transcricao}ERROR: unexpected status 401 Unauthorized\n`, 'cli'],
+  ]) {
+    const c = await ambiente({ controle: { codex: { stderr, codigo: 1 } } });
+    try {
+      const r = await c.executor.executar(pedido(c, planoDe(contrato, OPENAI, OPENAI, OPENAI)));
+      assert.equal(r.resultado, 'impedido', nome);
+      assert.deepEqual(r.causa, { tipo: causa, provedor: 'openai' }, nome);
+    } finally { await c.limpar(); }
+  }
+  const semBinario = await ambiente({ binariosExtra: {} });
+  try {
+    const exec = criarExecutorCli({ diretorioEstado: semBinario.estado, consultar,
+      binarios: { claude: path.join(semBinario.bin, 'claude-falso'), codex: path.join(semBinario.bin, 'nao-existe-mais'), npm: path.join(semBinario.bin, 'npm-falso') },
+      ambienteBase: process.env, limites: { minutosIa: 0.5, minutosComando: 0.5 } });
+    await fs.writeFile(path.join(semBinario.bin, 'nao-existe-mais'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    const plano = planoDe(contrato, CLAUDE, OPENAI, CLAUDE);
+    await exec.validar({ pasta: semBinario.repo, contrato, comando: contrato.comandos[0], plano, carta });
+    await fs.rm(path.join(semBinario.bin, 'nao-existe-mais'));
+    const r = await exec.executar(pedido(semBinario, plano));
+    assert.equal(r.resultado, 'impedido');
+    assert.deepEqual(r.causa, { tipo: 'cli', provedor: 'openai' }, 'binário ausente é infra da CLI');
+  } finally { await semBinario.limpar(); }
 });
 
 test('package-lock sem node_modules instala com npm ci --ignore-scripts no worktree; falha de instalação impede', async () => {
   const a = await ambiente({ comLock: true });
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, CLAUDE, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, CLAUDE, CLAUDE);
     const p = pedido(a, plano);
     const r = await a.executor.executar(p);
     assert.equal(r.resultado, 'concluido', JSON.stringify(r));
@@ -211,7 +278,7 @@ test('package-lock sem node_modules instala com npm ci --ignore-scripts no workt
   } finally { await a.limpar(); }
   const b = await ambiente({ comLock: true, binariosExtra: { npm: '/nao/existe/npm' } });
   try {
-    const plano = prepararPlanoExecucao(contrato, selecoes(CLAUDE, CLAUDE, CLAUDE));
+    const plano = planoDe(contrato, CLAUDE, CLAUDE, CLAUDE);
     const r = await b.executor.executar(pedido(b, plano));
     assert.equal(r.resultado, 'impedido');
     assert.match(r.resumo, /binário indisponível: npm/);

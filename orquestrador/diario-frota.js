@@ -6,12 +6,15 @@ import path from 'node:path';
 import { PROJETOS } from '../projetos.js';
 import { lerJsonl } from './leitor-jsonl.js';
 
-const CAMPOS = ['tipo', 'carta', 'cartaId', 'tentativaId', 'resultado', 'etapa', 'de', 'para', 'ate', 'grupo'];
+const CAMPOS = ['tipo', 'carta', 'cartaId', 'tentativaId', 'resultado', 'etapa', 'de', 'para', 'ate', 'grupo', 'frotaVersao'];
 
 function evento(bruto, origem, projetoId = null) {
   const e = { quando: bruto.quando ?? null, origem, projetoId: projetoId ?? bruto.projetoId ?? null };
   for (const c of CAMPOS) if (typeof bruto[c] === 'string' || typeof bruto[c] === 'number') e[c] = bruto[c];
   if (typeof bruto.motivo === 'string') e.motivo = bruto.motivo.slice(0, 200);
+  // A causa do impedido vem como objeto no despacho e como texto na vigília; sai um só formato.
+  const causa = typeof bruto.causa === 'string' ? bruto.causa : bruto.causa?.tipo;
+  if (['cli', 'limite', 'carta', 'infra'].includes(causa)) e.causa = causa;
   return e;
 }
 
@@ -30,8 +33,9 @@ export function criarLeitorDiarioFrota({ diretorio, projetos = PROJETOS, limite 
       ...projetos.filter(p => p.plane).map(p => ({ arquivo: path.join(diretorio, 'vigilia', `${p.plane}.jsonl`), nome: `vigília ${p.titulo}`, origem: 'vigilia', projetoId: p.plane }))];
     for (const f of fontes) {
       try {
-        const { linhas, truncadaNoFim } = await lerArquivo(f.arquivo, f.nome);
+        const { linhas, truncadaNoFim, truncadasNoMeio } = await lerArquivo(f.arquivo, f.nome);
         if (truncadaNoFim) avisos.push(`${f.nome}: última linha incompleta ignorada`);
+        if (truncadasNoMeio) avisos.push(`${f.nome}: ${truncadasNoMeio} linha(s) de escrita interrompida ignorada(s) no meio; o registro seguinte foi preservado`);
         eventos.push(...linhas.map(l => evento(l, f.origem, f.projetoId)));
       } catch (erro) { avisos.push(`${f.nome}: ${erro.message}`); }
     }

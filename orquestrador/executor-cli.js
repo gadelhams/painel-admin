@@ -10,7 +10,7 @@ import { argumentosModeloCli, PAPEIS } from './modelos.js';
 import { LIMITES_PADRAO, ambienteLimpo, resolverBinario } from './ambiente-cli.js';
 import { inspecionarComando } from './gramatica-cli.js';
 import { ProcessoCli } from './processo-cli.js';
-import { PapelCli, selecoesDoPlano } from './papel-cli.js';
+import { PapelCli } from './papel-cli.js';
 import { BriefingPapel, cortar } from './briefing-papel.js';
 import { IsolamentoGit } from './isolamento-git.js';
 import { DependenciasWorktree } from './dependencias-worktree.js';
@@ -45,8 +45,7 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
 
   async function validar({ pasta, contrato, comando, plano }) {
     for (const nome of ['git', ...new Set(PAPEIS.map(p => plano.papeis[p].provedor === 'claude' ? 'claude' : 'codex'))]) await binario(nome);
-    const selecoes = selecoesDoPlano(plano);
-    for (const papel of PAPEIS) argumentosModeloCli(contrato, selecoes, papel);
+    for (const papel of PAPEIS) argumentosModeloCli(plano, papel);
     let raiz;
     try { raiz = (await git.git(pasta, 'rev-parse', '--show-toplevel')).trim(); }
     catch { throw new Error('projeto sem repositório git; isolamento por worktree impossível'); }
@@ -67,7 +66,7 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
     await fs.writeFile(path.join(logs, 'plano.json'), JSON.stringify({ carta, cartaId, projetoId, comandoId, comando, papeis: plano.papeis, pasta }, null, 2));
     const evidencia = [];
     const papeis = PAPEIS.map(p => `${p}: ${plano.papeis[p].provedor}/${plano.papeis[p].modelo}/${plano.papeis[p].esforco}`).join(' · ');
-    const impedido = (motivo) => ({ resultado: 'impedido',
+    const impedido = (motivo, causa = { tipo: 'infra', provedor: null }) => ({ resultado: 'impedido', causa,
       resumo: cortar(`Tentativa ${curto} de ${carta} impedida antes de concluir: ${motivo}.`, 2000),
       evidencia: [...evidencia, cortar(motivo, 500), cortar(`logs: ${logs}`, 500)].slice(0, 10) });
 
@@ -89,12 +88,12 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
 
     const orq = await papeisCli.lancar({ papel: 'orquestracao', contrato, plano, worktree, comandos, logs,
       prompt: briefing.renderizar(await briefing.molde('orquestracao'), { ...contexto, licoes: await papeisCli.licoes('orquestracao') }) });
-    if (orq.impedimento) return impedido(orq.impedimento);
+    if (orq.impedimento) return impedido(orq.impedimento, orq.causa);
     evidencia.push(cortar(`orquestração ${orq.provedor}/${orq.modelo}/${orq.esforco} em ${Math.round(orq.duracaoMs / 1000)} s${orq.custoUsd != null ? ` · US$ ${orq.custoUsd.toFixed(2)}` : ''}`, 500));
 
     const dev = await papeisCli.lancar({ papel: 'codificacao_testes', contrato, plano, worktree, comandos, logs,
       prompt: briefing.renderizar(await briefing.molde('codificacao_testes'), { ...contexto, briefingOperacional: cortar(orq.texto, 12_000), licoes: await papeisCli.licoes('codificacao_testes') }) });
-    if (dev.impedimento) return impedido(dev.impedimento);
+    if (dev.impedimento) return impedido(dev.impedimento, dev.causa);
     let commit;
     let diffStat;
     let diff;
@@ -116,7 +115,7 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
       prompt: briefing.renderizar(await briefing.molde('validacao'), { ...contexto, briefingOperacional: cortar(orq.texto, 12_000), relatorioDev: cortar(dev.texto, 12_000),
         diffStat, diff: cortar(diff, DIFF_MAX), arquivoDiff: path.join(logs, 'diff.patch'), codigoComando: rc.expirou ? 'tempo esgotado' : String(rc.codigo),
         duracaoComando: `${Math.round(rc.duracaoMs / 1000)} s`, caudaComando: cortar(caudaComando, 8000), licoes: await papeisCli.licoes('validacao') }) });
-    if (val.impedimento) return impedido(val.impedimento);
+    if (val.impedimento) return impedido(val.impedimento, val.causa);
     const vereditos = [...val.texto.matchAll(/VEREDITO:\s*(APROVADO|REPROVADO|INCONCLUSIVO)/g)];
     const veredito = vereditos.at(-1)?.[1] ?? 'INCONCLUSIVO';
     evidencia.push(cortar(`validação ${val.provedor}/${val.modelo}/${val.esforco} em ${Math.round(val.duracaoMs / 1000)} s${val.custoUsd != null ? ` · US$ ${val.custoUsd.toFixed(2)}` : ''} · VEREDITO: ${veredito}`, 500));

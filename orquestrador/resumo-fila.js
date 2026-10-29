@@ -1,7 +1,7 @@
 // Conta cartas por projeto e fecha o envelope da fila. Não julga a carta.
 
 export class ResumoFila {
-  static de({ itens, projetos, catalogo, podeExecutar }) {
+  static de({ itens, projetos, catalogo, podeExecutar, frota = null }) {
     const contagens = new Map();
     for (const item of itens) {
       const atual = contagens.get(item.projetoId) ?? { cartas: 0, candidatas: 0, elegiveis: 0 };
@@ -19,6 +19,6 @@ export class ResumoFila {
     }));
     return { modo: podeExecutar ? 'despacho-controlado' : 'leitura-e-simulacao',
       execucaoHabilitada: podeExecutar,
-      atualizadoEm: new Date().toISOString(), projetos: projetosDaFila, itens };
+      atualizadoEm: new Date().toISOString(), frota, projetos: projetosDaFila, itens };
   }
 }

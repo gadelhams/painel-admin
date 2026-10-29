@@ -17,10 +17,8 @@ import { criarLeitorConsumo } from './orquestrador/consumo.js';
 import { criarFonteClaude } from './orquestrador/fonte-consumo-claude.js';
 import { criarLeitorDiarioFrota } from './orquestrador/diario-frota.js';
 import { criarFonteCodex } from './orquestrador/fonte-consumo-codex.js';
-import { criarEscritorPerfilPlane } from './orquestrador/perfil-plane.js';
 import { criarVerificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
-import { criarConfirmacoes } from './orquestrador/confirmacoes.js';
-import { criarApiPerfil } from './orquestrador/api-perfil.js';
+import { criarApiFrota, criarConfirmacoesFrota } from './orquestrador/api-frota.js';
 import { criarEscritorHandoffPlane } from './orquestrador/handoff-plane.js';
 import { criarApiHandoff, criarConfirmacoesHandoff } from './orquestrador/api-handoff.js';
 import { criarApiVoz, criarAutorizadorVoz } from './orquestrador/voz-xai.js';
@@ -88,7 +86,6 @@ for (const { sufixo, pasta } of [{ sufixo: '', pasta: 'CK3BannerLord' },
   try {
     identidadesEscrita[projetoId] = {
       autorEscrita: autorId,
-      escritorPerfil: criarEscritorPerfilPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
       escritorHandoff: criarEscritorHandoffPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
       escritorGate: criarEscritorGatePlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
       escritorEstado: criarEscritorEstadoPlane({ chave, projetoPermitido: projetoId, autorEsperado: autorId }),
@@ -98,7 +95,7 @@ for (const { sufixo, pasta } of [{ sufixo: '', pasta: 'CK3BannerLord' },
 }
 // Portão real: o executor só existe com ORQ_EXECUCAO_HABILITADA=true no .env — e, mesmo
 // assim, cada despacho ainda exige identidade de escrita do projeto, contrato, agente
-// disponível, perfil no card, sessão do Cadastro Único e confirmação em duas ações. Sem a
+// disponível, frota válida, sessão do Cadastro Único e confirmação em duas ações. Sem a
 // variável, a rota existe para diagnóstico e falha fechada.
 const execucaoHabilitada = process.env.ORQ_EXECUCAO_HABILITADA?.trim() === 'true';
 const executor = execucaoHabilitada && process.env.PLANE_API_KEY?.trim()
@@ -118,10 +115,8 @@ vigilia.iniciar();
 const triagemDev = criarTriagemDev();
 const lerConsumoIas = criarLeitorConsumo({ fontes: { claude: criarFonteClaude(), openai: criarFonteCodex() } });
 const autorizarPrivilegiado = criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId });
-const apiPerfil = criarApiPerfil({
-  autorizar: autorizarPrivilegiado,
-  confirmacoes: criarConfirmacoes({ servico: orquestracao }),
-});
+// Frota: a configuração geral de modelos por papel; troca só por SSO + duas ações.
+const apiFrota = criarApiFrota({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesFrota({ servico: orquestracao }) });
 const apiHandoff = criarApiHandoff({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesHandoff({ servico: orquestracao }) });
 const apiGate = criarApiGate({ autorizar: autorizarPrivilegiado,
@@ -154,12 +149,14 @@ const roteador = new RoteadorPainel({
     resposta,
     coletores: { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes },
     contas: manipularContas,
+    // Escritas da aba Contas: o mesmo autorizador SSO das ações privilegiadas (N5).
+    autorizarContas: autorizarPrivilegiado,
     ssh: new LeituraSsh({ chave: CHAVE_SSH }),
   }),
   orquestracao: new RotasOrquestracao({
     resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas,
     lerDiarioFrota: criarLeitorDiarioFrota({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }), vigilia,
-    apiPerfil, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz,
+    apiFrota, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz,
     xai: () => Boolean(process.env.XAI_API_KEY),
   }),
   alinhamento: new RotasAlinhamento({ resposta, alinhamento }),

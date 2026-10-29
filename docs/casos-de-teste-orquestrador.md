@@ -19,9 +19,10 @@ ou deploy para cumprir esta matriz.
    comprovar contrato, dependências, modelos, isolamento e comandos antes de
    mudar `disponivel` ou ligar o executor. Nenhum dos casos abaixo concede
    essa autorização.
-5. Na etapa final do PLAYER-38, escolher os três papéis no Painel e registrar
-   o perfil no card apenas com sessão SSO e confirmação do dono. O registro
-   do perfil não autoriza despacho nem inicia os comandos `testes`/`portao`.
+5. Desde 29/10/2026 (F2) os modelos vêm da **frota**, uma configuração só,
+   trocada na sub-aba Frota com sessão SSO e confirmação do dono. Gravar a
+   frota não autoriza despacho nem inicia os comandos `testes`/`portao`; o
+   `PERFIL-IA/v1` que uma carta já tenha é só exibido como ignorado.
 
 ## Núcleo e elegibilidade
 
@@ -44,7 +45,7 @@ ou deploy para cumprir esta matriz.
 |---|---|---|---|---|
 | C01 | Dois despachos simultâneos para a mesma carta | Confirmar em paralelo com executor falso | Uma tentativa inicia; a outra vê lease e não executa | `despacho-controlado.test.js` |
 | C02 | Mesma confirmação repetida | Repetir a confirmação com o mesmo id (processo vivo) ou reenviar a mesma chave ao serviço | Mesmo ID de tentativa; nenhum segundo spawn. Perdida a confirmação em memória (reinício), a proteção é o **lease** e a tentativa concluída pode ser reexecutada por nova confirmação — por desenho | `despacho-controlado.test.js` |
-| C03 | Chave de idempotência reutilizada com comando/perfil diferente | Reenviar a chave alterando seleção | Erro; nenhuma execução adicional | `despacho-controlado.test.js` |
+| C03 | Chave de idempotência reutilizada com comando ou frota diferente | Reenviar a chave alterando o comando | Erro; nenhuma execução adicional | `despacho-controlado.test.js` |
 | C04 | Lease de simulação expirado | Avançar relógio falso e reservar | Recuperação nomeada uma vez; nova reserva só após reconciliação | `orquestrador-core-v2.test.js` |
 | C05 | Lease real expirado ou falha após lançar executor | Avançar relógio falso ou lançar erro | Lease permanece para revisão humana; TTL não autoriza repetição | `orquestrador-core-v2.test.js`, `despacho-controlado.test.js` |
 | C06 | Interrupção entre RESULTADO e remoção do lease | Simular reinício/reconciliação | Resultado conservado, lease removido, um touchpoint de recuperação | `orquestrador-core-v2.test.js` |
@@ -65,7 +66,7 @@ ou deploy para cumprir esta matriz.
 | X04 | Comando de aceite falha ou veredito `REPROVADO`/`INCONCLUSIVO` | Script que sai 1; validador falso reprova | `rejeitado`; sem alterações não há commit | `executor-cli.test.js` |
 | X05 | Timeout e limite de uso | Papel que dorme além do limite; stderr com `usage limit` | `impedido`; grupo de processos morto (o dormente não deixa marcador); para no primeiro papel | `executor-cli.test.js` |
 | X06 | Dependências | `package-lock.json` sem `node_modules` | `npm ci --ignore-scripts --no-audit --no-fund` no worktree; npm ausente → `impedido` | `executor-cli.test.js` |
-| X07 | Primeira execução paga | Com o "vai" do dono: `ORQ_EXECUCAO_HABILITADA=true`, carta descartável com perfil e gate, confirmar | Worktree, logs em `saidas/<tentativa>/`, dois handoffs no card, resultado e custo na evidência; comandos do projeto piloto só os do contrato | **pendente** — decisão do dono |
+| X07 | Primeira execução paga | Com o "vai" do dono: `ORQ_EXECUCAO_HABILITADA=true`, carta descartável com gate e frota ok, confirmar | Worktree, logs em `saidas/<tentativa>/`, dois handoffs no card, resultado e custo na evidência; comandos do projeto piloto só os do contrato | **pendente** — decisão do dono |
 
 ## Vigília (24/10/2026)
 
@@ -73,7 +74,7 @@ ou deploy para cumprir esta matriz.
 |---|---|---|---|---|
 | V01 | Contrato com bloco `vigilia` | Perfil padrão fora do contrato, teto 0, comando inexistente | Contrato recusado com o campo nomeado; sem bloco, vigília indisponível | `vigilia.test.js` |
 | V02 | Desligada / ligar sem executor | Varrer; preparar com executor desligado | Nada despacha; 422 "executor desligado"; toggle persiste em disco | `vigilia.test.js` |
-| V03 | Carta DEV em Todo, sem perfil | Ligar e varrer | Todo → In Progress, `PERFIL-IA/v1` padrão gravado, tentativa, `READY TO DEV` → `READY TO TEST` com recibo; na varredura seguinte, teste aprovado → Done | `vigilia.test.js` |
+| V03 | Carta DEV em Todo, frota ok | Ligar e varrer | Todo → In Progress, nenhum `PERFIL-IA` gravado, tentativa com a frota, `READY TO DEV` → `READY TO TEST` com recibo; na varredura seguinte, teste aprovado → Done | `vigilia.test.js` |
 | V04 | Uma por vez | Lease ativo em carta do projeto | Varredura não despacha ("tentativa em curso") | `vigilia.test.js` |
 | V05 | Freios | Duas rejeições; teto diário; limite de uso | Carta esgotada; teto segura até passar 24 h; pausa pelo prazo do contrato e retoma | `vigilia.test.js` |
 | V06 | Toggle por SSO | preparar/confirmar sem sessão, payload extra, sessão alheia | 401/422/403; só `{projeto, ligar}` e `{confirmacaoId}` | `vigilia.test.js` |
@@ -92,15 +93,15 @@ saíram junto com o leitor.
 | I02 | Projetos sem READY, incluindo CKBL, Painel e Supervisor | Selecionar “Todas as cartas” e “Aguardando gate” | Projetos aparecem com motivos por carta; não somem por falta de gate/contrato | `orquestrador-ui.test.js`; conferência humana |
 | I03 | Voz xAI | Gravar até 45 s e pedir transcrição em projeto de teste | Só proposta de texto; não grava card, gate ou despacho sem confirmações | `voz-xai.test.js`; API real não chamada |
 | I04 | Consumo de assinatura sem fonte atual | Abrir tópico Consumo | “Indisponível”; não mostrar uso de API como percentual do plano | `orquestrador-v2.test.js` |
-| I05 | Identidade técnica ausente em instância de teste | Preparar gate, perfil e handoff | UI informa indisponibilidade; Guest não ganha escrita | `perfil-plane.test.js`, `gate-plane.test.js` |
+| I05 | Identidade técnica ausente em instância de teste | Preparar gate e handoff | UI informa indisponibilidade; Guest não ganha escrita | `gate-plane.test.js`, `handoff-plane.test.js` |
 | I06 | Portão real desligado | Abrir card elegível | UI informa que nenhum comando será iniciado | `despacho-controlado.test.js`; conferência humana |
-| I08 | Claude e OpenAI selecionáveis no PLAYER-38 | Abrir Papéis; escolher provedor, modelo filtrado e esforço em cada papel; validar combinações homogêneas e mista, sem confirmar perfil | Ambos aparecem disponíveis; fila lista os dois, mas não atribui responsável; cada prévia conserva provedor/modelo/esforço, sem fallback ou escrita no card | `orquestrador-v2.test.js`, `orquestrador-core-v2.test.js`, Playwright; API ativa em leitura |
-| I09 | Configuração final do perfil no card | Com SSO do dono, selecionar os três papéis, preparar, revisar carta/versão/esforços e confirmar uma vez | Antes de confirmar, nenhum perfil; depois, um comentário `PERFIL-IA/v1` de autoria técnica PLAYER e GET mostra a seleção exata; nenhum lease ou comando iniciado | `perfil-plane.test.js`, `orquestrador-sso.test.js`; smoke SSO Windows de preparo passou em v3; confirmação real pendente |
+| I08 | Claude e OpenAI selecionáveis na frota | Abrir Frota; escolher provedor, modelo filtrado e esforço em cada papel (executor e zelador); preparar uma frota mista, sem confirmar | Só o catálogo fechado aparece (sem `max` do OpenAI); o plano conserva provedor/modelo/esforço, sem fallback; provedor desligado no contrato para o despacho | `frota.test.js`, `orquestrador-v2.test.js`, `orquestrador-core-v2.test.js`, Playwright |
+| I09 | Primeira frota real | Com SSO do dono, escolher os quatro papéis na Frota, preparar, revisar e confirmar uma vez | Antes de confirmar, frota `ausente`; depois, `frota.json` v1 e uma linha em `frota-historico.jsonl`; nenhum lease ou comando iniciado; versão-base velha recusa sem escrita | `frota.test.js`, `orquestrador-sso.test.js`; confirmação real pendente (decisão do dono) |
 | I10 | Confirmação não abre despacho | Após I09, consultar fila e tentativa, sem clicar em despacho | `execucaoHabilitada: false`, lease ausente e histórico sem nova tentativa; `PLAYER-39`–`41` intactas | `despacho-controlado.test.js`; leitura da API/Plane na etapa final |
 | I11 | Acesso real aos dois modelos e esforços | Na etapa final autorizada, conferir autenticação das CLIs e fazer ensaio isolado por modelo/esforço em carta descartável, sem comandos do PLAYER nem despacho | Claude/max e OpenAI/xhigh realmente acessíveis; erro explícito se indisponível, nunca troca silenciosa de provedor/modelo/esforço | Prévia de argumentos em `orquestrador-core-v2.test.js`; prova paga real pendente |
-| I12 | Interface real com Plane/SSO simulados | Rodar `npm ci && npm test` em `e2e/` | Cinco abas, motivos de elegibilidade, gate, três seletores por papel com filtro e layout responsivo, carregamento atrasado, bloqueio de escrita inesperada e separação preparar/confirmar; nenhuma escrita real | Playwright `e2e/tests/orquestrador.spec.mjs` 9/9 (22/10) |
-| I13 | SSO real até o limite seguro | No Windows autorizado, rodar `e2e/windows-sso-smoke.mjs`; entrar na janela temporária | Validação e preparo funcionam com SSO do dono; confirmar não é clicado, e GET posterior conserva perfil/lease/tentativa ausentes | **Passou no Windows (v3, 22/10):** três papéis e escolhas exatas, 0 escritas inesperadas ao Painel, 8 de outras origens bloqueadas; GET final e releitura local sem perfil/lease/tentativa |
-| I14 | Troca de provedor/modelo após preparar | Em fixture SSO, preparar perfil e trocar o provedor de um papel | A confirmação anterior desaparece; modelo e esforço são recalculados só entre as opções daquele provedor; nova validação envia a combinação exata | Playwright `e2e/tests/orquestrador.spec.mjs`; 9/9 (22/10) |
+| I12 | Interface real com Plane/SSO simulados | Rodar `npm ci && npm test` em `e2e/` | Cinco abas, motivos de elegibilidade, gate, seletores da frota por papel com filtro e layout responsivo, carregamento atrasado, bloqueio de escrita inesperada e separação preparar/confirmar; nenhuma escrita real | Playwright `e2e/` 21/21 (29/10) |
+| I13 | SSO real até o limite seguro | No Windows autorizado, rodar `e2e/windows-sso-smoke.mjs`; entrar na janela temporária | Preparo da frota funciona com SSO do dono; confirmar não é clicado, e GET posterior mostra a mesma frota | Script portado para a Frota em 29/10, **ainda não rodado no Windows**; a versão por carta passou em 22/10 (v3): três papéis e escolhas exatas, 0 escritas inesperadas ao Painel, 8 de outras origens bloqueadas; GET final e releitura local sem perfil/lease/tentativa |
+| I14 | Troca de provedor/modelo após preparar | Em fixture SSO, preparar a frota e trocar o provedor de um papel | A confirmação anterior desaparece; modelo e esforço são recalculados só entre as opções daquele provedor; novo preparo envia a combinação exata | Playwright `e2e/tests/orquestrador.spec.mjs` (29/10) |
 
 ## Critério de saída
 

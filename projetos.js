@@ -155,7 +155,7 @@ export const PROJETOS = [
     portas: [{ porta: 7777, servico: 'Dashboard + C-3PO' }],
   },
   {
-    // Nasceu em 12/09/2026 (PLANO-CADASTRO-UNICO.md) e no mesmo dia passou a
+    // Nasceu em 12/09/2026 (~/Work/historico/PLANO-CADASTRO-UNICO.md) e no mesmo dia passou a
     // servir a raiz astargne.com (303 → /login) — a sonda "Caddy do host" em
     // PRODUCAO_EXTRA agora bate nele.
     pasta: 'CadastroUnico',

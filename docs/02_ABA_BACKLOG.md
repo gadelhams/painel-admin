@@ -1,6 +1,6 @@
 # Aba Backlog — o quadro kanban dos projetos (fase 1: só-leitura)
 
-> **Incremento: DO LINEAR PARA O PLANE, 30/09/2026 (`PLANO-PLANE-SELF-HOSTED.md`).**
+> **Incremento: DO LINEAR PARA O PLANE, 30/09/2026 (`../../../historico/PLANO-PLANE-SELF-HOSTED.md`).**
 > `plane.js` substituiu `linear.js` com a mesma forma de dado: projeto do Plane
 > = campo `plane` do catálogo, módulo = feature (ordem = `sort_order` do Plane),
 > sub-work item = filho, label = chip. Token do usuário Guest "painel"

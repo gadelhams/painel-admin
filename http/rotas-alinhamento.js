@@ -7,7 +7,8 @@ export class RotasAlinhamento {
   }
 
   async tentar(req, res, url) {
-    if (url.pathname !== '/api/alinhamento' || req.method !== 'GET') return false;
+    if (url.pathname !== '/api/alinhamento') return false;
+    if (req.method !== 'GET' && req.method !== 'HEAD') { this.resposta.naoPermitido(res, 'GET, HEAD', 'use GET'); return true; }
     res.setHeader('cache-control', 'no-store');
     try {
       this.resposta.json(res, await this.alinhamento.ler({ forcar: url.searchParams.get('agora') === '1' }));

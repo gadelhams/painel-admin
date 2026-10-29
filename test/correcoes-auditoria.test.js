@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { avaliarCarta, avaliarProntidaoGate, comandoEstaticoSeguro } from '../orquestrador/politica.js';
 import { dependenciasDaCarta, criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarEstadoOrquestracao } from '../orquestrador/estado.js';
-import { criarConfirmacoes, pendentes } from '../orquestrador/confirmacoes.js';
+import { criarDesafios, pendentes } from '../orquestrador/desafio-duas-acoes.js';
 import { criarEscritorGatePlane } from '../orquestrador/gate-plane.js';
 import { ErroAcesso } from '../orquestrador/sso.js';
 
@@ -113,13 +113,11 @@ test('teto de confirmações conta só pendentes/executando; recusa sem escrita 
   const cem = new Map(Array.from({ length: 100 }, (_, i) => [String(i), { estado: 'concluida' }]));
   assert.equal(pendentes(cem), 0);
   let semEscrita = true;
-  const servico = {
-    modelos: async () => ({ podeRegistrar: true, versaoCarta: '2026-10-20T08:00:00Z', carta: 'PAINEL-1' }),
-    validarModelos: async (_c, selecoes) => ({ selecoes }),
-    registrarModelos: async () => { const e = new Error('carta mudou; recarregue'); if (semEscrita) e.semEscrita = true; throw e; },
-  };
+  const confirmacoes = criarDesafios({
+    validar: async (entrada) => ({ guardar: entrada, resposta: {} }),
+    executar: async () => { const e = new Error('carta mudou; recarregue'); if (semEscrita) e.semEscrita = true; throw e; },
+  });
   const identidade = { usuarioId: '1', sessaoHash: 'a'.repeat(64) };
-  const confirmacoes = criarConfirmacoes({ servico });
   const p = await confirmacoes.preparar({ carta: randomUUID(), selecoes: {}, versaoCarta: '2026-10-20T08:00:00Z' }, identidade);
   await assert.rejects(confirmacoes.confirmar(p.confirmacaoId, identidade), e => e instanceof ErroAcesso && e.status === 422 && /nada foi gravado/.test(e.message));
   await assert.rejects(confirmacoes.confirmar(p.confirmacaoId, identidade), e => e.status === 404);

@@ -6,9 +6,13 @@ export class RotasHangar {
     this.coletores = coletores;
   }
 
-  async tentar(_req, res, url) {
+  async tentar(req, res, url) {
     // Duas rotas porque o custo é outro: as naves seguem o cache de 60 s do
     // Plane; os droids são /proc + stat, feitos para o poll de 5 s.
+    if (['/api/hangar', '/api/hangar/sessoes'].includes(url.pathname) && req.method !== 'GET' && req.method !== 'HEAD') {
+      this.resposta.naoPermitido(res, 'GET, HEAD', 'use GET');
+      return true;
+    }
     if (url.pathname === '/api/hangar') {
       this.resposta.json(res, await this.coletores.lerHangar());
       return true;

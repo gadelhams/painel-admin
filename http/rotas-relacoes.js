@@ -6,8 +6,10 @@ export class RotasRelacoes {
     this.coletores = coletores;
   }
 
-  async tentar(_req, res, url) {
+  async tentar(req, res, url) {
     if (url.pathname !== '/api/relacoes') return false;
+    // Só leitura: outro método é recusado aqui mesmo, sem chamar o coletor.
+    if (req.method !== 'GET' && req.method !== 'HEAD') { this.resposta.naoPermitido(res, 'GET, HEAD', 'use GET'); return true; }
     this.resposta.json(res, await this.coletores.catalogoRelacoes());
     return true;
   }

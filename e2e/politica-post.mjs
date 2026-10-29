@@ -1,8 +1,8 @@
 export const ORIGEM_PAINEL = 'https://painel.vpn.astargne.com';
 
+// Desde a F2 (29/10/2026) o único preparo provado no smoke é o da frota; confirmar nunca.
 const ROTAS_DE_PREPARO = new Set([
-  '/api/orquestracao/modelos/validar',
-  '/api/orquestracao/modelos/preparar',
+  '/api/orquestracao/frota/preparar',
 ]);
 
 // Todas as outras escritas são bloqueadas. Só tentativas dirigidas ao Painel

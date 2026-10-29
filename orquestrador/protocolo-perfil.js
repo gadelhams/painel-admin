@@ -1,40 +1,22 @@
-// Texto PERFIL-IA/v1. Comentário livre não vira perfil.
+// Leitura do texto PERFIL-IA/v1 legado. Não grava: desde a F2 da frota (29/10/2026) o perfil por carta não vincula nada.
+//
+// Um comentário ruim não derruba a carta: é contado como ilegível e o resto segue.
 
 import { UUID } from './uuid.js';
 const MARCADOR = 'PERFIL-IA/v1 ';
 
-function uuid(valor) {
-  if (!UUID.test(valor ?? '')) throw new Error('id de perfil inválido');
-  return valor.toLowerCase();
-}
-
-const escapar = texto => String(texto).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-
-export function codificarPerfil({ projetoId, cartaId, chaveIdempotencia, versaoCarta, selecoes }) {
-  const perfil = {
-    versao: 1, projetoId: uuid(projetoId), cartaId: uuid(cartaId),
-    chaveIdempotencia: uuid(chaveIdempotencia), versaoCarta,
-    selecoes,
-  };
-  if (!Number.isFinite(Date.parse(versaoCarta))) throw new Error('versão da carta inválida');
-  const dados = Buffer.from(JSON.stringify(perfil), 'utf8').toString('base64url');
-  const resumo = Object.entries(selecoes).map(([papel, e]) =>
-    `${escapar(papel)}: ${escapar(e.provedor)}/${escapar(e.modelo)}/${escapar(e.esforco)}`).join(' | ');
-  return `<p>[ORQ/v1 papel=decisao] ${MARCADOR}${dados}</p><p>${resumo}</p>`;
-}
-
 export function perfisDoCanal(interacoes, { projetoId, cartaId, autorId }) {
-  if (!UUID.test(autorId ?? '')) throw new Error('identidade de escrita não configurada');
-  return interacoes.filter(e => e.texto?.startsWith(MARCADOR) && e.autorId === autorId)
-    .map(e => {
-      const codificado = e.texto.slice(MARCADOR.length).split(/\s/)[0];
-      let perfil;
-      try { perfil = JSON.parse(Buffer.from(codificado, 'base64url').toString('utf8')); }
-      catch { throw new Error('perfil IA do card ilegível'); }
+  const perfis = [];
+  let ilegiveis = 0;
+  if (!UUID.test(autorId ?? '')) return { perfis, ilegiveis };
+  for (const e of interacoes) {
+    if (!e.texto?.startsWith(MARCADOR) || e.autorId !== autorId) continue;
+    try {
+      const perfil = JSON.parse(Buffer.from(e.texto.slice(MARCADOR.length).split(/\s/)[0], 'base64url').toString('utf8'));
       if (perfil.versao !== 1 || perfil.projetoId !== projetoId || perfil.cartaId !== cartaId ||
-          !UUID.test(perfil.chaveIdempotencia ?? '') || !Number.isFinite(Date.parse(perfil.versaoCarta))) {
-        throw new Error('perfil IA do card não confere');
-      }
-      return { ...perfil, comentarioId: e.id, quando: e.quando };
-    });
+          !perfil.selecoes || typeof perfil.selecoes !== 'object') throw new Error();
+      perfis.push({ selecoes: perfil.selecoes, comentarioId: e.id, quando: e.quando });
+    } catch { ilegiveis += 1; }
+  }
+  return { perfis, ilegiveis };
 }

@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { anexarJsonl, lerJsonl } from '../orquestrador/leitor-jsonl.js';
 
 export class DiarioChaves {
   constructor({ diretorioEstado, agora = Date.now }) {
@@ -11,13 +12,17 @@ export class DiarioChaves {
   }
 
   async ler() {
-    try { return (await fs.readFile(this.arquivo, 'utf8')).split('\n').filter(Boolean).map(JSON.parse); }
+    // O mesmo leitor dos outros diários (N4c): cauda interrompida não derruba o histórico.
+    let texto;
+    try { texto = await fs.readFile(this.arquivo, 'utf8'); }
     catch (e) { if (e.code === 'ENOENT') return []; throw new Error('eventos de chaves ilegíveis'); }
+    try { return lerJsonl(texto, 'eventos de chaves').linhas; }
+    catch { throw new Error('eventos de chaves ilegíveis'); }
   }
 
   async anotar(evento) {
     if ('valor' in evento) throw new Error('evento de chave nunca leva valor');
     await fs.mkdir(this.diretorio, { recursive: true });
-    await fs.appendFile(this.arquivo, `${JSON.stringify({ quando: new Date(this.agora()).toISOString(), ...evento })}\n`, 'utf8');
+    await anexarJsonl(this.arquivo, { quando: new Date(this.agora()).toISOString(), ...evento });
   }
 }

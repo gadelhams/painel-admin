@@ -8,7 +8,12 @@ import { ResumoFila } from './resumo-fila.js';
 export class FilaLeitura {
   constructor(servico) { this.s = servico; }
 
-  async listar({ preavaliarId = null, preavaliarGate = null, ignorarLeaseId = null, preavaliarSemGate = null } = {}) {
+  // `frota`: a checagem do despacho passa a que já leu (ou a congelada) e nada relê no meio
+  // da decisão; sem ela, a fila lê a frota uma vez, antes de julgar as cartas.
+  async listar({ preavaliarId = null, preavaliarGate = null, ignorarLeaseId = null, preavaliarSemGate = null, frota = undefined } = {}) {
+    const frotaLida = frota === undefined ? await this.s.lerFrota() : frota;
+    const tuplasFrota = frotaLida?.estado === 'ok' ? frotaLida.conteudo.executor : null;
+    const estadoFrota = frotaLida?.estado ?? 'ausente';
     const consulta = this.s.cliente();
     const catalogo = new Map(PROJETOS.filter(p => p.plane).map(p => [p.plane, p]));
     const projetos = (await todas(consulta, '/projects/')).filter(p => catalogo.has(p.id));
@@ -23,10 +28,11 @@ export class FilaLeitura {
     const contratos = new Map(await Promise.all(projetos.map(async p => [p.id, await contratoDoProjeto(catalogo.get(p.id), this.s.raiz)])));
     const montador = new CartaDaFila(this.s);
     const itens = await Promise.all(cartas.filter(c => !['canceled', 'cancelled'].includes(c.state?.group)).map(c => montador.montar(c, {
-      contratos, porId, consulta, preavaliarId, preavaliarGate, ignorarLeaseId, preavaliarSemGate,
+      contratos, porId, consulta, preavaliarId, preavaliarGate, ignorarLeaseId, preavaliarSemGate, tuplasFrota, estadoFrota,
     })));
     itens.sort((a, b) => Number(b.elegivel) - Number(a.elegivel) || a.identificador.localeCompare(b.identificador, 'pt-BR', { numeric: true }));
     const podeExecutar = [...this.s.identidades.keys()].some(id => this.s.podeDespachar(id));
-    return ResumoFila.de({ itens, projetos, catalogo, podeExecutar });
+    return ResumoFila.de({ itens, projetos, catalogo, podeExecutar,
+      frota: frotaLida ? { estado: frotaLida.estado, versao: frotaLida.versao ?? null, hash: frotaLida.hash ?? null, motivo: frotaLida.motivo ?? null } : null });
   }
 }

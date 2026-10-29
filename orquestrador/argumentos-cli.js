@@ -1,12 +1,8 @@
 // Argumentos fixos de cada CLI. O lançamento mora em papel-cli.js.
 
-import { argumentosModeloCli, PAPEIS } from './modelos.js';
+import { argumentosModeloCli } from './modelos.js';
 
 const SO_LEITURA = new Set(['orquestracao', 'validacao']);
-
-export function selecoesDoPlano(plano) {
-  return Object.fromEntries(PAPEIS.map(p => [p, { provedor: plano.papeis[p].provedor, modelo: plano.papeis[p].modelo, esforco: plano.papeis[p].esforco }]));
-}
 
 export class ArgumentosCli {
   static claude(base, { papel, comandos, limites }) {
@@ -32,8 +28,9 @@ export class ArgumentosCli {
       '-m', modelo, '-c', `model_reasoning_effort="${esforco}"`, '-'];
   }
 
-  static de(contrato, plano, papel, extras) {
-    const base = argumentosModeloCli(contrato, selecoesDoPlano(plano), papel);
+  // As tuplas vêm do plano congelado da frota; o papel zelador não é papel do executor e é recusado ali.
+  static de(plano, papel, extras) {
+    const base = argumentosModeloCli(plano, papel);
     return plano.papeis[papel].provedor === 'claude' ? ArgumentosCli.claude(base, extras) : ArgumentosCli.codex(base, extras);
   }
 }

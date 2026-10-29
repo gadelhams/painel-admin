@@ -7,6 +7,7 @@ import { avaliarCarta, comandoEstaticoSeguro, comandoPermitido, validarContrato 
 import { criarEstadoOrquestracao } from '../orquestrador/estado.js';
 import { dependenciasDaCarta, criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { argumentosModeloCli } from '../orquestrador/modelos.js';
+import { gravarFrota } from './fixtures/frota/frota.js';
 import { codificarGate } from '../orquestrador/gate-plane.js';
 
 const PROJETO = 'c24e3d36-2e2a-4760-a3f3-53998297a245';
@@ -39,6 +40,9 @@ test('fila lista todos os agentes disponíveis sem atribuir responsável implici
   const avaliacao = avaliarCarta(carta, { contrato: doisAgentes });
   assert.equal(avaliacao.elegivel, true);
   assert.deepEqual(avaliacao.agentesDisponiveis.map(a => a.id), ['Claude', 'OpenAI']);
+  // J-L4: do contrato só sai o interruptor; modelo e esforço são da frota.
+  assert.deepEqual(avaliacao.agentesDisponiveis, [{ id: 'Claude', provedor: 'claude' }, { id: 'OpenAI', provedor: 'openai' }]);
+  assert.deepEqual(avaliacao.agente, { id: 'Claude', provedor: 'claude' });
   assert.equal(avaliacao.lease, null);
   assert.equal(avaliacao.tentativa, null);
 
@@ -110,30 +114,27 @@ test('contrato só admite comandos de teste estáticos, sem eval, flags extras o
   assert.throws(() => comandoPermitido({ ...contrato, comandos: [{ id: 'teste', executavel: 'node', argumentos: ['-e', '1'] }] }, 'teste'), /proibido/);
 });
 
-test('prévia de CLI conserva modelo e esforço selecionados, sem fallback ou spawn', () => {
-  const agentes = [
-    { id: 'Claude', provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max', esforcos: ['high', 'max'], disponivel: true },
-    { id: 'OpenAI', provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'extreme high', esforcos: ['high', 'xhigh'], disponivel: true },
-  ];
-  const c = { ...contrato, agentes };
-  const selecoes = {
+// Reescrito na F2 (29/10/2026): as flags vêm do plano da frota, conferido contra o catálogo fechado.
+test('prévia de CLI conserva modelo e esforço do plano, sem fallback ou spawn', () => {
+  const papeis = {
     orquestracao: { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max' },
     codificacao_testes: { provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'xhigh' },
     validacao: { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'high' },
   };
-  assert.deepEqual(argumentosModeloCli(c, selecoes, 'orquestracao'), {
+  const plano = { papeis };
+  assert.deepEqual(argumentosModeloCli(plano, 'orquestracao'), {
     executavel: 'claude', argumentos: ['--model', 'claude-opus-5', '--effort', 'max'],
   });
-  assert.deepEqual(argumentosModeloCli(c, selecoes, 'codificacao_testes'), {
+  assert.deepEqual(argumentosModeloCli(plano, 'codificacao_testes'), {
     executavel: 'codex', argumentos: ['exec', '--model', 'gpt-6-astra', '--config', 'model_reasoning_effort=xhigh'],
   });
-  assert.deepEqual(argumentosModeloCli(c, selecoes, 'validacao').argumentos,
-    ['--model', 'claude-opus-5', '--effort', 'high']);
-  assert.throws(() => argumentosModeloCli(c, { ...selecoes,
-    codificacao_testes: { ...selecoes.codificacao_testes, modelo: 'gpt-6-other' } }, 'codificacao_testes'), /não permitido/);
-  assert.throws(() => argumentosModeloCli({ ...c, agentes: agentes.map(a => ({ ...a, disponivel: false })) }, selecoes,
-    'codificacao_testes'), /indisponível.*sem fallback/);
-  assert.throws(() => argumentosModeloCli(c, selecoes, 'desconhecido'), /papel/);
+  assert.deepEqual(argumentosModeloCli(plano, 'validacao').argumentos, ['--model', 'claude-opus-5', '--effort', 'high']);
+  assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, codificacao_testes: { ...papeis.codificacao_testes, modelo: 'gpt-6-other' } } },
+    'codificacao_testes'), /fora do catálogo/);
+  assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, codificacao_testes: { ...papeis.codificacao_testes, esforco: 'max' } } },
+    'codificacao_testes'), /fora do catálogo/);
+  assert.throws(() => argumentosModeloCli(plano, 'desconhecido'), /papel/);
+  assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, zelador: papeis.orquestracao } }, 'zelador'), /papel/);
 });
 
 test('lease serializa concorrência, idempotência, expiração e recuperação', async () => {
@@ -247,17 +248,22 @@ test('fila integra Plane, contrato local e simulação sem executar', async () =
     const estado = criarEstadoOrquestracao({ diretorio: path.join(raiz, 'estado') });
     const servico = criarServicoOrquestracao({ consultar, raiz, estado,
       projetoEscrita: PROJETO, autorEscrita: AUTOR });
+    // N6: sem frota a fila não diz "elegível"; diz por quê.
+    const semFrotaNaFila = await servico.fila();
+    assert.equal(semFrotaNaFila.itens[0].elegivel, false);
+    assert.deepEqual(semFrotaNaFila.itens[0].motivos, ['frota ausente: nada despacha sem frota válida']);
+    await gravarFrota(path.join(raiz, 'estado'));
     const fila = await servico.fila();
     assert.equal(fila.itens[0].elegivel, true);
     assert.equal(fila.projetos.find(p => p.id === PROJETO).candidatas, 1);
     assert.equal(fila.projetos.find(p => p.id === PROJETO).acessivel, true);
     assert.match(fila.projetos.find(p => p.nome === 'CK3 Bannerlord').impedimento, /Sem acesso de leitura/);
     assert.equal(fila.projetos.find(p => p.nome === 'SupervisorHandoff').cartas, 0);
-    assert.equal((await servico.simular(CARTA, 'teste')).executaria, false);
-    const escolha = Object.fromEntries(['orquestracao', 'codificacao_testes', 'validacao'].map(p => [p,
-      { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max' }]));
-    assert.equal((await servico.simular(CARTA, 'teste', escolha)).executaria, true);
-    assert.deepEqual((await servico.validarModelos(CARTA, escolha)).impedimentosExecucao, []);
+    assert.equal(semFrotaNaFila.frota.estado, 'ausente');
+    assert.equal(fila.frota.estado, 'ok');
+    const comFrota = await servico.simular(CARTA, 'teste');
+    assert.equal(comFrota.executaria, true);
+    assert.equal(comFrota.plano.frota.versao, 1);
     await assert.rejects(servico.simular(CARTA, 'outro'), /proibido/);
     assert.ok(consultas.some(x => x.includes('/relations/')));
     assert.deepEqual(await estado.lerHistorico(CARTA), []);

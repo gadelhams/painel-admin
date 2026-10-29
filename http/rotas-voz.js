@@ -14,7 +14,9 @@ export class RotasVoz {
       const sonda = this.proxyEleven.sondar();
       this.resposta.json(res, sonda.corpo, sonda.status);
     } else if (pathname === '/api/tts') {
-      this.resposta.json(res, { erro: 'use POST (sintetizar) ou GET (disponibilidade)' }, 405);
+      this.resposta.naoPermitido(res, 'GET, POST', 'use POST (sintetizar) ou GET (disponibilidade)');
+    } else if (pathname === '/api/diagnostico/voz' && req.method !== 'POST') {
+      this.resposta.naoPermitido(res, 'POST', 'use POST');
     } else if (pathname === '/api/diagnostico/voz' && req.method === 'POST') {
       try {
         const corpo = (await this.resposta.corpo(req)).slice(0, 4096);

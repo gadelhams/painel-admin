@@ -2,7 +2,7 @@
 
 import { PROJETOS } from '../projetos.js';
 import { lerCanalPlane } from './canal-plane.js';
-import { handoffsDoCanal } from './handoff-plane.js';
+import { lerHandoffsDoCanal } from './handoff-plane.js';
 import { gatesDoCanal } from './gate-plane.js';
 import { resumirCarta } from './resumo-carta.js';
 
@@ -19,10 +19,11 @@ export class CanalCarta {
     }
     const dadosCanal = await lerCanalPlane({ consultar: this.s.cliente(), projetoId: projetoDaCarta, cartaId });
     const autorId = this.s.identidade(projetoDaCarta)?.autorEscrita;
-    const handoffs = autorId ? handoffsDoCanal(dadosCanal.interacoes, { projetoId: projetoDaCarta, cartaId, autorId }) : [];
+    const { handoffs, ilegiveis: handoffsIlegiveis } = autorId
+      ? lerHandoffsDoCanal(dadosCanal.interacoes, { projetoId: projetoDaCarta, cartaId, autorId }) : { handoffs: [], ilegiveis: 0 };
     const gates = autorId ? gatesDoCanal(dadosCanal.interacoes, { projetoId: projetoDaCarta, cartaId, autorId }) : [];
     const { descricaoHtml, ...resto } = dadosCanal;
-    return { ...resto, projetoId: projetoDaCarta, handoffs, gates,
+    return { ...resto, projetoId: projetoDaCarta, handoffs, handoffsIlegiveis, gates,
       resumo: resumirCarta({ descricaoHtml, interacoes: dadosCanal.interacoes, handoffs, gates }) };
   }
 }

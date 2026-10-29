@@ -1,7 +1,7 @@
 // O que o C-3PO diz e mostra no popup de cada estrutura do Hangar. Só monta HTML (com escape); não abre nem posiciona o popup.
 
 import {
-  H, BAIAS, SETORES, COR_TIPO, NOME_TIPO,
+  H, BAIAS, SETORES, COR_TIPO, NOME_TIPO, COR_PAPEL, NOME_PAPEL,
   fabrica, setor, nave, droid, acervoItem, naDoca, travada, pecaAlvo, situacao,
 } from './estado.js';
 import { esc, pct, plural, nomeCurto, haQuanto } from './util.js';
@@ -28,6 +28,19 @@ function blocoDecisao(x, produto) {
 }
 
 const cartaoDe = (n, uuid) => (n && uuid && n.cartoes[uuid]) || null;
+
+// A frota em leitura: a troca mora na sub-aba Frota da Orquestração, nunca aqui.
+function blocoFrota() {
+  const fr = H.frota;
+  if (!fr || fr.estado === 'indisponivel') return `<h4>Frota</h4>${vazio('Não consegui ler a frota agora.')}`;
+  if (fr.estado !== 'ok') return `<h4>Frota</h4>${vazio(`Frota ${esc(fr.estado)}: nenhum despacho nem vigília roda até o dono configurar.`)}`;
+  const linhas = Object.entries(fr.papeis).flatMap(([bloco, papeis]) => papeis.map((p) => {
+    const t = fr.conteudo[bloco]?.[p];
+    const valor = t ? `${esc(t.provedor)}/${esc(t.modelo)}/${esc(t.esforco)}` : 'inválido: fora do catálogo';
+    return `<li>${chip(COR_PAPEL[p] ?? '#ac9b81', esc(NOME_PAPEL[p] ?? p))}<span class="hg-mono">${valor}</span></li>`;
+  }));
+  return `<h4>Frota v${esc(fr.versao)} · só leitura</h4><ul class="hg-linhas">${linhas.join('')}</ul>`;
+}
 
 function alvoDaAcao(a, n) {
   const pre = a.projeto ? `${esc(a.projeto)}/` : '';
@@ -92,10 +105,11 @@ export function conteudo(a) {
   }
   if (a.tipo === 'fabrica') {
     const f = fabrica(a.id); const ds = H.droids.filter((d) => d.ia === f.id);
+    const frota = blocoFrota();
     return {
       cor: f.cor, olho: 'C-3PO · fábricas, ao norte', titulo: `Fábrica ${f.nome}<small>${f.ativa ? `${ds.length} ${plural(ds.length, 'droid', 'droids')} em campo` : 'offline'}</small>`,
       fala: f.ativa ? `A fábrica do ${f.nome} monta um droid para cada sessão viva nesta máquina e o desmonta quando a sessão acaba.` : `A fábrica do ${f.nome} está fechada: não encontrei a CLI dele rodando nesta máquina.`,
-      corpo: ds.length ? `<ul class="hg-linhas">${ds.map((d) => `<li>${tagDroid(d)} ${linkAlvo({ tipo: 'droid', id: d.id }, esc(oQueFaz(d)))}</li>`).join('')}</ul>` : vazio('Nenhum droid.'),
+      corpo: `${ds.length ? `<ul class="hg-linhas">${ds.map((d) => `<li>${tagDroid(d)} ${linkAlvo({ tipo: 'droid', id: d.id }, esc(oQueFaz(d)))}</li>`).join('')}</ul>` : vazio('Nenhum droid.')}${frota}`,
     };
   }
   if (a.tipo === 'baia') {

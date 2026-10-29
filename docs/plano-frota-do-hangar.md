@@ -1,6 +1,6 @@
 # Frota do Hangar — droids configurados no Hangar, zelador varrendo o Plane
 
-Plano de 28/10/2026, ainda não construído (PAINEL-54). Pedido do dono: "os CLIs têm que ser
+Plano de 28/10/2026 (PAINEL-54); a F2 foi feita em 29/10/2026 (seção abaixo), F3 e F4 não. Pedido do dono: "os CLIs têm que ser
 configurados para o hangar e não por task. A ideia do hangar é ter um droid
 que valida o Plane procurando cards para serem feitos, seja limpeza do card
 (atualizar definições, diminuir pendências) ou puxar para desenvolver." O
@@ -198,6 +198,93 @@ falha fechada. Rotação diária, só campos estruturados. O droid do zelador
 nasce do estado do job. O Hangar ganha rotas de escrita, cobertas pelo teste
 que varre as rotas.
 
+## F2 feita (29/10/2026)
+
+O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota).
+- **Feito:** `frota.json` com estado explícito e histórico; troca por SSO e
+  duas ações com versão-base (J4); catálogo fechado e dois blocos (J6, J8);
+  despacho, simulação e vigília leem a frota, uma vez por decisão, sem
+  fallback (J5); a tentativa congela a frota e o `HANDOFF/v2` grava
+  `origemModelos` (J3, J9); a vigília não grava `PERFIL-IA` (J10).
+- **Escolhas:** HANDOFF subiu para v2, porque um campo obrigatório no v1
+  invalidaria os recibos antigos; o v1 é lido com origem `perfil-ia` e o
+  handoff à mão leva `humano`, porque nenhuma frota rodou nele. O contrato
+  liga o projeto **e cada provedor** (`agentes[].disponivel`): a frota nunca
+  liga um provedor que o contrato desligou (J1). Impedido de CLI ou modelo
+  pausa a versão da frota até o dono confirmar outra; o limite de uso pausa
+  o provedor por `pausaPorLimiteMinutos` do contrato que bateu nele. As duas
+  pausas valem só para a vigília: o despacho manual é decisão do dono.
+- **Correção pós-varredura (29/10/2026):** o validador de invariantes deu NÃO
+  RATIFICÁVEL (janelas J-A a J-L), e todas foram fechadas, cada uma com teste e
+  mutação. Mecanismo em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota):
+  - a reserva relê a frota sob a trava, e a vigília só escreve no Plane depois
+    do lease;
+  - o preparar usa a marca que o dono viu;
+  - a falha tem três baldes, lidos só de stderr e erro estruturado com saída ≠ 0;
+  - a compatibilidade frota×contrato aparece na prontidão;
+  - `anexarJsonl` serve os três diários;
+  - o HANDOFF é lido pela forma, não pelo catálogo;
+  - pausas inválidas contam como ilegíveis, e a confirmação dá a saída;
+  - a numeração tem piso; o rename que falha fica registrado;
+  - a varredura de rotas usa o roteador real e os quatro métodos;
+  - o zelador tem estado próprio;
+  - o `pausadaAte` por projeto saiu.
+- **Terceira rodada (29/10/2026, segunda varredura):** fechados N1 a N6 e os
+  itens baratos, cada um com teste e mutação.
+  - **N1:** no Claude, `is_error: true` faz o `result` ser lido como mensagem do
+    CLI (limite → `limite`, credencial → `cli`), com qualquer código de saída.
+  - **N2:** no Codex, conta só a última linha `ERROR` do stderr.
+  - **N3:** reserva sem início vai ao diário com causa `infra` e não gasta
+    tentativa.
+  - **N4:** o leitor tolera a falha dupla, e as linhas perdidas são contadas e
+    mostradas.
+  - **N5:** as escritas da aba Contas exigem SSO.
+  - **N6:** a fila mostra "frota ≠ ok".
+  - **Baratos:** HEAD responde 200 e o 405 leva `Allow`.
+  - **Não verificado no CLI real:** o formato das mensagens de limite e de
+    credencial dos dois CLIs; confirmar no piloto PAINEL-34. As fixtures seguem
+    o formato documentado ("Claude AI usage limit reached|<epoch>" no `result`,
+    com `is_error`).
+- **Risco aberto, aguardando o dono (ninguém o aceitou):**
+  - `/api/conversa` e `/api/tts` gastam crédito pago sem SSO.
+  - O executor (papel de codificação rodando `npm test`, já na F2, a partir do piloto PAINEL-34) poderia chamá-las
+    pelo loopback.
+  - **Pendência do PAINEL-34:** antes do piloto, bloquear o loopback do executor
+    ou exigir SSO nelas.
+- **Janelas conhecidas, só documentadas:**
+  - **N9, falha tripla na gravação.** O piso e a linha do histórico são escritos
+    antes do rename. Se o rename falhar, a anotação `nunca-aplicada` também
+    falhar e o processo cair:
+    - o histórico fica com uma vN que nunca vigorou e não tem marca;
+    - o número vN fica consumido (a próxima é vN+1);
+    - a nota de pausa ("pausa da vN limpa") foi escrita antes da gravação, mas
+      as pausas só são regravadas depois do rename. O histórico afirma uma
+      limpeza que não aconteceu.
+    - Quem audita compara o histórico com o `frota.json` em vigor.
+  - **N10, `formaDasTuplas` presa ao conjunto de papéis.** A leitura do
+    HANDOFF/v2 exige exatamente os três papéis de hoje. Se um papel for
+    renomeado ou criado, os recibos antigos passam a ser contados como
+    ilegíveis e somem da tela, a mesma perda de auditoria do J-G. Mudar papel
+    exige HANDOFF/v3 ou uma leitura pelos papéis do próprio recibo.
+  - **N11, trava global segurada durante HTTP do Plane** (anterior à F2).
+    - Handoff, gate e estado gravam no Plane sob `estado.comTrava`.
+    - Com o Plane lento (timeout de 15 s por chamada), quem espera a trava
+      desiste em 60 s: a troca da frota, a reserva e as pausas falham com
+      "trava ocupada".
+    - O confirmar da frota vira "incerto" e precisa de um preparar novo.
+    - Nada é gravado pela metade.
+- **Saiu:** a rota `/api/orquestracao/modelos*`, o escritor `PERFIL-IA/v1` e
+  a sub-aba "Papéis e modelos". `vigilia.perfilPadrao` virou opcional, e um
+  contrato com vigília e sem ele, antes inválido, agora vale.
+- **Ficou de fora:**
+  - a cor por papel nos droids, porque ainda não há droid de frota (F3/F4);
+    só a paleta `COR_PAPEL` existe;
+  - nenhuma frota real gravada: até o dono confirmar a primeira, o despacho
+    e a vigília ficam parados (`ausente`);
+  - o smoke SSO do Windows foi portado para a Frota, mas não rodou;
+  - `/api/conversa` e `/api/tts` continuam sem SSO, com só a borda do tailnet
+    (risco aberto acima). A varredura de rotas as lista como exceção;
+
 ## Mudanças nas regras (docs na mesma entrega)
 
 - `ProjetosPessoais/ORQUESTRADOR-PROJETOS.md`: hoje só a marcação de gate
@@ -224,9 +311,9 @@ que varre as rotas.
    - o Canal legado sai;
    - Tentativas vira o diário da frota;
    - Conversa vira resumo.
-3. **F2, a frota:** a configuração geral, gravada com SSO e duas ações. O
-   executor lê a frota no lugar do `PERFIL-IA/v1`. No Hangar, a cor do droid
-   passa a ser a do papel.
+3. **F2, a frota — feita em 29/10/2026** (seção "F2 feita"): a configuração
+   geral, gravada com SSO e duas ações; o executor lê a frota no lugar do
+   `PERFIL-IA/v1`. A cor do droid por papel ficou para a F3/F4.
 4. **F3, o play por nave e o zelador:**
    - **Liberação do projeto:** cada projeto é liberado pelo play.
    - **Identidade nova "Zelador (Hangar)":** Member em cada projeto. O

@@ -15,7 +15,7 @@ class VigiliaOrquestracao {
     status.textContent = 'Lendo o estado da vigília…';
     try {
       const dados = await this.n.json('/api/orquestracao/vigilia', { signal: this.n.sinal('vigilia') });
-      alvo.replaceChildren();
+      alvo.replaceChildren(this.desenho.pausas(dados));
       for (const p of dados.projetos) {
         alvo.append(this.desenho.projeto(p, (projeto, ligar, caixa) => this.confirmacao.preparar(projeto, ligar, caixa)));
       }

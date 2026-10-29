@@ -19,6 +19,7 @@ class DemandaCarta {
     for (const motivo of c.motivos) motivos.append(this.n.criar('li', motivo));
     if (!c.motivos.length) motivos.append(this.n.criar('li', 'Todos os portões de leitura passaram. Execução ainda indisponível.'));
     alvo.append(estadoAtual);
+    for (const linha of DemandaCarta.linhasDaFrota(c, this.n.estado.fila?.frota)) alvo.append(this.n.criar('p', linha, 'orq-ajuda'));
     if (this.n.estado.ultimoResultado?.cartaId === c.id) alvo.append(this.n.criar('p', this.n.estado.ultimoResultado.texto, 'orq-resultado'));
     alvo.append(motivos);
     const triagem = this.n.estado.triagem?.porId.get(c.id);
@@ -49,6 +50,22 @@ class DemandaCarta {
   }
 
   historico() { this.historicoDesenho.desenhar(); }
+
+  // A frota manda nos modelos (F2): o perfil antigo da carta só aparece como ignorado, e a
+  // tentativa em curso mostra a versão que congelou ao lado da atual.
+  static linhasDaFrota(c, frota) {
+    const atual = frota?.estado === 'ok' ? `v${frota.versao}` : `frota ${frota?.estado ?? 'desconhecida'}`;
+    const linhas = [];
+    const p = c.perfilAntigo;
+    if (p?.estado === 'ignorado') linhas.push(`perfil antigo ignorado (era ${p.resumo}; roda a frota ${atual})`);
+    else if (p?.estado === 'ilegivel') linhas.push(`perfil antigo ilegível, ignorado; roda a frota ${atual}`);
+    else if (p?.estado === 'indisponivel') linhas.push(`perfil antigo indisponível (${p.motivo}); a frota manda de qualquer jeito`);
+    const congelada = c.lease?.frota;
+    if (congelada?.versao) linhas.push(congelada.versao === frota?.versao && congelada.hash === frota?.hash
+      ? `rodando com v${congelada.versao} (a atual)` : `rodando com v${congelada.versao}; atual ${atual}`);
+    for (const aviso of c.avisosContrato ?? []) linhas.push(`contrato: ${aviso}`);
+    return linhas;
+  }
 }
 
 globalThis.DemandaCarta = DemandaCarta;

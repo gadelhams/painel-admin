@@ -14,7 +14,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `coletores.js` — Porta única dos coletores.
 - `contas.js` — Porta da aba Contas.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
-- `guarda.js` — O painel não tem login: quem alcança a porta manda nele (aba Contas muda o cadastro de produção; o C-3PO e a voz gastam crédito).
+- `guarda.js` — O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão SSO do dono desde 29/10/2026 para Contas, antes para o resto.
 - `motor.js` — Conversa do C-3PO.
 - `plane.js` — Porta do Plane.
 - `producao-extra.js` — Sondas de produção que não pertencem a um projeto do catálogo.
@@ -116,9 +116,9 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-orq-despacho.js` — Preparar e confirmar o despacho.
 - `rotas-orq-diario.js` — Diário da frota: leitura só.
 - `rotas-orq-fila.js` — Fila, pré-checagem e simulação.
+- `rotas-orq-frota.js` — Leitura e troca da frota.
 - `rotas-orq-gate.js` — Preparar e confirmar a marca de gate.
 - `rotas-orq-handoff.js` — Preparar e confirmar o handoff.
-- `rotas-orq-modelos.js` — Leitura, validação e registro do perfil de modelos.
 - `rotas-orq-triagem.js` — Triagem das folhas sem gate.
 - `rotas-orq-vigilia.js` — Estado e alternância da vigília.
 - `rotas-orq-voz.js` — Presença da chave e a transcrição.
@@ -142,11 +142,11 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 ## orquestrador/
 
 - `ambiente-cli.js` — Ambiente dos filhos da CLI: lista branca, sem chave do painel.
-- `api-despacho.js` — Duas ações do despacho: preparar valida e guarda o desafio; confirmar inicia a tentativa real.
+- `api-despacho.js` — Duas ações do despacho: preparar valida e guarda o desafio com a versão da frota; confirmar inicia a tentativa real.
 - `api-duas-acoes.js` — Fronteira HTTP das duas ações: sessão antes do corpo, campos fechados, falha upstream sem eco.
+- `api-frota.js` — Duas ações da frota: preparar valida contra o catálogo e guarda a versão-base; confirmar grava se a frota não mudou.
 - `api-gate.js` — Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta.
 - `api-handoff.js` — Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário.
-- `api-perfil.js` — Fronteira HTTP de /api/orquestracao/modelos/{preparar,confirmar}.
 - `api-vigilia.js` — Duas ações da vigília: preparar valida a alternância de um projeto; confirmar liga ou desliga.
 - `argumentos-cli.js` — Argumentos fixos de cada CLI.
 - `arquivo-lease.js` — Um arquivo de lease por carta.
@@ -157,9 +157,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `carta-da-fila.js` — Julga uma carta já carregada: lease, proveniência do gate e a pré-checagem pedida.
 - `checagem-despacho.js` — Checagem do despacho real.
 - `classificar-prontidao-dev.js` — Classifica impedimentos verificáveis de uma carta sem gate.
-- `confirmacoes.js` — Duas ações do perfil de modelos: preparar valida e guarda o desafio; confirmar grava no card.
 - `consulta-c3po.js` — Projeção limitada e só-leitura da fila/triagem para a conversa do C-3PO.
-- `consulta-perfil.js` — Consulta do perfil vinculante e do catálogo.
+- `consulta-perfil.js` — O perfil antigo da carta, só para exibir "perfil antigo ignorado (era X; roda a frota vN)".
 - `consumo.js` — Apenas cota incluída na ASSINATURA.
 - `contrato-local.js` — Contrato local `.orquestrador.json` de um projeto do catálogo.
 - `contrato-politica.js` — Gramática do contrato opt-in: o que o projeto permite executar.
@@ -172,7 +171,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `erro-acesso.js` — Erro das ações privilegiadas.
 - `escritor-gate-plane.js` — Grava a etiqueta depois do comentário.
 - `escritor-handoff-plane.js` — Grava o comentário de handoff.
-- `escritor-perfil-plane.js` — Grava o comentário do perfil.
 - `estado-carta.js` — Troca o grupo de estado de uma carta.
 - `estado-plane.js` — Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e In Progress → Done quando a tentativa de teste é aprovada.
 - `estado.js` — Recupera lease e diário depois de uma queda.
@@ -181,6 +179,10 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `fila.js` — Porta da fila.
 - `fonte-consumo-claude.js` — Cota da assinatura do Claude.
 - `fonte-consumo-codex.js` — Cota da assinatura do Codex.
+- `frota-catalogo.js` — Catálogo fechado da frota (provedor → modelo → esforços) e os validadores dos dois blocos.
+- `frota-pausas.js` — Pausas da frota: por provedor (limite de uso, com prazo) e da versão inteira (CLI ou modelo impedido).
+- `frota-servico.js` — Leitura e troca da frota pelo serviço.
+- `frota.js` — Frota: a configuração geral de modelos por papel, num arquivo só, gravado por SSO + duas ações.
 - `gate-plane.js` — Entrada do gate no card.
 - `gate-servico.js` — Junta a pré-checagem e a marcação do gate.
 - `gramatica-cli.js` — Gramática estática do scripts.test e dos scripts do contrato.
@@ -188,14 +190,12 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `handoff-servico.js` — Handoff no card.
 - `interacao-canal.js` — Forma de um comentário do card: texto visível e o cabeçalho ORQ/v1.
 - `isolamento-git.js` — Worktree e commit do ramo orq/.
-- `leitor-jsonl.js` — Linhas de um diário JSONL.
+- `leitor-jsonl.js` — Leitura e acréscimo de um diário JSONL.
 - `marcas-carta.js` — Marcas da carta que os dois julgamentos leem.
-- `modelos.js` — A escolha explícita por carta/papel é vinculante para qualquer plano futuro.
+- `modelos.js` — Plano de execução a partir da frota congelada e as flags de modelo/esforço de cada CLI.
 - `origem-privilegiada.js` — Recusa POST privilegiado que não venha da própria borda.
 - `papel-cli.js` — Lança um papel de IA.
-- `passo-vigilia.js` — Um projeto ligado: escolhe a carta, despacha e avança o gate.
-- `perfil-plane.js` — Entrada do perfil no card.
-- `perfil-servico.js` — Junta a consulta e o registro do perfil.
+- `passo-vigilia.js` — Um projeto ligado: escolhe a carta, despacha com a frota e avança o gate.
 - `politica.js` — Porta da política da orquestração.
 - `preavaliacao-gate.js` — Pré-checagem só-leitura do gate.
 - `processo-cli.js` — Um processo filho: sem shell, grupo morto no tempo, saída capada e log em disco.
@@ -203,17 +203,16 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `prontidao-gate.js` — Pode marcar este gate.
 - `prontidao.js` — Os dois julgamentos da carta.
 - `protocolo-gate.js` — Texto GATE/v1: valida a proposta, codifica o comentário e lê a evidência.
-- `protocolo-handoff.js` — Texto HANDOFF/v1: valida a entrada, codifica o comentário e lê o card.
-- `protocolo-perfil.js` — Texto PERFIL-IA/v1.
+- `protocolo-handoff.js` — Texto HANDOFF: valida a entrada, codifica o comentário (v2) e lê o card (v1 legado e v2).
+- `protocolo-perfil.js` — Leitura do texto PERFIL-IA/v1 legado.
 - `registro-gate.js` — Marcação do gate no card.
-- `registro-perfil.js` — Registro do perfil no card.
 - `relacoes-formais.js` — Relações formais do Plane: blocked_by, start_after e finish_after.
 - `resumo-carta.js` — Resumo da carta para a aba: o estado que a descrição declara (compactação do fio, PADROES-BACKLOG.md), o último handoff e gate, e o tamanho do fio.
 - `resumo-fila.js` — Conta cartas por projeto e fecha o envelope da fila.
-- `retrato-cli.js` — Retrato do que a CLI devolveu.
-- `servico-orquestracao.js` — Liga leitura, despacho, gate, handoff e perfil.
+- `retrato-cli.js` — Retrato do que a CLI devolveu e a causa de uma falha (carta, cli ou limite).
+- `servico-orquestracao.js` — Liga leitura, despacho, gate, handoff e frota.
 - `sessao-cookie.js` — Lê o cookie astargne_session.
-- `simulacao-despacho.js` — Prévia do despacho.
+- `simulacao-despacho.js` — Prévia do despacho com a frota atual.
 - `sso.js` — Porta das ações privilegiadas.
 - `tentativa-despacho.js` — Tentativa real: lease, handoff e executor.
 - `texto-dependencia.js` — Declarações de dependência no texto da carta.
@@ -222,7 +221,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `uuid.js` — Forma de um UUID v4 do Plane ou do próprio painel.
 - `varredura-triagem.js` — Lê as folhas sem gate e devolve a triagem.
 - `verificador-cadastro.js` — Pergunta ao Cadastro Único se o token ainda vale.
-- `vigilia-controle.js` — Liga, desliga e pausa a vigília de um projeto.
+- `vigilia-controle.js` — Liga e desliga a vigília de um projeto e monta o estado dela.
 - `vigilia-diario.js` — Diário da vigília: config e eventos em disco.
 - `vigilia-politica.js` — Freios da vigília declarados no contrato.
 - `vigilia-varredura.js` — Percorre os projetos ligados.
@@ -298,7 +297,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 - `cena.js` — Cena 3D do Hangar (Three.js r128 vendorizado + bloom): monta as estruturas, reconstrói o que os dados mudam e desenha cada quadro.
 - `conteudo.js` — O que o C-3PO diz e mostra no popup de cada estrutura do Hangar.
-- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes) e sondas (/api/producao) e as aplica ao estado da cena sem perder a animação.
+- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao) e a frota (/api/orquestracao/frota) e as aplica ao estado da cena sem perder a animação.
 - `estado.js` — Mapa do estaleiro (posições fixas) e o estado vivo compartilhado entre os módulos do Hangar.
 - `formas.js` — Formas das peças da nave (polígonos vistos de cima, nariz para +x) e a escolha da forma de cada módulo.
 - `hangar.js` — Entrada do Hangar: liga dados, simulação, cena e interface, e pausa tudo quando a aba sai de vista.
@@ -323,10 +322,10 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `fila-lista.js` — Desenha o seletor de projetos e os botões das cartas.
 - `fila-triagem.js` — Classifica as folhas sem gate.
 - `fila.js` — Carrega a fila e abre a carta.
+- `frota-confirmacao.js` — Preparar e confirmar a troca da frota.
+- `frota.js` — Sub-aba Frota: mostra a configuração geral (estado, versão, os quatro papéis) e o editor dos dois blocos.
 - `gate.js` — Preparar e confirmar a etiqueta de gate.
-- `modelos-confirmacao.js` — Validar, preparar e confirmar o perfil.
-- `modelos-seletores.js` — Desenha os seletores de um papel.
-- `modelos.js` — Liga os seletores à confirmação em duas ações.
+- `modelos-seletores.js` — Desenha os seletores provedor → modelo → esforço de cada papel.
 - `nucleo.js` — Estado e HTTP da aba Orquestração.
 - `vigilia-confirmacao.js` — Segunda ação da vigília.
 - `vigilia-desenho.js` — Desenho de um projeto da vigília.
@@ -351,6 +350,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `diario-resumo.test.js`
 - `executor-cli.test.js` — Executor real com CLIs falsas: flags exatas, ambiente limpo, isolamento por worktree, timeout que mata o processo, e os três desfechos.
 - `fluxo-sse.test.js`
+- `frota.test.js` — Frota (F2, 29/10/2026): catálogo fechado, dois blocos, estado explícito na leitura, troca por duas ações com versão-base e histórico só de acréscimo.
 - `gate-plane.test.js`
 - `guarda.test.js`
 - `handoff-plane.test.js`
@@ -361,11 +361,11 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `orquestrador-sso.test.js`
 - `orquestrador-ui.test.js`
 - `orquestrador-v2.test.js`
-- `perfil-plane.test.js`
 - `plane.test.js`
 - `politica-fala.test.js`
 - `protocolo-ui.test.js`
 - `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
+- `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo roteador REAL: guarda, famílias e APIs de duas ações de verdade; só os serviços no fim da linha são espiões.
 - `sessao-voz.test.js`
 - `sonda-sso.test.js`
 - `triagem-dev.test.js`
@@ -383,3 +383,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `codex-falso.mjs` — CLI codex falsa: grava o retrato ao lado de si mesma e escreve a última mensagem em -o.
 - `dormente.mjs` — Dorme 5 s; se sobreviver, deixa um marcador ao lado de si mesmo (o timeout deve impedir).
 - `npm-falso.mjs` — npm falso: só registra os argumentos (npm ci nunca roda de verdade em teste).
+
+## test/fixtures/frota/
+
+- `frota.js` — Frota de teste gravada pelo mesmo caminho da troca real (ArquivoFrota.gravar), nunca escrita à mão.

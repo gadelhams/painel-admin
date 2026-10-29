@@ -18,7 +18,10 @@ class DemandaHistorico {
     alvo.replaceChildren();
     if (carta) {
       const disponiveis = (carta.agentesDisponiveis ?? []).map(a => a.id).join(', ') || 'nenhum';
-      alvo.append(this.n.criar('p', `${carta.identificador} · Lease: ${carta.leaseSituacao ?? 'desconhecido'} · Agentes disponíveis: ${disponiveis} · Responsável pela tentativa: ${carta.lease?.agente ?? 'não atribuído'}`, 'orq-ajuda'));
+      const frota = this.n.estado.fila?.frota;
+      const modelos = carta.lease?.frota?.tuplas ? `rodando com a frota v${carta.lease.frota.versao}`
+        : frota?.estado === 'ok' ? `modelos da frota v${frota.versao}` : `frota ${frota?.estado ?? 'desconhecida'}`;
+      alvo.append(this.n.criar('p', `${carta.identificador} · Lease: ${carta.leaseSituacao ?? 'desconhecido'} · Agentes disponíveis: ${disponiveis} · ${modelos} · Responsável pela tentativa: ${carta.lease?.agente ?? 'não atribuído'}`, 'orq-ajuda'));
     }
     // A carta escolhida redesenha a sub-aba; o diário só é lido com ela aberta.
     if (this.n.estado.topico !== 'historico') return;

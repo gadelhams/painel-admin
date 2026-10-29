@@ -1,5 +1,9 @@
 # Orquestrador v2 — integração local da onda 2 (20/10/2026)
 
+> Desde 29/10/2026 (F2 da frota) a escolha de modelos **não é por carta**: o
+> `PERFIL-IA/v1` e a sub-aba "Papéis e modelos" saíram, e as ondas abaixo que
+> falam deles são histórico. O que vale está em § "Frota (F2, 29/10/2026)", no fim.
+
 Esta é a árvore de trabalho servida em `127.0.0.1:7777` após reinício local
 em 20/10/2026. A integração preservou o reskin Protocolo das cinco
 abas, o catálogo de projetos, C-3PO e as alterações locais anteriores. Os
@@ -432,3 +436,22 @@ da vigília e corrigido: `avaliarCarta` comparava prazos com a função
 141/141, docs 0 erros, Playwright 11/11; smoke em porta temporária: PLAYER com
 limites e impedimento "executor desligado", preparar sem SSO 403, fila
 inalterada. Carta PAINEL-44 absorve a substância do C-0014 do SupervisorHandoff.
+
+## Frota (F2, 29/10/2026)
+
+Decisão do dono (28–29/10): "a orquestração não é pra ser por card". Os modelos
+de cada papel vêm de **uma** frota do painel, trocada na sub-aba Frota por SSO
+e duas ações (`/api/orquestracao/frota/{preparar,confirmar}`). O mecanismo está
+em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota) e o que ficou de
+fora, em [plano-frota-do-hangar.md](plano-frota-do-hangar.md) § "F2 feita".
+- O contrato continua sendo o interruptor do projeto e de cada provedor
+  (`agentes[].disponivel`). Modelo e esforço de `agentes`, e o
+  `vigilia.perfilPadrao`, aparecem só como aviso "ignorado".
+- Sem frota `ok` (`ausente`, `ilegivel`, `invalida`), nada despacha e a
+  vigília não liga nem varre. Não há padrão de reserva.
+- O `PERFIL-IA/v1` que uma carta já tenha aparece na fila e no preparar do
+  despacho como "perfil antigo ignorado (era X; roda a frota vN)".
+- A tentativa congela a frota. O `HANDOFF/v2` grava `origemModelos`.
+- A vigília não grava perfil nenhum.
+
+Portão: `npm test` 220/220, docs 0 erros, Playwright 21/21 (com as duas rodadas de correção, mesmo dia).

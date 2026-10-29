@@ -33,6 +33,7 @@ class ListaFila {
       botao.type = 'button';
       botao.append(this.n.criar('strong', c.identificador), this.n.criar('span', c.titulo),
         this.n.criar('small', nomePrincipal ?? (c.elegivel ? 'Elegível' : c.motivos[0] ?? 'Impedida')));
+      if (c.perfilAntigo?.estado === 'ignorado') botao.append(this.n.criar('small', 'perfil antigo ignorado'));
       botao.setAttribute('aria-pressed', String(estado.carta?.id === c.id));
       botao.addEventListener('click', () => this.aoSelecionar(c));
       lista.append(botao);

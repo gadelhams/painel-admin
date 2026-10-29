@@ -1,5 +1,6 @@
-// O painel não tem login: quem alcança a porta manda nele (aba Contas muda o
-// cadastro de produção; o C-3PO e a voz gastam crédito). Desde 06/10/2026 ele
+// O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito
+// pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão
+// SSO do dono desde 29/10/2026 para Contas, antes para o resto. Desde 06/10/2026 ele
 // é alcançável de dois jeitos — loopback e a borda do tailnet, que só deixa
 // passar o Windows do dono — e esta guarda fecha o que sobra dos dois:
 //

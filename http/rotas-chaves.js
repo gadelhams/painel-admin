@@ -22,7 +22,7 @@ export class RotasChaves {
       const { status, corpo } = await this.apiChaves(req, pathname, (pedido) => this.resposta.corpo(pedido));
       json(corpo, status);
     } else if (pathname.startsWith('/api/chaves')) {
-      json({ erro: 'operação indisponível' }, 405);
+      this.resposta.naoPermitido(res, /\/(preparar|confirmar)$/.test(pathname) ? 'POST' : 'GET, HEAD', 'operação indisponível');
     }
     return true;
   }

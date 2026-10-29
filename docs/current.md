@@ -1,4 +1,4 @@
-# painel-admin — estado real (28/10/2026)
+# painel-admin — estado real (29/10/2026)
 
 Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 `historico/`; mecanismos em `arquitetura.md`.
@@ -23,8 +23,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## O que falta
 
-- **Frota do Hangar**: CLIs no Hangar, não por carta; droid zelador
-  varre o Plane ([plano](plano-frota-do-hangar.md)).
+- **Frota**: F2 feita (modelos numa frota só, por SSO; sem frota
+  gravada nada despacha); falta F3 ([plano](plano-frota-do-hangar.md)).
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo** (PAINEL-40): Codex pelas sessões, Claude pela statusLine (29/10).
@@ -36,7 +36,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 180 testes + `check-docs` 0 erros (28/10); Playwright 15/15.
+- `npm test`: 220 testes + `check-docs` 0 erros (29/10); Playwright 21/21.
 - Um módulo por responsabilidade (27–28/10); mapa gerado em `mapa.md`,
   conferido no `npm test`.
 - Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` no GitHub.

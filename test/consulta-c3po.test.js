@@ -9,7 +9,7 @@ function contexto() {
   const orquestracao = {
     async fila() {
       chamadas.push('fila');
-      return { atualizadoEm: '2026-10-22T00:00:00Z', itens: [
+      return { atualizadoEm: '2026-10-22T00:00:00Z', frota: { estado: 'ok', versao: 4, hash: 'h', motivo: null }, itens: [
         { id: ID, identificador: 'PAINEL-31', titulo: 'Fila', estado: 'Backlog', gate: null,
           elegivel: false, motivos: ['dependência pendente'], agente: null, lease: null },
         ...Array.from({ length: 35 }, (_, indice) => ({ id: String(indice), identificador: `T-${indice}`,
@@ -45,6 +45,11 @@ test('C-3PO resume fila sem divulgar dados extras e limita contexto', async () =
   const carta = await consultarOrquestracaoC3po(base, { identificador: 'painel-31' });
   assert.equal(carta.itens[0].identificador, 'PAINEL-31');
   assert.equal(carta.itens[0].id, undefined);
+});
+
+test('J-L4: o C-3PO vê a frota que rodaria, e do contrato só o interruptor', async () => {
+  const resultado = await consultarOrquestracaoC3po(contexto());
+  assert.deepEqual(resultado.frota, { estado: 'ok', versao: 4, hash: 'h', motivo: null });
 });
 
 test('triagem DEV filtra categorias sem transformar ausência de gate em elegibilidade', async () => {

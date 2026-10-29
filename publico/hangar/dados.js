@@ -1,4 +1,4 @@
-// Busca naves (/api/hangar), droids (/api/hangar/sessoes) e sondas (/api/producao) e as aplica ao estado da cena sem perder a animação. Só GET.
+// Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao) e a frota (/api/orquestracao/frota) e as aplica ao estado da cena sem perder a animação. Só GET.
 
 import {
   H, FABRICAS, ARQ, LADOS, SETORES, MAX_CHAO, nave, corDoIndice, vagaPos, ancorar, emitir,
@@ -84,12 +84,19 @@ export async function carregarHangar() {
     const r = await json('/api/hangar');
     r.naves.forEach(aplicarNave);
     if (!H.acervo.length) montarAcervo(r.acervo);
+    carregarFrota();
     if (H.erroHangar) falar('O Plane voltou a responder, mestre. As naves estão em dia.');
     H.erroHangar = null;
   } catch (e) {
     if (!H.erroHangar) falar('Oh, não! Não consegui ler o Plane. As naves ficam como estavam até ele voltar.');
     H.erroHangar = e.message;
   }
+}
+
+// A frota aparece em leitura no popup da fábrica; trocar é na sub-aba Frota (SSO + duas ações).
+async function carregarFrota() {
+  try { H.frota = await json('/api/orquestracao/frota'); }
+  catch { H.frota = { estado: 'indisponivel' }; }
 }
 
 export async function carregarSessoes() {

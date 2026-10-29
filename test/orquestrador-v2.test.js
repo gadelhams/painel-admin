@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { lerCanalPlane, normalizarInteracao, validarAlvoCanal } from '../orquestrador/canal-plane.js';
-import { catalogoModelos, prepararPlanoExecucao, validarSelecoes } from '../orquestrador/modelos.js';
+import { prepararPlanoFrota } from '../orquestrador/modelos.js';
 import { criarLeitorConsumo, percentualDeConsumo } from '../orquestrador/consumo.js';
 
 const projetoId = 'c24e3d36-2e2a-4760-a3f3-53998297a245';
@@ -36,25 +36,28 @@ test('card Plane é o canal; comentários paginam e não aceitam alvo arbitrári
   await assert.rejects(lerCanalPlane({ consultar: async () => ({ id: 'outra' }), projetoId, cartaId }), /não confere/);
 });
 
-test('modelo e esforço são escolhidos por papel sem fallback silencioso', () => {
-  assert.deepEqual(catalogoModelos(contrato).map(x => x.esforcoPadrao), ['max', 'xhigh']);
-  const selecoes = {
+// Reescrito na F2 (29/10/2026): a escolha por carta saiu; o plano vem da frota congelada
+// e o contrato só liga ou desliga cada provedor.
+test('plano vem da frota congelada; provedor desligado no contrato para sem fallback', () => {
+  const tuplas = {
     orquestracao: { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max' },
     codificacao_testes: { provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'xhigh' },
     validacao: { provedor: 'claude', modelo: 'claude-opus-5', esforco: 'high' },
   };
-  assert.deepEqual(validarSelecoes(contrato, selecoes), selecoes);
-  assert.throws(() => validarSelecoes(contrato, { ...selecoes, validacao: { ...selecoes.validacao, esforco: 'low' } }), /não permitido/);
-  assert.throws(() => validarSelecoes(contrato, { ...selecoes, validacao: undefined }), /não permitido/);
-  assert.throws(() => prepararPlanoExecucao(contrato, selecoes), /indisponível.*sem fallback/);
+  const congelada = { versao: 3, hash: 'a'.repeat(64), tuplas };
+  assert.throws(() => prepararPlanoFrota(contrato, congelada), /desligado no contrato/);
   const ativo = { agentes: contrato.agentes.map(a => ({ ...a, disponivel: true })) };
-  const plano = prepararPlanoExecucao(ativo, selecoes);
+  const plano = prepararPlanoFrota(ativo, congelada);
   assert.equal(plano.papeis.codificacao_testes.modelo, 'gpt-6-astra');
   assert.equal(plano.papeis.validacao.esforco, 'high');
+  assert.equal(plano.papeis.validacao.agenteId, 'Claude');
+  assert.deepEqual(plano.frota, { versao: 3, hash: 'a'.repeat(64) });
   assert.equal(plano.fallback, false);
-  assert.throws(() => prepararPlanoExecucao(ativo, { ...selecoes, validacao: undefined }), /não permitido/);
+  assert.throws(() => prepararPlanoFrota(ativo, { ...congelada, tuplas: { ...tuplas, validacao: undefined } }), /fora do catálogo/);
+  assert.throws(() => prepararPlanoFrota(ativo, { ...congelada, tuplas: { ...tuplas, validacao: { ...tuplas.validacao, esforco: 'max', provedor: 'openai', modelo: 'gpt-6-astra' } } }), /fora do catálogo/);
   const apenasClaude = { agentes: [ativo.agentes[0], { ...ativo.agentes[1], disponivel: false }] };
-  assert.throws(() => prepararPlanoExecucao(apenasClaude, selecoes), /codificacao_testes; sem fallback/);
+  assert.throws(() => prepararPlanoFrota(apenasClaude, congelada), /openai desligado no contrato para codificacao_testes/);
+  assert.throws(() => prepararPlanoFrota(ativo, null), /sem fallback/);
 });
 
 test('consumo mostra somente assinatura, com janela atual; API e amostra antiga não entram', async () => {

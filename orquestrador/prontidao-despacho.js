@@ -1,11 +1,12 @@
 // Pode despachar esta carta. Marcar gate continua em prontidao-gate.js.
 
 import { BLOQUEIOS, DECISAO_HUMANA_NA_DESCRICAO, GATES, MarcasCarta } from './marcas-carta.js';
+import { incompatibilidadesFrota } from './modelos.js';
 
 export class ProntidaoDespacho {
   // `agora` é um instante (número), não a função: com `Date.now` sem parênteses toda comparação
   // de prazo dava falso e um lease ativo aparecia como 'revisão' sem motivo (achado de 24/10/2026).
-  avaliar(carta, { contrato, errosContrato = [], dependencias = [], lease = null, historico = [], erroEstado = null, agora = Date.now() } = {}) {
+  avaliar(carta, { contrato, errosContrato = [], dependencias = [], lease = null, historico = [], erroEstado = null, agora = Date.now(), tuplasFrota = null, estadoFrota = null } = {}) {
     const motivos = [];
     const nomes = MarcasCarta.nomes(carta);
     const descricao = carta.description_html ?? '';
@@ -31,10 +32,14 @@ export class ProntidaoDespacho {
       ? contrato.agentes.filter(a => a.disponivel) : [];
     const agente = agentesDisponiveis[0] ?? null;
     if (!agente) motivos.push('nenhum agente elegível');
+    else motivos.push(...incompatibilidadesFrota(contrato, tuplasFrota));
+    // Sem frota válida nada despacha (N6): a fila diz isso em vez de "elegível".
+    if (estadoFrota && estadoFrota !== 'ok') motivos.push(`frota ${estadoFrota}: nada despacha sem frota válida`);
     const tentativa = [...historico].reverse().find(x => x.tipo === 'TENTATIVA' || x.tipo === 'RESULTADO') ?? null;
     const leaseSituacao = !lease ? 'livre' : !Number.isFinite(Date.parse(lease.expiraEm)) ? 'ilegível' : Date.parse(lease.expiraEm) > agora ? 'ativo' : lease.modoReal === true ? 'revisão' : 'expirado';
+    // Do contrato só sai o interruptor (id e provedor); modelo e esforço são da frota.
     return { elegivel: motivos.length === 0, motivos, gate: gates.length === 1 ? gates[0] : null,
-      agente, agentesDisponiveis: agentesDisponiveis.map(a => ({ id: a.id, modelo: a.modelo, esforco: a.esforco })),
+      agente: agente ? { id: agente.id, provedor: agente.provedor } : null, agentesDisponiveis: agentesDisponiveis.map(a => ({ id: a.id, provedor: a.provedor })),
       tentativa, lease, leaseSituacao, historico };
   }
 }

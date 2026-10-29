@@ -10,7 +10,12 @@ export function criarConfirmacoesHandoff({ servico, agora }) {
     agora,
     async validar({ carta, entrada, versaoCarta }) {
       if (!UUID.test(carta ?? '') || !Number.isFinite(Date.parse(versaoCarta))) throw new ErroAcesso('carta ou versão inválida', 422);
-      const validacao = await servico.validarHandoff(carta, entrada);
+      // A origem dos modelos é do servidor: o handoff à mão é sempre `humano`, e o navegador
+      // não pode alegar que uma frota rodou.
+      if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada) || Object.hasOwn(entrada, 'origemModelos')) {
+        throw new ErroAcesso('entrada de handoff inválida', 422);
+      }
+      const validacao = await servico.validarHandoff(carta, { ...entrada, origemModelos: { fonte: 'humano' } });
       if (validacao.versaoCarta !== versaoCarta) throw new ErroAcesso('carta mudou; recarregue antes de preparar', 409);
       return { guardar: { carta, versaoCarta, entrada: validacao.entrada },
         resposta: { carta: validacao.carta, entrada: validacao.entrada, aviso: validacao.aviso } };

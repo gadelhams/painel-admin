@@ -6,7 +6,7 @@ class PainelOrquestracao {
     this.despacho = new DespachoOrquestracao(this);
     this.gates = new GateOrquestracao(this);
     this.conversa = new ConversaOrquestracao(this);
-    this.modelos = new ModelosOrquestracao(this);
+    this.frota = new FrotaOrquestracao(this);
     this.vigilia = new VigiliaOrquestracao(this);
     this.consumo = new ConsumoOrquestracao(this);
     this.voz = new VozCartaOrquestracao(this);
@@ -19,7 +19,7 @@ class PainelOrquestracao {
     }
     for (const secao of document.querySelectorAll('.orq-topico')) secao.hidden = secao.id !== `orq-topico-${nome}`;
     if (nome === 'conversa') this.conversa.carregar();
-    if (nome === 'modelos') this.modelos.carregar();
+    if (nome === 'frota') this.frota.carregar();
     if (nome === 'consumo') this.consumo.carregar();
     if (nome === 'vigilia') this.vigilia.carregar();
     if (nome === 'historico') this.fila.renderHistorico();
@@ -36,8 +36,7 @@ class PainelOrquestracao {
     $('orq-triagem-carregar').addEventListener('click', () => this.fila.carregarTriagem());
     $('orq-atualizar').addEventListener('click', () => this.fila.carregar());
     $('orq-vigilia-atualizar').addEventListener('click', () => this.vigilia.carregar());
-    $('orq-validar-modelos').addEventListener('click', () => this.modelos.validar());
-    $('orq-preparar-modelos').addEventListener('click', () => this.modelos.preparar());
+    $('orq-frota-preparar').addEventListener('click', () => this.frota.confirmacao.preparar());
     $('orq-handoff-preparar').addEventListener('click', () => this.conversa.prepararHandoff());
     $('orq-voz-gravar').addEventListener('click', () => this.voz.alternar());
     $('orq-voz-usar').addEventListener('click', () => this.voz.usar());

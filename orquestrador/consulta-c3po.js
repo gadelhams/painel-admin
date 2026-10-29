@@ -51,5 +51,7 @@ export async function consultarOrquestracaoC3po({ orquestracao, triagemDev },
     candidatosComGate: fila.itens.filter(item => item.gate).length,
     encontrados: encontrados.length, exibidos: Math.min(encontrados.length, LIMITE),
     itens: encontrados.slice(0, LIMITE).map(camposDaCarta),
+    // Os modelos que rodariam são os da frota, não os do contrato.
+    frota: fila.frota ?? null,
   };
 }

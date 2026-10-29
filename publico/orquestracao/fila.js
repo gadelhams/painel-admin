@@ -27,7 +27,6 @@ class FilaOrquestracao {
   selecionar(carta) {
     if (this.n.estado.carta?.id !== carta.id) this.painel.voz.descartar();
     this.n.estado.carta = carta;
-    this.painel.modelos.limpar();
     this.painel.conversa.limparHandoff();
     this.n.estado.confirmacaoGate = null;
     this.n.estado.confirmacaoDespacho = null;
@@ -42,14 +41,10 @@ class FilaOrquestracao {
     this.renderDemanda();
     this.renderHistorico();
     this.n.mensagem('orq-conversa', 'Abra o tópico para ler as interações deste card.');
-    this.n.mensagem('orq-modelos', 'Abra o tópico para escolher os modelos.');
     this.n.$('orq-voz-texto').textContent = '';
     this.n.$('orq-voz-usar').hidden = true;
     this.n.estado.transcricao = null;
-    this.n.$('orq-validar-modelos').disabled = true;
-    this.n.$('orq-preparar-modelos').disabled = true;
     if (this.n.estado.topico === 'conversa') this.painel.conversa.carregar();
-    if (this.n.estado.topico === 'modelos') this.painel.modelos.carregar();
   }
 
   async carregar() {

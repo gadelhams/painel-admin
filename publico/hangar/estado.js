@@ -10,6 +10,11 @@ export const FABRICAS = [
   { id: 'grok', nome: 'Grok', x: 32, z: -60, cor: '#b28cff', ativa: false },
 ];
 export const fabrica = (id) => FABRICAS.find((f) => f.id === id);
+// Cor por papel da frota (F2, 29/10/2026), nos tons dos tokens --hg-* de hangar.css:
+// realce, editar, testar e pátio. Só os droids da frota (F3/F4) a usam; sessão humana não
+// tem papel e continua com a cor da fábrica.
+export const COR_PAPEL = Object.freeze({ orquestracao: '#ffd89a', codificacao_testes: '#ff9b54', validacao: '#7fd6be', zelador: '#e3a86b' });
+export const NOME_PAPEL = Object.freeze({ orquestracao: 'orquestração', codificacao_testes: 'codificação', validacao: 'validação', zelador: 'zelador' });
 export const plataforma = (f) => ({ x: f.x, y: 1.2, z: f.z + 11 });
 
 export const PATIO = { x: -70, z: 0, w: 36, d: 96 };
@@ -47,6 +52,7 @@ export const H = {
   carregado: false,
   erroHangar: null,
   sessoesEm: null,
+  frota: null,
 };
 export const nave = (id) => H.naves.find((n) => n.id === id);
 export const droid = (id) => H.droids.find((d) => d.id === id);

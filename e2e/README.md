@@ -31,13 +31,15 @@ npm run test:sso
 
 Para usar Edge: `$env:ORQ_E2E_BROWSER='msedge'; npm run test:sso`.
 O programa abre um contexto novo e temporário em `astargne.com/login`, espera
-até 10 minutos para o dono entrar **na janela aberta**, e então confere
-PLAYER-38 no Painel. Ele valida a combinação Claude/OpenAI/Claude, chama
-somente `modelos/validar` e `modelos/preparar`, prova que aparece a segunda
-confirmação, mas **não clica em confirmar**. Qualquer outro POST é bloqueado;
-perfil pré-existente, lease, tentativa ou executor real ligado abortam a prova.
+até 10 minutos para o dono entrar **na janela aberta**, e então abre a
+sub-aba Frota (desde 29/10/2026; antes era o perfil por carta do PLAYER-38).
+Ele monta uma frota mista nos quatro papéis, chama somente `frota/preparar`,
+prova que aparece a segunda confirmação, mas **não clica em confirmar**.
+Qualquer outro POST é bloqueado; executor real ligado aborta a prova, e a
+frota lida antes e depois tem de ser a mesma.
 Senha, cookie, `storageState`, screenshot e trace reais não são salvos nem
 impressos. Ao terminar, a janela fecha e o terminal mostra PASSOU ou FALHOU.
+A versão da Frota ainda não rodou no Windows.
 
-Esta prova não testa gravação do perfil, disponibilidade real de CLIs,
+Esta prova não testa gravação da frota, disponibilidade real de CLIs,
 despacho, comandos do PLAYER, stream, deploy ou ciclos do Supervisor.

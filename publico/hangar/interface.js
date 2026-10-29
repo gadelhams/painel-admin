@@ -150,7 +150,7 @@ export function atualizarPaineis(dt = 0) {
   $('hg-conta-droids').textContent = `${emCampo} em campo`;
   $('hg-fabricas').innerHTML = FABRICAS.map((f) => {
     const k = H.droids.filter((d) => d.ia === f.id && !d.encerrar).length;
-    return `<li style="--cor:${f.cor}"><b>${f.nome}</b><span>${f.ativa ? `${k} ${plural(k, 'droid', 'droids')} em campo` : 'offline · sem CLI viva'}</span></li>`;
+    return `<li style="--cor:${f.cor}"><button type="button" class="hg-link" data-fab="${f.id}"><b>${f.nome}</b></button><span>${f.ativa ? `${k} ${plural(k, 'droid', 'droids')} em campo` : 'offline · sem CLI viva'}</span></li>`;
   }).join('');
   montarProjetos();
   for (const b of $('hg-projetos').querySelectorAll('[data-proj]')) {
@@ -186,6 +186,8 @@ export function iniciarInterface() {
   $('hg-holo-fechar').addEventListener('click', fecharPopup);
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && H.popup && !$('hg-ajuda').open && !$('aba-hangar').hidden) fecharPopup(); });
   $('hg-droids').addEventListener('click', (e) => { const b = e.target.closest('[data-droid]'); if (b) clicar({ tipo: 'droid', id: b.dataset.droid }); });
+  // A fábrica também abre pela lista lateral: o popup mostra a frota em leitura (F2).
+  $('hg-fabricas').addEventListener('click', (e) => { const b = e.target.closest('[data-fab]'); if (b) clicar({ tipo: 'fabrica', id: b.dataset.fab }); });
   $('hg-projetos').addEventListener('click', (e) => {
     if (e.target.closest('[data-berco]')) { clicar({ tipo: 'berco' }); return; }
     const b = e.target.closest('[data-proj]'); if (!b) return;

@@ -3,8 +3,8 @@
 class NucleoOrquestracao {
   constructor() {
     this.estado = {
-      fila: null, triagem: null, carta: null, topico: 'demanda', opcoes: [], modeloDados: null,
-      confirmacao: null, confirmacaoHandoff: null, confirmacaoGate: null,
+      fila: null, triagem: null, carta: null, topico: 'demanda', frota: null,
+      confirmacaoFrota: null, confirmacaoHandoff: null, confirmacaoGate: null,
       confirmacaoDespacho: null, gravacao: null, transcricao: null, ultimoResultado: null, abortos: {},
     };
   }

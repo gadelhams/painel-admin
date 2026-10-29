@@ -21,7 +21,7 @@ export class RotasOrqFila {
       try {
         const corpo = JSON.parse(await this.resposta.corpo(req));
         if (typeof corpo.carta !== 'string' || typeof corpo.comando !== 'string') throw new Error('carta e comando obrigatórios');
-        json(await this.orquestracao.simular(corpo.carta, corpo.comando, corpo.selecoes ?? null));
+        json(await this.orquestracao.simular(corpo.carta, corpo.comando));
       } catch (erro) {
         json({ erro: erro.message }, 422);
       }

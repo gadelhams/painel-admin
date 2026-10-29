@@ -1,7 +1,7 @@
 # painel-admin — operação (texto de referência)
 
 Texto preservado do `CLAUDE.md` até 01/10/2026 (F3 do
-`../../../PLANO-CONTEXTO-POR-TAREFA.md`): as seções "Como roda" e "C-3PO
+`../../../historico/PLANO-CONTEXTO-POR-TAREFA.md`): as seções "Como roda" e "C-3PO
 por voz, fora de casa". Estado atual em [`current.md`](current.md); original
 íntegro em [`historico/CLAUDE-ate-2026-10-01.md`](historico/CLAUDE-ate-2026-10-01.md).
 

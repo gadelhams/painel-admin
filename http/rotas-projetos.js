@@ -6,10 +6,13 @@ export class RotasProjetos {
     this.coletores = coletores;
   }
 
-  async tentar(_req, res, url) {
+  async tentar(req, res, url) {
     const { pathname } = url;
     const json = (corpo, status) => this.resposta.json(res, corpo, status);
-    if (pathname === '/api/projetos') {
+    const daFamilia = pathname === '/api/projetos' || (pathname.startsWith('/api/projetos/') && (pathname.endsWith('/docs') || pathname.endsWith('/git')));
+    if (daFamilia && req.method !== 'GET' && req.method !== 'HEAD') {
+      this.resposta.naoPermitido(res, 'GET, HEAD', 'use GET');
+    } else if (pathname === '/api/projetos') {
       json(await this.coletores.estadoProjetos());
     } else if (pathname.startsWith('/api/projetos/') && pathname.endsWith('/docs')) {
       const pasta = decodeURIComponent(pathname.slice('/api/projetos/'.length, -'/docs'.length));

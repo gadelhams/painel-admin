@@ -31,7 +31,7 @@ export class RoteadorPainel {
         return;
       }
       if (url.pathname === '/api/conversa') {
-        this.resposta.json(res, { erro: 'use POST' }, 405);
+        this.resposta.naoPermitido(res, 'POST', 'use POST');
         return;
       }
       if (await this.voz.tentar(req, res, url)) return;
@@ -43,7 +43,7 @@ export class RoteadorPainel {
         await this.resposta.estatico(res, url.pathname);
         return;
       }
-      this.resposta.json(res, { erro: 'método não suportado' }, 405);
+      this.resposta.naoPermitido(res, 'GET, HEAD');
     } catch (erro) {
       console.error('[servidor]', erro);
       if (!res.headersSent) this.resposta.json(res, { erro: 'erro interno' }, 500);

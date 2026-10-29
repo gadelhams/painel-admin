@@ -46,6 +46,16 @@ export function validarContrato(valor, projectId) {
   return erros;
 }
 
+// O que o contrato ainda declara mas a frota decide (J1): mostrado como aviso, nunca usado.
+export function avisosDoContrato(contrato) {
+  const avisos = [];
+  if (Array.isArray(contrato?.agentes) && contrato.agentes.length) {
+    avisos.push('agentes[]: modelo e esforço ignorados, a frota manda; só disponivel (por provedor) liga o projeto');
+  }
+  if (contrato?.vigilia?.perfilPadrao !== undefined) avisos.push('vigilia.perfilPadrao ignorado: a frota manda');
+  return avisos;
+}
+
 export function comandoPermitido(contrato, id) {
   const comando = contrato?.comandos?.find(c => c.id === id);
   if (!comandoEstaticoSeguro(comando)) {

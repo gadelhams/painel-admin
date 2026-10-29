@@ -3,7 +3,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { lerJsonl } from './leitor-jsonl.js';
+import { anexarJsonl, lerJsonl } from './leitor-jsonl.js';
+import { CAUSAS_DA_FROTA } from './frota-pausas.js';
 
 const DIA_MS = 24 * 60 * 60_000;
 
@@ -39,7 +40,7 @@ export class DiarioVigilia {
 
   async anotar(id, evento) {
     await fs.mkdir(this.pasta, { recursive: true });
-    await fs.appendFile(this.eventos(id), `${JSON.stringify({ quando: this.iso(), ...evento })}\n`, 'utf8');
+    await anexarJsonl(this.eventos(id), { quando: this.iso(), ...evento });
   }
 
   async linhas(id) {
@@ -51,6 +52,7 @@ export class DiarioVigilia {
 
   async tentativas24h(id) {
     const limite = this.agora() - DIA_MS;
-    return (await this.linhas(id)).filter(e => e.tipo === 'TENTATIVA' && Date.parse(e.quando) > limite).length;
+    // Tentativa parada pela frota (CLI ou limite) não conta para o teto do dia.
+    return (await this.linhas(id)).filter(e => e.tipo === 'TENTATIVA' && Date.parse(e.quando) > limite && !CAUSAS_DA_FROTA.has(e.causa)).length;
   }
 }

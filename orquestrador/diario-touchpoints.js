@@ -2,7 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { lerJsonl } from './leitor-jsonl.js';
+import { anexarJsonl, lerJsonl } from './leitor-jsonl.js';
 
 export class DiarioTouchpoints {
   constructor({ diretorio, agora }) {
@@ -18,6 +18,6 @@ export class DiarioTouchpoints {
   }
 
   async anotar(evento) {
-    await fs.appendFile(this.log, `${JSON.stringify({ quando: new Date(this.agora()).toISOString(), ...evento })}\n`, 'utf8');
+    await anexarJsonl(this.log, { quando: new Date(this.agora()).toISOString(), ...evento });
   }
 }

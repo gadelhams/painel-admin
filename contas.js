@@ -2,4 +2,4 @@
 
 export { OPERACOES, ErroContas, montarComando } from './contas/tabela.js';
 export { criarExecutorSsh, executarSsh, redigirSegredo, interpretarSaida } from './contas/ssh.js';
-export { criarClienteContas, resolverRotaContas, criarManipuladorContas } from './contas/fronteira.js';
+export { criarClienteContas, resolverRotaContas, criarManipuladorContas, ROTAS_HTTP as ROTAS_CONTAS } from './contas/fronteira.js';
