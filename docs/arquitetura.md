@@ -39,7 +39,7 @@ em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
 
 ### servidor.js
 
-O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, jogo nativo, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -52,8 +52,8 @@ aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
 `relacoes.js` — hoje fora da nav, ver abaixo), `POST /api/conversa` (SSE,
 motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 (aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
-`prontidao`, `canal?carta&projeto`, `frota`, `consumo`, `legado`; POST
-`simular`, `{frota,handoff,gates,despacho,vigilia}/{preparar,confirmar}`,
+`prontidao`, `canal?carta&projeto`, `frota`, `consumo`, `legado`, `nativo`; POST
+`simular`, `{frota,handoff,gates,despacho,vigilia,nativo}/{preparar,confirmar}`,
 `voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
 varre toda rota pelo roteador real com POST, PUT, PATCH e DELETE sem sessão — 401 ou 405 no próprio handler,
@@ -543,6 +543,19 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   parser de SSE é o de `c3po/fluxo-sse.js`, importado como módulo. Trocar de
   objeto ou fechar o popup aborta a resposta em curso. A rota tem o mesmo
   risco aberto do `/c3po/` (sem SSO, `docs/invariants.md`).
+- **Jogo nativo por nave** (`nativo.js`, PAINEL-59, 29/10/2026). Projeto com
+  `jogoNativo` no catálogo (hoje só o CKBL) ganha no popup da vaga e da doca
+  o interruptor "Steam livre": o teste no jogo toma a tela e a conta da Steam
+  e derruba a sessão do dono se ele estiver jogando com a mesma conta. Marcar
+  ou desmarcar só prepara; gravar é a segunda ação, por SSO, nas duas
+  direções. Ligar escolhe 2, 4, 8 ou 12 h e vence sozinho
+  (`orquestrador/liberacao-nativa.js`, arquivo `liberacao-nativa.json` no
+  estado da orquestração, gravado por tmp + rename e serializado no
+  processo). `GET /api/orquestracao/nativo` é aberto e não diz quem ligou;
+  arquivo ilegível, forma estranha ou prazo vencido contam como desligado.
+  Quem consome hoje é o pré-flight nativo do CKBL
+  (`docs/native-test-strategy-20261017.md` de lá); o executor da frota ainda
+  não abre jogo (PAINEL-34).
 
 #### vendor/mermaid.min.js
 

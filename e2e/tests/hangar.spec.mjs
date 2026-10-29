@@ -12,6 +12,7 @@ const nave = (pasta, extra = {}) => ({
 const hangar = {
   naves: [
     nave('alfa', {
+      jogoNativo: 'Jogo X pela Steam',
       pecas: [
         { titulo: 'Coleta', total: 3, abertas: 1, andamento: 1, feitas: 1, pct: 33, proximas: [{ id: 'ALFA-2', titulo: 'Busca <b>rápida</b>', url: null }],
           decisoes: [{ id: 'ALFA-3', titulo: 'Qual fonte usar?', url: null, modulo: 'Coleta', tags: ['ASTARGNE'], detalhe: null }] },
@@ -39,6 +40,7 @@ const sessoes = () => ({
 async function fixtures(page) {
   const chamadas = [];
   const errosPagina = [];
+  const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
   page.on('pageerror', (e) => errosPagina.push(e.message));
   await page.route('**/*', async (route) => {
     const req = route.request(); const url = new URL(req.url());
@@ -57,6 +59,19 @@ async function fixtures(page) {
     if (url.pathname === '/api/orquestracao/voz') return json({ xai: false });
     if (url.pathname === '/api/orquestracao/frota') return json(frota);
     if (url.pathname === '/api/tts') return json({ disponivel: false });
+    // Liberação nativa simulada: o preparar devolve o desafio, o confirmar grava e o GET passa a mostrar.
+    if (url.pathname === '/api/orquestracao/nativo') return json({ legivel: true, horas: [2, 4, 8, 12], projetos: [nativo] });
+    if (url.pathname === '/api/orquestracao/nativo/preparar') {
+      const corpo = chamadas.at(-1).corpo = req.postDataJSON();
+      const ate = corpo.horas ? new Date(Date.now() + corpo.horas * 3_600_000).toISOString() : null;
+      return json({ confirmacaoId: 'c1', expiraEm: new Date(Date.now() + 120_000).toISOString(), ligar: corpo.horas > 0, ate, jaEstava: false, aviso: 'Só ligue com a Steam livre.' });
+    }
+    if (url.pathname === '/api/orquestracao/nativo/confirmar') {
+      chamadas.at(-1).corpo = req.postDataJSON();
+      const ultimo = chamadas.filter((c) => c.caminho === '/api/orquestracao/nativo/preparar').at(-1).corpo;
+      Object.assign(nativo, ultimo.horas ? { liberada: true, ate: new Date(Date.now() + ultimo.horas * 3_600_000).toISOString() } : { liberada: false, ate: null });
+      return json({ nome: 'alfa', ...nativo });
+    }
     // C-3PO simulado: nunca o LLM real em teste. Responde em SSE e devolve a sessão.
     if (url.pathname === '/api/conversa' && req.method() === 'POST') {
       chamadas.at(-1).corpo = req.postDataJSON();
@@ -169,5 +184,37 @@ test('popup do C-3PO conversa sobre o objeto clicado: contexto na pergunta, resp
   await page.locator('#hg-projetos [data-proj="beta"]').click();
   await expect(page.locator('#hg-conversa-resp')).toBeHidden();
   await expect(page.locator('a.hg-conversa-mais')).toHaveAttribute('href', '/c3po/');
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('nave com jogo nativo: o interruptor Steam livre prepara e confirma em duas ações; nave sem jogo não mostra', async ({ page }) => {
+  const audit = await fixtures(page);
+  await page.goto('/');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-nativo')).toBeVisible();
+  await expect(page.locator('#hg-nativo-jogo')).toHaveText('Jogo X pela Steam');
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Desligado/);
+  await page.selectOption('#hg-nativo-horas', '2');
+  await page.locator('#hg-nativo-caixa').check();
+  // Marcar só prepara: nada gravado até a segunda ação.
+  await expect(page.locator('#hg-nativo-confirmar')).toHaveText(/^Confirmar: liberar até \d\d:\d\d$/);
+  await expect(page.locator('#hg-nativo-aviso')).toHaveText('Só ligue com a Steam livre.');
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET').map((c) => c.caminho)).toEqual(['/api/orquestracao/nativo/preparar']);
+  expect(audit.chamadas.at(-1).corpo).toEqual({ projeto: 'P', horas: 2 });
+  await page.locator('#hg-nativo-confirmar').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Liberado até \d\d:\d\d \(faltam (1 h 59 min|2 h)\)/);
+  await expect(page.locator('#hg-nativo-caixa')).toBeChecked();
+  // Desligar também é preparar + confirmar.
+  await page.locator('#hg-nativo-caixa').uncheck();
+  await expect(page.locator('#hg-nativo-confirmar')).toHaveText('Confirmar: desligar agora');
+  await page.locator('#hg-nativo-confirmar').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Desligado/);
+  const escritas = audit.chamadas.filter((c) => c.metodo !== 'GET');
+  expect(escritas.map((c) => [c.caminho, c.corpo])).toEqual([
+    ['/api/orquestracao/nativo/preparar', { projeto: 'P', horas: 2 }], ['/api/orquestracao/nativo/confirmar', { confirmacaoId: 'c1' }],
+    ['/api/orquestracao/nativo/preparar', { projeto: 'P', horas: 0 }], ['/api/orquestracao/nativo/confirmar', { confirmacaoId: 'c1' }],
+  ]);
+  await page.locator('#hg-projetos [data-proj="beta"]').click();
+  await expect(page.locator('#hg-nativo')).toBeHidden();
   expect(audit.errosPagina).toEqual([]);
 });

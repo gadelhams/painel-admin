@@ -52,6 +52,7 @@ export function montarNave(projeto, backlog) {
     congelado: Boolean(projeto.congelado),
     producao: projeto.producao ?? null,
     planePrj: projeto.plane ?? null,
+    jogoNativo: projeto.jogoNativo ?? null,
     fonte: backlog?.fonte ?? null,
     estado: backlog?.estado ?? 'sem_backlog',
     url: backlog?.url ?? null,

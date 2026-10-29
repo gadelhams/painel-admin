@@ -19,6 +19,8 @@ import { criarLeitorDiarioFrota } from './orquestrador/diario-frota.js';
 import { criarFonteCodex } from './orquestrador/fonte-consumo-codex.js';
 import { criarVerificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
 import { criarApiFrota, criarConfirmacoesFrota } from './orquestrador/api-frota.js';
+import { criarApiNativo, criarConfirmacoesNativo } from './orquestrador/api-nativo.js';
+import { LiberacaoNativa } from './orquestrador/liberacao-nativa.js';
 import { criarEscritorHandoffPlane } from './orquestrador/handoff-plane.js';
 import { criarApiHandoff, criarConfirmacoesHandoff } from './orquestrador/api-handoff.js';
 import { criarApiVoz, criarAutorizadorVoz } from './orquestrador/voz-xai.js';
@@ -123,6 +125,9 @@ const apiGate = criarApiGate({ autorizar: autorizarPrivilegiado,
   confirmacoes: criarConfirmacoesGate({ servico: orquestracao }) });
 // Com o executor desligado a rota falha fechada; ligado, continua atrás de SSO e confirmação.
 const apiVigilia = criarApiVigilia({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesVigilia({ vigilia }) });
+// Jogo nativo: o dono libera por nave, com prazo, quando a Steam está livre; SSO + duas ações nas duas direções.
+const liberacaoNativa = new LiberacaoNativa({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') });
+const apiNativo = criarApiNativo({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesNativo({ liberacao: liberacaoNativa }) });
 // Chaves: inventário só de nomes; troca em duas ações com SSO; escrita no servidor só com
 // CHAVES_SERVIDOR_ESCRITA=true depois do APROVADO do validador-deploy.
 const chaves = criarServicoChaves();
@@ -155,8 +160,8 @@ const roteador = new RoteadorPainel({
   }),
   orquestracao: new RotasOrquestracao({
     resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas,
-    lerDiarioFrota: criarLeitorDiarioFrota({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }), vigilia,
-    apiFrota, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz,
+    lerDiarioFrota: criarLeitorDiarioFrota({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }), vigilia, liberacaoNativa,
+    apiFrota, apiHandoff, apiGate, apiDespacho, apiVigilia, apiNativo, apiVoz,
     xai: () => Boolean(process.env.XAI_API_KEY),
   }),
   alinhamento: new RotasAlinhamento({ resposta, alinhamento }),

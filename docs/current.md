@@ -13,7 +13,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   13 projetos no Plane, 15 no catálogo.
 - **Hangar** (28/10) é a entrada: naves = projetos (peça = módulo do Plane),
   droids = sessões Claude/Codex vivas (`/proc` + transcripts, só ferramenta e
-  arquivo), C-3PO narrando e respondendo no popup (29/10) —
+  arquivo), C-3PO narrando e respondendo no popup, e a Steam liberada por nave (29/10) —
   [arquitetura.md](arquitetura.md) § Hangar.
 - Abas: Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs.
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
@@ -37,7 +37,6 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 220 testes + `check-docs` 0 erros (29/10); Playwright 22/22.
-- Um módulo por responsabilidade (27–28/10); mapa gerado em `mapa.md`,
-  conferido no `npm test`.
+- `npm test`: 228 testes + `check-docs` 0 erros (29/10); Playwright 23/23.
+- Um módulo por responsabilidade; mapa em `mapa.md`, conferido no `npm test`.
 - `main` no GitHub.

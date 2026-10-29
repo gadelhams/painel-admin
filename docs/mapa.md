@@ -119,6 +119,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-orq-frota.js` — Leitura e troca da frota.
 - `rotas-orq-gate.js` — Preparar e confirmar a marca de gate.
 - `rotas-orq-handoff.js` — Preparar e confirmar o handoff.
+- `rotas-orq-nativo.js` — Estado e alternância da liberação do jogo nativo.
 - `rotas-orq-triagem.js` — Triagem das folhas sem gate.
 - `rotas-orq-vigilia.js` — Estado e alternância da vigília.
 - `rotas-orq-voz.js` — Presença da chave e a transcrição.
@@ -147,6 +148,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `api-frota.js` — Duas ações da frota: preparar valida contra o catálogo e guarda a versão-base; confirmar grava se a frota não mudou.
 - `api-gate.js` — Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta.
 - `api-handoff.js` — Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário.
+- `api-nativo.js` — Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga.
 - `api-vigilia.js` — Duas ações da vigília: preparar valida a alternância de um projeto; confirmar liga ou desliga.
 - `argumentos-cli.js` — Argumentos fixos de cada CLI.
 - `arquivo-lease.js` — Um arquivo de lease por carta.
@@ -191,6 +193,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `interacao-canal.js` — Forma de um comentário do card: texto visível e o cabeçalho ORQ/v1.
 - `isolamento-git.js` — Worktree e commit do ramo orq/.
 - `leitor-jsonl.js` — Leitura e acréscimo de um diário JSONL.
+- `liberacao-nativa.js` — Liberação do jogo nativo por projeto: o dono liga na nave do Hangar quando a Steam está livre.
 - `marcas-carta.js` — Marcas da carta que os dois julgamentos leem.
 - `modelos.js` — Plano de execução a partir da frota congelada e as flags de modelo/esforço de cada CLI.
 - `origem-privilegiada.js` — Recusa POST privilegiado que não venha da própria borda.
@@ -304,6 +307,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `hangar.js` — Entrada do Hangar: liga dados, simulação, cena e interface, e pausa tudo quando a aba sai de vista.
 - `interface.js` — Popup do C-3PO ancorado na cena, painéis laterais (droids, projetos, Oficina) e os botões do Hangar.
 - `narrador.js` — Narrador do Hangar: fila de falas prontas do C-3PO, balão digitado e diário.
+- `nativo.js` — Interruptor "Steam livre" no popup da nave que tem jogo nativo.
 - `rotulos.js` — Rótulos HTML sobre a cena (docas, vagas, droids, bancadas, Oficina), projetados do 3D para a tela a cada quadro.
 - `simulacao.js` — Movimento do Hangar: sessões reais viram droids, cada ação nova vira uma ida (bancada, nave ou Oficina), naves vão e voltam das docas.
 - `util.js` — Utilidades do Hangar: curvas de movimento, sorteio com semente, escape de HTML e atalhos de DOM.
@@ -357,6 +361,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `handoff-plane.test.js`
 - `hangar.test.js` — Hangar: sessões vivas (/proc e transcripts falsos em pasta temporária) e naves sobre backlog falso.
 - `identidades-projeto.test.js`
+- `liberacao-nativa.test.js` — Liberação do jogo nativo (PAINEL-59): prazo que vence sozinho, só projetos com jogo nativo no catálogo, arquivo estranho conta como desligado e a troca só por duas ações.
 - `motor-ambiente.test.js` — Prova que o processo do modelo do C-3PO não recebe segredo do .env nem config do disco (PAINEL-52).
 - `orquestrador-core-v2.test.js`
 - `orquestrador-sso.test.js`

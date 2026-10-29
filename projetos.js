@@ -174,8 +174,10 @@ export const PROJETOS = [
     pasta: 'CK3BannerLord',
     area: 'ProjetosPessoais',
     titulo: 'CK3 Bannerlord',
-    descricao: 'Mod de Bannerlord em desenvolvimento; piloto do Orquestrador restrito a trabalho e testes offline, sem jogo.',
-    stack: 'C# · .NET 8 · testes offline',
+    descricao: 'Mod de Bannerlord em desenvolvimento; testes offline e, com a Steam liberada na nave do Hangar, no jogo (grim + ydotool).',
+    stack: 'C# · .NET 8 · testes offline e nativos',
+    // O que a liberação nativa deixa abrir (orquestrador/liberacao-nativa.js).
+    jogoNativo: 'Bannerlord pela Steam',
     entrada: 'AGENTS.md',
     plane: '7ce26c40-6e46-49a8-9a7d-bf06bbda6542', // CKBL
     portas: [],

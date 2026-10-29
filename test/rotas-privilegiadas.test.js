@@ -24,6 +24,7 @@ import { criarApiHandoff, criarConfirmacoesHandoff } from '../orquestrador/api-h
 import { criarApiGate, criarConfirmacoesGate } from '../orquestrador/api-gate.js';
 import { criarApiDespacho, criarConfirmacoesDespacho } from '../orquestrador/api-despacho.js';
 import { criarApiVigilia, criarConfirmacoesVigilia } from '../orquestrador/api-vigilia.js';
+import { criarApiNativo, criarConfirmacoesNativo } from '../orquestrador/api-nativo.js';
 import { criarApiVoz } from '../orquestrador/voz-xai.js';
 import { criarApiChaves, criarConfirmacoesChaves } from '../chaves.js';
 import { criarManipuladorContas, ROTAS_CONTAS } from '../contas.js';
@@ -78,12 +79,13 @@ function montar() {
     painel: new RotasPainel({ resposta, coletores: espiao('coletores'), ssh: espiao('ssh'), autorizarContas: negar,
       contas: criarManipuladorContas({ cliente: espiao('contas') }) }),
     orquestracao: new RotasOrquestracao({ resposta, orquestracao, triagemDev: espiao('triagem'), lerConsumo: espiao('consumo'),
-      lerDiarioFrota: espiao('diario'), vigilia: espiao('vigilia'),
+      lerDiarioFrota: espiao('diario'), vigilia: espiao('vigilia'), liberacaoNativa: espiao('nativo'),
       apiFrota: criarApiFrota({ autorizar: negar, confirmacoes: criarConfirmacoesFrota({ servico: orquestracao }) }),
       apiHandoff: criarApiHandoff({ autorizar: negar, confirmacoes: criarConfirmacoesHandoff({ servico: orquestracao }) }),
       apiGate: criarApiGate({ autorizar: negar, confirmacoes: criarConfirmacoesGate({ servico: orquestracao }) }),
       apiDespacho: criarApiDespacho({ autorizar: negar, confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) }),
       apiVigilia: criarApiVigilia({ autorizar: negar, confirmacoes: criarConfirmacoesVigilia({ vigilia: espiao('vigilia') }) }),
+      apiNativo: criarApiNativo({ autorizar: negar, confirmacoes: criarConfirmacoesNativo({ liberacao: espiao('nativo') }) }),
       apiVoz: criarApiVoz({ autorizar: negar, transcrever: async () => { chamadas.push('transcrever'); return {}; } }),
       xai: () => false }),
     alinhamento: new RotasAlinhamento({ resposta, alinhamento: espiao('alinhamento') }),
@@ -105,7 +107,7 @@ async function pedir(roteador, metodo, caminho) {
 test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo nem chamar serviço', async () => {
   const caminhos = await caminhosDoCodigo();
   for (const esperado of ['/api/orquestracao/frota/preparar', '/api/orquestracao/frota/confirmar', '/api/chaves/confirmar', '/api/hangar',
-    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites']) {
+    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites']) {
     assert.ok(caminhos.includes(esperado), `a varredura precisa achar ${esperado}`);
   }
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');

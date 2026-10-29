@@ -9,6 +9,7 @@ import { conteudo, pedidoDeNave } from './conteudo.js';
 import { estadoDroid } from './simulacao.js';
 import { diarioAdd } from './narrador.js';
 import { contextoDoPopup, limparConversa, perguntar } from './conversa.js';
+import { esconderNativo, ligarNativo, mostrarNativo } from './nativo.js';
 
 let popFala = '';
 let popDig = 0;
@@ -76,7 +77,7 @@ export function clicar(a) {
 export function abrir(a, silencioso = false) {
   if (DA_DOCA.includes(a.tipo) && !naDoca(nave(a.nave))) a = { tipo: 'vaga', nave: a.nave };
   // A reabertura silenciosa só refresca dados; a conversa em curso fica.
-  if (!silencioso) limparConversa();
+  if (!silencioso) { limparConversa(); mostrarNativo(a.tipo === 'vaga' || a.tipo === 'doca' ? nave(a.nave) : null); }
   H.popup = { alvo: a };
   const h = $('hg-holo'); const c = conteudo(a);
   h.style.setProperty('--cor', c.cor);
@@ -91,6 +92,7 @@ export function abrir(a, silencioso = false) {
 
 export function fecharPopup() {
   limparConversa();
+  esconderNativo();
   H.popup = null; $('hg-holo').hidden = true; $('hg-mira').hidden = true; $('hg-narrador').hidden = false;
 }
 
@@ -206,6 +208,7 @@ export function iniciarInterface() {
   $('hg-abrir-ajuda').addEventListener('click', () => { try { $('hg-ajuda').showModal(); } catch { $('hg-ajuda').setAttribute('open', ''); } });
   $('hg-fechar-ajuda').addEventListener('click', () => $('hg-ajuda').close());
 
+  ligarNativo();
   $('hg-conversa').addEventListener('submit', (e) => {
     e.preventDefault();
     const campo = $('hg-conversa-pergunta'); const pergunta = campo.value;

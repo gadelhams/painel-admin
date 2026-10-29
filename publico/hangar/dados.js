@@ -27,6 +27,8 @@ function aplicarNave(api, i) {
     cor: corDoIndice(i),
     congelado: api.congelado,
     producao: api.producao,
+    planePrj: api.planePrj,
+    jogoNativo: api.jogoNativo,
     url: api.url,
     estadoBacklog: api.estado,
     pct: api.pct / 100,
