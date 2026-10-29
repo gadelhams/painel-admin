@@ -1,4 +1,5 @@
-// Lê os comentários do card. Não prepara handoff.
+// Resumo da carta: o estado que a descrição declara, o último handoff e gate e o tamanho
+// do fio. O fio inteiro fica no Plane, num link. Não prepara handoff.
 
 class CanalConversa {
   constructor(painel) { this.painel = painel; }
@@ -8,27 +9,38 @@ class CanalConversa {
   async carregar() {
     if (!this.n.estado.carta) return;
     const id = this.n.estado.carta.id;
-    this.n.mensagem('orq-conversa', 'Lendo comentários do Plane…');
+    this.n.mensagem('orq-conversa', 'Lendo a carta no Plane…');
     try {
       const canal = await this.n.json(`/api/orquestracao/canal?carta=${encodeURIComponent(id)}&projeto=${encodeURIComponent(this.n.estado.carta.projetoId)}`, { signal: this.n.sinal('conversa') });
       if (this.n.estado.carta?.id !== id) return;
-      const alvo = this.n.$('orq-conversa');
-      alvo.replaceChildren();
-      const estruturados = new Map((canal.handoffs ?? []).map(h => [h.comentarioId, h]));
-      for (const e of canal.interacoes) {
-        const item = this.n.criar('article', '', 'orq-interacao');
-        const handoff = estruturados.get(e.id);
-        item.append(this.n.criar('strong', `${e.papel} · ${e.autor}`), this.n.criar('time', e.quando ? new Date(e.quando).toLocaleString('pt-BR') : ''));
-        if (handoff) {
-          item.append(this.n.criar('p', `${handoff.resultado} · tentativa ${handoff.tentativaId ?? 'não iniciada'} · ${handoff.resumo}`));
-          const evidencias = this.n.criar('ul');
-          for (const evidencia of handoff.evidencia) evidencias.append(this.n.criar('li', evidencia));
-          item.append(evidencias);
-        } else item.append(this.n.criar('p', e.texto));
-        alvo.append(item);
-      }
-      if (!canal.interacoes.length) this.n.mensagem('orq-conversa', 'O card ainda não tem comentários.');
+      this.desenhar(canal.resumo, this.n.estado.carta);
     } catch (erro) { if (this.n.abortado(erro)) return; if (this.n.estado.carta?.id === id) this.n.mensagem('orq-conversa', `Canal indisponível: ${erro.message}`); }
+  }
+
+  desenhar(r, carta) {
+    const alvo = this.n.$('orq-conversa');
+    alvo.replaceChildren();
+    const data = q => (q ? new Date(q).toLocaleString('pt-BR') : '');
+    const bloco = (titulo, texto) => {
+      const caixa = this.n.criar('article', '', 'orq-interacao');
+      caixa.append(this.n.criar('strong', titulo));
+      for (const linha of String(texto).split('\n')) caixa.append(this.n.criar('p', linha));
+      alvo.append(caixa);
+    };
+    if (r.estado) bloco('Estado', r.estado);
+    else bloco('Descrição', r.descricao ?? '(sem descrição)');
+    if (r.feito) bloco('Feito e decidido', r.feito);
+    if (r.ultimoHandoff) bloco(`Último handoff · ${data(r.ultimoHandoff.quando)}`, `${r.ultimoHandoff.papel} · ${r.ultimoHandoff.resultado} · ${r.ultimoHandoff.resumo}`);
+    if (r.ultimoGate) bloco('Último gate', `${r.ultimoGate.gate} · ${data(r.ultimoGate.quando)}`);
+    const fio = r.fio;
+    const rodape = this.n.criar('p', `${fio.comentarios} comentário(s) no fio${fio.ultimo ? ` · último de ${fio.ultimo.autor} em ${data(fio.ultimo.quando)}` : ''}${fio.pedeCompactacao ? ` · ${fio.desdeCompactacao} desde a última compactação: pede COMPACTADO/v1` : ''}`, 'orq-ajuda');
+    alvo.append(rodape);
+    if (!r.estado) alvo.append(this.n.criar('p', 'A descrição ainda não tem o bloco "Estado" da compactação (PADROES-BACKLOG.md).', 'orq-ajuda'));
+    if (carta?.url) {
+      const link = this.n.criar('a', 'Abrir o fio inteiro no Plane ↗');
+      link.href = carta.url; link.target = '_blank'; link.rel = 'noopener';
+      alvo.append(link);
+    }
   }
 }
 

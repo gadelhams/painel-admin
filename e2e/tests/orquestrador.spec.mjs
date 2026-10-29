@@ -112,7 +112,11 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoModelosMs = 0, opcoe
         claude: { disponivel: false, motivo: 'fonte indisponível' },
         openai: { disponivel: false, motivo: 'fonte indisponível' },
       });
-      if (url.pathname === '/api/orquestracao/canal') return responder({ interacoes: [], handoffs: [] });
+      if (url.pathname === '/api/orquestracao/canal') return responder({ interacoes: [], handoffs: [], resumo: {
+        estado: 'Estado (29/10/2026): proxy em código, falta a unit.', feito: null, descricao: null, ultimoHandoff: null, ultimoGate: null,
+        fio: { comentarios: 3, desdeCompactacao: 3, pedeCompactacao: false, ultimo: null } } });
+      if (url.pathname === '/api/orquestracao/diario') return responder({ eventos: [
+        { quando: '2026-10-29T10:00:00Z', origem: 'vigilia', carta: 'PLAYER-38', tipo: 'AVANCO', de: 'READY TO DEV', para: 'READY TO TEST' }], total: 1, avisos: [] });
     }
     if (req.method() === 'POST' && url.pathname === '/api/orquestracao/modelos/validar') {
       return responder({ carta: 'PLAYER-38', impedimentosExecucao: ['portão real desligado'] });
@@ -341,6 +345,21 @@ test('cinco abas abrem sem chamada de escrita', async ({ page }) => {
     await expect(page.locator(`#aba-${aba}`)).toBeVisible();
   }
   await expect(page.locator('#aba-contas')).toContainText('Convidar');
+  expect(audit.chamadas.filter(c => c.metodo !== 'GET')).toEqual([]);
+  expect(audit.inesperadas).toEqual([]);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('resumo da carta e diário da frota: estado da descrição, link do Plane, eventos, sem escrita', async ({ page }) => {
+  const audit = await fixtures(page);
+  await abrirOrquestracao(page);
+  await page.locator('#orq-cartas button').filter({ hasText: 'PLAYER-38' }).click();
+  await page.locator('[data-orq-topico="conversa"]').click();
+  await expect(page.locator('#orq-conversa')).toContainText('Estado (29/10/2026): proxy em código');
+  await expect(page.locator('#orq-conversa')).toContainText('3 comentário(s) no fio');
+  await expect(page.locator('#orq-conversa a')).toHaveText(/Abrir o fio inteiro no Plane/);
+  await page.locator('[data-orq-topico="historico"]').click();
+  await expect(page.locator('#orq-historico')).toContainText('PLAYER-38 · AVANCO · READY TO DEV → READY TO TEST');
   expect(audit.chamadas.filter(c => c.metodo !== 'GET')).toEqual([]);
   expect(audit.inesperadas).toEqual([]);
   expect(audit.errosPagina).toEqual([]);

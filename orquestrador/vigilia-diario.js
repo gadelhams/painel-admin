@@ -3,6 +3,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { lerJsonl } from './leitor-jsonl.js';
 
 const DIA_MS = 24 * 60 * 60_000;
 
@@ -42,8 +43,10 @@ export class DiarioVigilia {
   }
 
   async linhas(id) {
-    try { return (await fs.readFile(this.eventos(id), 'utf8')).split('\n').filter(Boolean).map(JSON.parse); }
-    catch (e) { if (e.code === 'ENOENT') return []; throw new Error('diário da vigília ilegível'); }
+    let texto;
+    try { texto = await fs.readFile(this.eventos(id), 'utf8'); }
+    catch (e) { if (e.code === 'ENOENT') return []; throw e; }
+    return lerJsonl(texto, 'diário da vigília').linhas;
   }
 
   async tentativas24h(id) {

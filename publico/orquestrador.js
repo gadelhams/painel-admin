@@ -22,6 +22,7 @@ class PainelOrquestracao {
     if (nome === 'modelos') this.modelos.carregar();
     if (nome === 'consumo') this.consumo.carregar();
     if (nome === 'vigilia') this.vigilia.carregar();
+    if (nome === 'historico') this.fila.renderHistorico();
   }
 
   iniciar() {

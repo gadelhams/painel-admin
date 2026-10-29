@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { lerJsonl } from './leitor-jsonl.js';
 
 export class DiarioTouchpoints {
   constructor({ diretorio, agora }) {
@@ -13,8 +14,7 @@ export class DiarioTouchpoints {
     let texto;
     try { texto = await fs.readFile(this.log, 'utf8'); }
     catch (e) { if (e.code === 'ENOENT') return []; throw e; }
-    try { return texto.split('\n').filter(Boolean).map(JSON.parse).filter(x => x.cartaId === id); }
-    catch { throw new Error('touchpoints ilegíveis'); }
+    return lerJsonl(texto, 'touchpoints').linhas.filter(x => x.cartaId === id);
   }
 
   async anotar(evento) {

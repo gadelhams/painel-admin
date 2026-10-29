@@ -18,5 +18,5 @@ export async function lerCanalPlane({ consultar, projetoId, cartaId }) {
     interacoes.push(...pagina.results.map(normalizarInteracao));
     cursor = pagina.next_page_results ? pagina.next_cursor : null;
   } while (cursor);
-  return { cartaId, projetoId, fonte: 'Plane', interacoes };
+  return { cartaId, projetoId, fonte: 'Plane', descricaoHtml: typeof carta.description_html === 'string' ? carta.description_html : '', interacoes };
 }

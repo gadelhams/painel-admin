@@ -15,6 +15,7 @@ import { criarServicoOrquestracao } from './orquestrador/fila.js';
 import { criarTriagemDev } from './orquestrador/triagem.js';
 import { criarLeitorConsumo } from './orquestrador/consumo.js';
 import { criarFonteClaude } from './orquestrador/fonte-consumo-claude.js';
+import { criarLeitorDiarioFrota } from './orquestrador/diario-frota.js';
 import { criarFonteCodex } from './orquestrador/fonte-consumo-codex.js';
 import { criarEscritorPerfilPlane } from './orquestrador/perfil-plane.js';
 import { criarVerificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
@@ -156,7 +157,8 @@ const roteador = new RoteadorPainel({
     ssh: new LeituraSsh({ chave: CHAVE_SSH }),
   }),
   orquestracao: new RotasOrquestracao({
-    resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas, vigilia,
+    resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas,
+    lerDiarioFrota: criarLeitorDiarioFrota({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }), vigilia,
     apiPerfil, apiHandoff, apiGate, apiDespacho, apiVigilia, apiVoz,
     xai: () => Boolean(process.env.XAI_API_KEY),
   }),

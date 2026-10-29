@@ -357,8 +357,12 @@ sem escuta contínua ou ações do mock. Abre o console sem enviar mensagem ou
 acionar microfone. O filtro inicial exibe candidatas com gate; "Todas as
 cartas" revela as demais rejeições. A pré-checagem GET por carta consulta
 relações formais sob demanda sem criar lease ou escrever no Plane. Tópicos:
-Demanda, Conversa no card, Papéis e modelos, Consumo, Tentativas, **Canal
-legado (doc 59)** e **Vigília** — estes dois lidos só ao abrir o tópico. Leituras pesadas abortam a
+Demanda, **Resumo da carta** (bloco Estado da descrição, último handoff e gate, tamanho do fio
+e link para o Plane; `orquestrador/resumo-carta.js`, sem LLM), Papéis e modelos, Consumo, **Diário
+da frota** (projeção só-leitura de `touchpoints.jsonl` e dos diários da vigília por
+`orquestrador/diario-frota.js`, só campos estruturados; linha truncada no fim é ignorada e
+avisada, corrupção no meio falha fechada naquela fonte — `leitor-jsonl.js`) e **Vigília** —
+estes dois lidos só ao abrir o tópico. Leituras pesadas abortam a
 anterior (`AbortController` por tópico); resultado de gate/despacho confirmado
 sobrevive ao re-render (`estado.ultimoResultado`). Ver
 [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).

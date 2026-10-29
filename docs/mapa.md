@@ -114,6 +114,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-orq-canal.js` — Comentários do card.
 - `rotas-orq-consumo.js` — Cotas de assinatura.
 - `rotas-orq-despacho.js` — Preparar e confirmar o despacho.
+- `rotas-orq-diario.js` — Diário da frota: leitura só.
 - `rotas-orq-fila.js` — Fila, pré-checagem e simulação.
 - `rotas-orq-gate.js` — Preparar e confirmar a marca de gate.
 - `rotas-orq-handoff.js` — Preparar e confirmar o handoff.
@@ -166,6 +167,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `dependencias-worktree.js` — Instalação do worktree quando há lock e faltam os módulos.
 - `desafio-duas-acoes.js` — Esqueleto das duas ações privilegiadas: preparar guarda um desafio, confirmar o executa uma vez.
 - `despacho-servico.js` — Junta a checagem e a tentativa real.
+- `diario-frota.js` — Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho e diários da vigília).
 - `diario-touchpoints.js` — Diário JSONL dos touchpoints.
 - `erro-acesso.js` — Erro das ações privilegiadas.
 - `escritor-gate-plane.js` — Grava a etiqueta depois do comentário.
@@ -186,6 +188,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `handoff-servico.js` — Handoff no card.
 - `interacao-canal.js` — Forma de um comentário do card: texto visível e o cabeçalho ORQ/v1.
 - `isolamento-git.js` — Worktree e commit do ramo orq/.
+- `leitor-jsonl.js` — Linhas de um diário JSONL.
 - `marcas-carta.js` — Marcas da carta que os dois julgamentos leem.
 - `modelos.js` — A escolha explícita por carta/papel é vinculante para qualquer plano futuro.
 - `origem-privilegiada.js` — Recusa POST privilegiado que não venha da própria borda.
@@ -205,6 +208,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `registro-gate.js` — Marcação do gate no card.
 - `registro-perfil.js` — Registro do perfil no card.
 - `relacoes-formais.js` — Relações formais do Plane: blocked_by, start_after e finish_after.
+- `resumo-carta.js` — Resumo da carta para a aba: o estado que a descrição declara (compactação do fio, PADROES-BACKLOG.md), o último handoff e gate, e o tamanho do fio.
 - `resumo-fila.js` — Conta cartas por projeto e fecha o envelope da fila.
 - `retrato-cli.js` — Retrato do que a CLI devolveu.
 - `servico-orquestracao.js` — Liga leitura, despacho, gate, handoff e perfil.
@@ -307,11 +311,11 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 ## publico/orquestracao/
 
 - `consumo.js` — Medidores de consumo.
-- `conversa-canal.js` — Lê os comentários do card.
+- `conversa-canal.js` — Resumo da carta: o estado que a descrição declara, o último handoff e gate e o tamanho do fio.
 - `conversa-handoff.js` — Prepara e confirma o handoff.
 - `conversa.js` — Liga a leitura do card ao handoff em duas ações.
 - `demanda-carta.js` — Elegibilidade e dependências da carta selecionada.
-- `demanda-historico.js` — Lease, agentes e tentativas da carta selecionada.
+- `demanda-historico.js` — Diário da frota: o que cada droid fez, em que carta e com que resultado.
 - `demanda-portao.js` — Portão de execução da carta selecionada.
 - `demanda-prontidao.js` — Pré-checagem de gate da carta selecionada.
 - `despacho.js` — Preparar e confirmar o despacho.
@@ -344,6 +348,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `correcoes-auditoria.test.js` — Correções da auditoria de 23-24/10/2026: cada teste pina um mecanismo que a auditoria mostrou furado (mutação nomeada no título do caso).
 - `decisoes-c3po.test.js`
 - `despacho-controlado.test.js`
+- `diario-resumo.test.js`
 - `executor-cli.test.js` — Executor real com CLIs falsas: flags exatas, ambiente limpo, isolamento por worktree, timeout que mata o processo, e os três desfechos.
 - `fluxo-sse.test.js`
 - `gate-plane.test.js`
