@@ -19,8 +19,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
   identidade técnica (CKBL, PLAYER) por SSO + duas ações —
   [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
-- Despacho **desligado** (`ORQ_EXECUCAO_HABILITADA` ausente); executor
-  provado com CLIs falsas. Vigília: todas desligadas; só o PLAYER declara.
+- Executor **ligado** (29/10, piloto PAINEL-34): cada despacho por SSO +
+  duas ações; nenhum rodou ainda. Vigília: todas desligadas.
 
 ## O que falta
 
@@ -37,6 +37,6 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 228 testes + `check-docs` 0 erros (29/10); Playwright 23/23.
+- `npm test`: 229 testes + `check-docs` 0 erros (29/10); Playwright 23/23.
 - Um módulo por responsabilidade; mapa em `mapa.md`, conferido no `npm test`.
 - `main` no GitHub.
