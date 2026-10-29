@@ -59,8 +59,7 @@ descrição, ids dos comentários) → efeitos como DELTA (DONO ≡ ASTARGNE, no
 label único, recusa com lease ativo, aviso se a carta fica despachável) → HTML
 escapado montado e guardado no servidor.
 
-**Confirmar:** desafio "executando" + `comTrava` por carta (a mesma da vigília e
-do gate) → releitura sem cache, digital igual ou recusa sem escrita → ids
+**Confirmar:** desafio "executando" + `comTrava` (a trava é GLOBAL, um `.trava` só para toda a orquestração, quem espera desiste em ~60 s — validador 29/10: nunca segurar com CLI nem com muitas chamadas ao Plane) → releitura sem cache, digital igual ou recusa sem escrita → ids
 resolvidos de novo por nome → diário DECISAO_PENDENTE (padrão `registro-gate.js`)
 → comentário de INTENÇÃO `DECISAO/v1` (`external_source: painel-decisao-v1`,
 `external_id` = chave; timeout não segue) → diário COMENTARIO_GRAVADO →
