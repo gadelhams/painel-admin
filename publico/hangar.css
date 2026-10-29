@@ -144,7 +144,7 @@ body.hg-ativo main { max-width: none; padding: 10px 14px 12px; }
 .hg-fechar:hover { color: var(--hg-texto) !important; border-color: var(--hg-texto); }
 .hg-holo-fala { margin: 0; font-size: 13.5px; line-height: 1.45; border-left: 2px solid var(--hg-ouro); padding-left: 10px; min-height: 2.9em; }
 .hg-holo-corpo { display: grid; gap: 10px; }
-.hg-nativo { display: grid; gap: 6px; border-top: 1px solid rgba(172, 155, 129, .25); padding-top: 10px; }
+.hg-nativo { display: grid; gap: 6px; border: 1px solid rgba(172, 155, 129, .3); padding: 8px 10px; }
 .hg-nativo-linha { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; font-size: 13px; }
 .hg-nativo-linha label { display: flex; gap: 7px; align-items: center; cursor: pointer; }
 .hg-nativo-linha input { accent-color: var(--hg-ouro); width: 16px; height: 16px; }
