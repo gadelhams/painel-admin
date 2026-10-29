@@ -1,22 +1,36 @@
 // Catálogo fechado da frota (provedor → modelo → esforços) e os validadores dos dois blocos. Não lê nem grava arquivo.
 //
 // O catálogo mora no código de propósito (J6 do parecer de 29/10/2026): o navegador
-// nunca acrescenta modelo. O `max` do OpenAI não foi verificado na CLI, por isso fica fora.
+// nunca acrescenta modelo. Fonte de cada linha, conferida em 29/10/2026: o registro de
+// modelos do `claude` 2.1.284 (capacidades effort/xhigh_effort/max_effort) e o
+// `~/.codex/models_cache.json` do codex-cli 0.162.1 (modelos `list` da conta e os níveis
+// que cada um aceita). Atualizar a CLI pode trazer modelo novo: ele entra aqui, à mão.
 
 export const PAPEIS_EXECUTOR = Object.freeze(['orquestracao', 'codificacao_testes', 'validacao']);
 export const PAPEIS_ZELADOR = Object.freeze(['zelador']);
 
+const CLAUDE = Object.freeze(['low', 'medium', 'high', 'xhigh', 'max']);
+const OPENAI = Object.freeze(['low', 'medium', 'high', 'xhigh', 'max']);
+const OPENAI_ULTRA = Object.freeze([...OPENAI, 'ultra']);
+
 export const CATALOGO_FROTA = Object.freeze({
-  claude: Object.freeze({ 'claude-opus-5': Object.freeze(['low', 'medium', 'high', 'xhigh', 'max']) }),
-  openai: Object.freeze({ 'gpt-6-astra': Object.freeze(['low', 'medium', 'high', 'xhigh']) }),
+  claude: Object.freeze({
+    'claude-opus-5-5': CLAUDE, 'claude-fable-5-1': CLAUDE, 'claude-sonnet-5-5': CLAUDE,
+    'claude-opus-5': CLAUDE, 'claude-sonnet-5': CLAUDE,
+  }),
+  openai: Object.freeze({
+    'gpt-6.1-sol': OPENAI_ULTRA, 'gpt-6.1-terra': OPENAI_ULTRA, 'gpt-6-astra': OPENAI_ULTRA, 'gpt-6-sol': OPENAI_ULTRA,
+    'gpt-6-luna': OPENAI, 'gpt-5.6-sol': OPENAI_ULTRA, 'gpt-5.6-terra': OPENAI_ULTRA, 'gpt-5.6-luna': OPENAI,
+  }),
 });
 
 const NOMES_PROVEDOR = { claude: 'Claude', openai: 'OpenAI' };
 
-// Forma que os seletores do navegador já entendem (modelos-seletores.js).
+// Forma que os seletores do navegador já entendem (modelos-seletores.js). O padrão segue
+// `max`: o `ultra` do OpenAI só entra por escolha explícita.
 export function catalogoPublico() {
   return Object.entries(CATALOGO_FROTA).flatMap(([provedor, modelos]) => Object.entries(modelos).map(([modelo, esforcos]) => ({
-    provedor, nome: NOMES_PROVEDOR[provedor], modelo, esforcos: [...esforcos], esforcoPadrao: esforcos.at(-1), disponivel: true,
+    provedor, nome: NOMES_PROVEDOR[provedor], modelo, esforcos: [...esforcos], esforcoPadrao: esforcos.includes('max') ? 'max' : esforcos.at(-1), disponivel: true,
   })));
 }
 

@@ -57,6 +57,12 @@ async function fixtures(page) {
     if (url.pathname === '/api/orquestracao/voz') return json({ xai: false });
     if (url.pathname === '/api/orquestracao/frota') return json(frota);
     if (url.pathname === '/api/tts') return json({ disponivel: false });
+    // C-3PO simulado: nunca o LLM real em teste. Responde em SSE e devolve a sessão.
+    if (url.pathname === '/api/conversa' && req.method() === 'POST') {
+      chamadas.at(-1).corpo = req.postDataJSON();
+      const sse = (evento, dados) => `event: ${evento}\ndata: ${JSON.stringify(dados)}\n\n`;
+      return route.fulfill({ status: 200, contentType: 'text/event-stream', body: sse('inicio', { sessao: 'sessao-teste' }) + sse('token', { texto: 'Oh, céus! ' }) + sse('token', { texto: 'A nave <b>alfa</b> vai bem.' }) + sse('fim', { sessao: 'sessao-teste' }) });
+    }
     return json({});
   });
   return { chamadas, errosPagina };
@@ -138,5 +144,30 @@ test('fábrica mostra a frota atual em leitura no popup do C-3PO, sem editar nem
   await expect(page.locator('#hg-holo-corpo')).toContainText('claude/claude-opus-5/medium');
   await expect(page.locator('#hg-holo-corpo select, #hg-holo-corpo input')).toHaveCount(0);
   expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('popup do C-3PO conversa sobre o objeto clicado: contexto na pergunta, resposta em texto e sessão do /c3po/', async ({ page }) => {
+  const audit = await fixtures(page);
+  await page.goto('/');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-holo')).toBeVisible();
+  await page.fill('#hg-conversa-pergunta', 'O que falta nesta nave?');
+  await page.locator('#hg-conversa-enviar').click();
+  await expect(page.locator('#hg-conversa-resp .hg-conversa-c3po')).toHaveText('Oh, céus! A nave <b>alfa</b> vai bem.');
+  await expect(page.locator('#hg-conversa-resp b')).toHaveCount(0);
+  await expect(page.locator('#hg-conversa-resp .hg-conversa-eu')).toHaveText('O que falta nesta nave?');
+  const escritas = audit.chamadas.filter((c) => c.metodo !== 'GET');
+  expect(escritas.map((c) => c.caminho)).toEqual(['/api/conversa']);
+  expect(escritas[0].corpo.mensagem).toMatch(/^\[No Hangar do painel, olhando: C-3PO · .*alfa.*\] O que falta nesta nave\?$/);
+  expect(await page.evaluate(() => sessionStorage.getItem('c3po-sessao'))).toBe('sessao-teste');
+  // Segunda pergunta leva a sessão; trocar de objeto limpa a resposta.
+  await page.fill('#hg-conversa-pergunta', 'E agora?');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#hg-conversa-resp .hg-conversa-c3po')).toHaveCount(2);
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET')[1].corpo.sessao).toBe('sessao-teste');
+  await page.locator('#hg-projetos [data-proj="beta"]').click();
+  await expect(page.locator('#hg-conversa-resp')).toBeHidden();
+  await expect(page.locator('a.hg-conversa-mais')).toHaveAttribute('href', '/c3po/');
   expect(audit.errosPagina).toEqual([]);
 });

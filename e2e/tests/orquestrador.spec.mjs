@@ -233,7 +233,7 @@ test('Frota: mostra a v3, quatro papéis e os seletores partem dela, sem escrita
   expect(audit.errosPagina).toEqual([]);
 });
 
-test('Frota: modelo depende do provedor e esforço depende do modelo; o max do OpenAI não aparece', async ({ page }) => {
+test('Frota: modelo depende do provedor e esforço depende do modelo; a tela só oferece o que o catálogo do servidor manda', async ({ page }) => {
   const catalogo = [...CATALOGO, { provedor: 'openai', modelo: 'gpt-6-sol', esforcoPadrao: 'xhigh', esforcos: ['medium', 'xhigh'], disponivel: true }];
   const audit = await fixtures(page, { preparar: 'simulado', catalogo });
   await abrirFrota(page);

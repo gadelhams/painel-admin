@@ -34,11 +34,15 @@ async function comServico(f) {
   finally { await fs.rm(raiz, { recursive: true, force: true }); }
 }
 
-test('J6: catálogo fechado — modelo, esforço ou provedor fora dele é recusado; o max do OpenAI não entra', () => {
-  assert.deepEqual(catalogoPublico().map(x => `${x.provedor}/${x.modelo}`), ['claude/claude-opus-5', 'openai/gpt-6-astra']);
+test('J6: catálogo fechado — modelo, esforço ou provedor fora dele é recusado', () => {
+  const publico = catalogoPublico();
+  assert.deepEqual(publico.filter(x => x.provedor === 'claude').map(x => x.modelo),
+    ['claude-opus-5-5', 'claude-fable-5-1', 'claude-sonnet-5-5', 'claude-opus-5', 'claude-sonnet-5']);
+  assert.equal(publico.filter(x => x.provedor === 'openai').length, 8);
+  assert.ok(publico.every(x => x.esforcoPadrao === 'max'), 'o padrão continua max; ultra só por escolha');
   assert.doesNotThrow(() => validarConteudoFrota(conteudoFrota()));
-  for (const ruim of [{ provedor: 'claude', modelo: 'claude-inventado', esforco: 'max' }, { provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'max' },
-    { provedor: 'grok', modelo: 'grok-5', esforco: 'high' }, { ...tupla(), extra: 1 }]) {
+  for (const ruim of [{ provedor: 'claude', modelo: 'claude-inventado', esforco: 'max' }, { provedor: 'openai', modelo: 'gpt-6-luna', esforco: 'ultra' },
+    { provedor: 'claude', modelo: 'claude-opus-5-5', esforco: 'ultra' }, { provedor: 'grok', modelo: 'grok-5', esforco: 'high' }, { ...tupla(), extra: 1 }]) {
     assert.throws(() => validarConteudoFrota(conteudoFrota({ validacao: ruim })), /fora do catálogo para validacao/);
   }
 });
@@ -64,7 +68,7 @@ test('J5: a leitura diz o estado — ausente, ilegível, inválida (forma, hash,
     await fs.writeFile(path.join(diretorio, 'frota.json'), JSON.stringify(bom));
     assert.equal((await arquivo.ler()).estado, 'ok');
     for (const ruim of [[], { ...bom, extra: 1 }, { ...bom, versao: 0 }, { ...bom, hash: 'f'.repeat(64) },
-      { ...bom, conteudo: conteudoFrota({ validacao: { provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'max' } }) }]) {
+      { ...bom, conteudo: conteudoFrota({ validacao: { provedor: 'openai', modelo: 'gpt-6-luna', esforco: 'ultra' } }) }]) {
       await fs.writeFile(path.join(diretorio, 'frota.json'), JSON.stringify(ruim));
       const lida = await arquivo.ler();
       assert.equal(lida.estado, 'invalida', JSON.stringify(ruim).slice(0, 60));
@@ -98,13 +102,13 @@ test('J4: preparar não grava; confirmar com versão-base velha recusa sem escri
     const visto = await servico.estadoFrota();
     assert.equal(visto.marca, `ok:2:${r3.hash}`, 'a marca sai na API: é a versão que o dono viu (J-B)');
     assert.equal(visto.versao, 2);
-    assert.equal(visto.catalogo.length, 2);
+    assert.equal(visto.catalogo.length, 13);
   });
 });
 
 test('J6: preparar recusa modelo fora do catálogo antes de criar desafio', async () => {
   await comServico(async ({ arquivo, preparar }) => {
-    await assert.rejects(preparar(conteudoFrota({ codificacao_testes: { provedor: 'openai', modelo: 'gpt-6-astra', esforco: 'max' } })),
+    await assert.rejects(preparar(conteudoFrota({ codificacao_testes: { provedor: 'openai', modelo: 'gpt-6-luna', esforco: 'ultra' } })),
       e => e.status === 422 && /fora do catálogo para codificacao_testes/.test(e.message));
     await assert.rejects(preparar({ executor: { ...conteudoFrota().executor, zelador: tupla() }, zelador: conteudoFrota().zelador }),
       e => e.status === 422 && /zelador não pertence ao bloco executor/.test(e.message));

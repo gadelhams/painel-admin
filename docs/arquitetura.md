@@ -94,8 +94,9 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
 
 **Frota** (F2, 29/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md)).
 Uma configuração só, no lugar do perfil por carta: `frota-catalogo.js` (catálogo
-fechado no código — Claude `claude-opus-5` low…max, OpenAI `gpt-6-astra`
-low…xhigh, sem o `max` não verificado — e dois validadores separados: bloco
+fechado no código, copiado do que cada CLI declara — 5 modelos Claude low…max e
+8 OpenAI low…max, `ultra` onde o Codex aceita; o padrão da tela é `max` — e dois
+validadores separados: bloco
 `executor` com os três papéis e bloco `zelador`), `frota.js` (`frota.json` em
 `~/.local/state/painel-admin/orquestracao/`, gravado com tmp + rename; versão =
 inteiro crescente + sha256 do conteúdo; `frota-historico.jsonl` só de acréscimo,
@@ -534,6 +535,14 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
 - **Frota em leitura.** A fábrica (cena ou lista lateral) abre o popup com a
   frota atual (`GET /api/orquestracao/frota`, lida junto com `/api/hangar`);
   trocar é só na sub-aba Frota.
+- **Conversa no popup** (`conversa.js`, 29/10/2026). Todo popup tem a caixa
+  "Pergunte ao C-3PO sobre isto": a pergunta vai a `POST /api/conversa` com o
+  olho e o título do popup na frente, como texto (o C-3PO não vê a cena), e a
+  resposta em SSE entra como texto puro. A sessão é a `c3po-sessao` do
+  `sessionStorage`, a mesma do `/c3po/`, que continua a conversa com voz. O
+  parser de SSE é o de `c3po/fluxo-sse.js`, importado como módulo. Trocar de
+  objeto ou fechar o popup aborta a resposta em curso. A rota tem o mesmo
+  risco aberto do `/c3po/` (sem SSO, `docs/invariants.md`).
 
 #### vendor/mermaid.min.js
 

@@ -13,18 +13,19 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   13 projetos no Plane, 15 no catálogo.
 - **Hangar** (28/10) é a entrada: naves = projetos (peça = módulo do Plane),
   droids = sessões Claude/Codex vivas (`/proc` + transcripts, só ferramenta e
-  arquivo), C-3PO narrando — [arquitetura.md](arquitetura.md) § Hangar.
+  arquivo), C-3PO narrando e respondendo no popup (29/10) —
+  [arquitetura.md](arquitetura.md) § Hangar.
 - Abas: Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs.
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
-  identidade técnica (CKBL, PLAYER) por SSO + duas ações; canal legado em
-  leitura — [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
+  identidade técnica (CKBL, PLAYER) por SSO + duas ações —
+  [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
 - Despacho **desligado** (`ORQ_EXECUCAO_HABILITADA` ausente); executor
   provado com CLIs falsas. Vigília: todas desligadas; só o PLAYER declara.
 
 ## O que falta
 
-- **Frota**: F2 feita (modelos numa frota só, por SSO; sem frota
-  gravada nada despacha); falta F3 ([plano](plano-frota-do-hangar.md)).
+- **Frota**: F2 feita (modelos numa frota só, por SSO; catálogo com 13
+  modelos das duas CLIs; sem frota gravada nada despacha); falta F3 ([plano](plano-frota-do-hangar.md)).
 - **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
   carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
 - **Consumo** (PAINEL-40): Codex pelas sessões, Claude pela statusLine (29/10).
@@ -36,7 +37,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 220 testes + `check-docs` 0 erros (29/10); Playwright 21/21.
+- `npm test`: 220 testes + `check-docs` 0 erros (29/10); Playwright 22/22.
 - Um módulo por responsabilidade (27–28/10); mapa gerado em `mapa.md`,
   conferido no `npm test`.
-- Orquestrador em `b7d59fb`, Chaves em `b986385`; `main` no GitHub.
+- `main` no GitHub.

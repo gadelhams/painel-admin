@@ -54,7 +54,7 @@ test('plano vem da frota congelada; provedor desligado no contrato para sem fall
   assert.deepEqual(plano.frota, { versao: 3, hash: 'a'.repeat(64) });
   assert.equal(plano.fallback, false);
   assert.throws(() => prepararPlanoFrota(ativo, { ...congelada, tuplas: { ...tuplas, validacao: undefined } }), /fora do catálogo/);
-  assert.throws(() => prepararPlanoFrota(ativo, { ...congelada, tuplas: { ...tuplas, validacao: { ...tuplas.validacao, esforco: 'max', provedor: 'openai', modelo: 'gpt-6-astra' } } }), /fora do catálogo/);
+  assert.throws(() => prepararPlanoFrota(ativo, { ...congelada, tuplas: { ...tuplas, validacao: { ...tuplas.validacao, esforco: 'ultra', provedor: 'openai', modelo: 'gpt-6-luna' } } }), /fora do catálogo/);
   const apenasClaude = { agentes: [ativo.agentes[0], { ...ativo.agentes[1], disponivel: false }] };
   assert.throws(() => prepararPlanoFrota(apenasClaude, congelada), /openai desligado no contrato para codificacao_testes/);
   assert.throws(() => prepararPlanoFrota(ativo, null), /sem fallback/);

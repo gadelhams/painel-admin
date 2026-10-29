@@ -116,6 +116,14 @@
             </div>
             <p class="hg-holo-fala" id="hg-holo-fala"></p>
             <div class="hg-holo-corpo" id="hg-holo-corpo"></div>
+            <form class="hg-conversa" id="hg-conversa" autocomplete="off">
+              <div class="hg-conversa-resp" id="hg-conversa-resp" aria-live="polite" hidden></div>
+              <div class="hg-conversa-linha">
+                <input type="text" name="pergunta" id="hg-conversa-pergunta" maxlength="2000" placeholder="Pergunte ao C-3PO sobre isto" aria-label="Pergunta ao C-3PO sobre o que está aberto">
+                <button type="submit" id="hg-conversa-enviar">Perguntar</button>
+              </div>
+              <a href="/c3po/" class="hg-conversa-mais">continuar a conversa no C-3PO, com voz</a>
+            </form>
           </section>
           <div class="hg-narrador" id="hg-narrador" aria-live="polite">
             <a href="/c3po/" class="hg-retrato-link" title="Conversar com o C-3PO"><svg class="hg-retrato" aria-hidden="true"><use href="#hg-c3po"/></svg></a>

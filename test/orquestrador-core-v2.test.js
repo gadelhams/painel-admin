@@ -131,7 +131,7 @@ test('prévia de CLI conserva modelo e esforço do plano, sem fallback ou spawn'
   assert.deepEqual(argumentosModeloCli(plano, 'validacao').argumentos, ['--model', 'claude-opus-5', '--effort', 'high']);
   assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, codificacao_testes: { ...papeis.codificacao_testes, modelo: 'gpt-6-other' } } },
     'codificacao_testes'), /fora do catálogo/);
-  assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, codificacao_testes: { ...papeis.codificacao_testes, esforco: 'max' } } },
+  assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, codificacao_testes: { ...papeis.codificacao_testes, modelo: 'gpt-6-luna', esforco: 'ultra' } } },
     'codificacao_testes'), /fora do catálogo/);
   assert.throws(() => argumentosModeloCli(plano, 'desconhecido'), /papel/);
   assert.throws(() => argumentosModeloCli({ papeis: { ...papeis, zelador: papeis.orquestracao } }, 'zelador'), /papel/);

@@ -144,6 +144,20 @@ body.hg-ativo main { max-width: none; padding: 10px 14px 12px; }
 .hg-fechar:hover { color: var(--hg-texto) !important; border-color: var(--hg-texto); }
 .hg-holo-fala { margin: 0; font-size: 13.5px; line-height: 1.45; border-left: 2px solid var(--hg-ouro); padding-left: 10px; min-height: 2.9em; }
 .hg-holo-corpo { display: grid; gap: 10px; }
+.hg-conversa { display: grid; gap: 6px; border-top: 1px solid rgba(172, 155, 129, .25); padding-top: 10px; }
+.hg-conversa-resp { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; font-size: 13px; line-height: 1.45; scrollbar-width: thin; }
+.hg-conversa-resp p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.hg-conversa-eu { color: var(--hg-apagado); }
+.hg-conversa-eu::before { content: 'Você: '; color: var(--hg-ouro); }
+.hg-conversa-c3po { border-left: 2px solid var(--hg-ouro); padding-left: 10px; }
+.hg-conversa-c3po.hg-pensando { color: var(--hg-apagado); font-style: italic; }
+.hg-conversa-erro { color: var(--falha, #e5484d); }
+.hg-conversa-linha { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.hg-conversa-linha input { min-width: 0; background: rgba(0, 0, 0, .35); color: var(--hg-texto); border: 1px solid rgba(172, 155, 129, .4); padding: 6px 8px; font: inherit; font-size: 13px; }
+.hg-conversa-linha input:focus { outline: 1px solid var(--cor); }
+.hg-conversa-linha button { background: transparent; color: var(--hg-ouro); border: 1px solid var(--hg-ouro); padding: 6px 10px; font: 600 12px/1 var(--hg-f-titulo); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.hg-conversa-linha button:disabled { opacity: .5; cursor: progress; }
+.hg-conversa-mais { font-size: 11.5px; color: var(--hg-apagado); justify-self: end; }
 .hg-medidor { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 1px solid var(--hg-linha); padding: 7px 10px; --cor: var(--hg-realce); }
 .hg-holo .hg-medidor { --cor: inherit; }
 .hg-medidor span { font: 500 12px var(--hg-f-mono); color: var(--hg-apagado); }
