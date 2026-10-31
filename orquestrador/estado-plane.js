@@ -10,28 +10,31 @@ export function criarEscritorEstadoPlane({ chave, projetoPermitido, autorEsperad
   apiBase = process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095', fetchImpl = fetch }) {
   if (!chave || !UUID.test(projetoPermitido ?? '') || !UUID.test(autorEsperado ?? '')) throw new Error('identidade de escrita restrita ausente');
   const prefixo = `${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/`;
-  async function pedir(caminho, opcoes = {}) {
+  // `chave` pode ser função (identidade do catálogo): uma cópia por operação (J56).
+  const chaveDaOperacao = async () => (typeof chave === 'function' ? chave() : chave);
+  async function pedir(k, caminho, opcoes = {}) {
     const r = await fetchImpl(`${prefixo}${caminho}`, { ...opcoes, redirect: 'error',
-      headers: { 'X-API-Key': chave, ...(opcoes.body ? { 'content-type': 'application/json' } : {}) },
+      headers: { 'X-API-Key': k, ...(opcoes.body ? { 'content-type': 'application/json' } : {}) },
       signal: AbortSignal.timeout(15_000) });
     if (!r.ok) throw new Error(`Plane recusou a mudança de estado (HTTP ${r.status})`);
     return r.json();
   }
   return async ({ projetoId, cartaId, grupo, versaoCarta, removerEtiqueta = null }) => {
+    const k = await chaveDaOperacao();
     if (projetoId !== projetoPermitido || !UUID.test(cartaId ?? '') || !GRUPOS.has(grupo)) throw new Error('mudança de estado fora do escopo da identidade de escrita');
-    const estados = await pedir('states/?per_page=100');
+    const estados = await pedir(k, 'states/?per_page=100');
     const candidatos = (estados.results ?? []).filter(e => e.group === grupo && UUID.test(e.id ?? ''));
     const alvo = candidatos.find(e => PREFERIDOS[grupo].includes(e.name)) ?? candidatos[0];
     if (!alvo) throw new Error(`projeto sem estado do grupo ${grupo}`);
-    const carta = await pedir(`work-items/${cartaId}/?expand=labels`);
+    const carta = await pedir(k, `work-items/${cartaId}/?expand=labels`);
     if (carta.id !== cartaId || carta.updated_at !== versaoCarta) throw new Error('carta mudou; releia antes de mudar o estado');
     const corpo = { state: alvo.id };
     if (removerEtiqueta) {
       if (!Array.isArray(carta.labels)) throw new Error('etiquetas da carta ilegíveis');
       corpo.labels = carta.labels.filter(x => x.name !== removerEtiqueta).map(x => x.id);
     }
-    await pedir(`work-items/${cartaId}/`, { method: 'PATCH', body: JSON.stringify(corpo) });
-    const verificada = await pedir(`work-items/${cartaId}/?expand=labels`);
+    await pedir(k, `work-items/${cartaId}/`, { method: 'PATCH', body: JSON.stringify(corpo) });
+    const verificada = await pedir(k, `work-items/${cartaId}/?expand=labels`);
     const estadoAtual = typeof verificada.state === 'string' ? verificada.state : verificada.state?.id;
     if (verificada.id !== cartaId || estadoAtual !== alvo.id ||
         (removerEtiqueta && (verificada.labels ?? []).some(x => x.name === removerEtiqueta))) {

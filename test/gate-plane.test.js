@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { avaliarProntidaoGate } from '../orquestrador/politica.js';
-import { codificarGate, gatesDoCanal, criarEscritorGatePlane } from '../orquestrador/gate-plane.js';
+import { codificarGate, gatesDoCanal, lerGatesDoCanal, criarEscritorGatePlane } from '../orquestrador/gate-plane.js';
 import { normalizarInteracao } from '../orquestrador/canal-plane.js';
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarEstadoOrquestracao } from '../orquestrador/estado.js';
@@ -34,11 +34,13 @@ test('prontidão do gate não é despacho; dois gates, dependência e decisão h
 
 test('comentário de gate exige autoria esperada e evidencia versão/idempotência', () => {
   const html = codificarGate({ projetoId: PROJETO, cartaId: CARTA, chaveIdempotencia: CHAVE, versaoCarta: VERSAO, ...proposta });
-  const confiavel = normalizarInteracao({ id: COMENTARIO, actor: AUTOR, comment_html: html });
-  const falso = normalizarInteracao({ id: OUTRO, actor: OUTRO, comment_html: html });
+  const confiavel = normalizarInteracao({ id: COMENTARIO, actor: AUTOR, comment_html: html, external_source: 'orquestrador-gate-v1', edited_at: null });
+  const falso = normalizarInteracao({ id: OUTRO, actor: OUTRO, comment_html: html, external_source: 'orquestrador-gate-v1' });
   assert.equal(gatesDoCanal([falso, confiavel], { projetoId: PROJETO, cartaId: CARTA, autorId: AUTOR }).length, 1);
   assert.equal(gatesDoCanal([confiavel], { projetoId: PROJETO, cartaId: CARTA, autorId: AUTOR })[0].gate, proposta.gate);
-  assert.throws(() => gatesDoCanal([confiavel], { projetoId: OUTRO, cartaId: CARTA, autorId: AUTOR }), /não confere/);
+  // Desde a F4a (J54) o recibo que não confere fica de fora e é anotado, sem derrubar a leitura.
+  assert.deepEqual(lerGatesDoCanal([confiavel], { projetoId: OUTRO, cartaId: CARTA, autorId: AUTOR }),
+    { gates: [], ignorados: [{ comentarioId: COMENTARIO, motivo: 'não confere com a carta' }] });
   assert.doesNotMatch(codificarGate({ projetoId: PROJETO, cartaId: CARTA, chaveIdempotencia: CHAVE, versaoCarta: VERSAO,
     ...proposta, justificativa: '<script>alert(1)</script>' }), /<script>/);
 });

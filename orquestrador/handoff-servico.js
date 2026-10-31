@@ -44,7 +44,8 @@ export class HandoffServico {
       const repetido = anteriores.find(h => h.chaveIdempotencia === chaveIdempotencia);
       if (repetido) {
         if (JSON.stringify({ papel: repetido.papel, tentativaId: repetido.tentativaId, resultado: repetido.resultado,
-          resumo: repetido.resumo, evidencia: repetido.evidencia, origemModelos: repetido.origemModelos }) !== JSON.stringify(dados.entrada)) {
+          resumo: repetido.resumo, evidencia: repetido.evidencia, origemModelos: repetido.origemModelos,
+          origemDespacho: repetido.origemDespacho ?? null, origemGate: repetido.origemGate ?? null }) !== JSON.stringify(dados.entrada)) {
           throw new Error('chave de idempotência usada com outro handoff');
         }
         return { carta: dados.carta, persistido: true, duplicado: true, comentarioId: repetido.comentarioId };

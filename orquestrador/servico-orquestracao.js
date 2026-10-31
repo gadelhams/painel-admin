@@ -20,7 +20,7 @@ import { EstadoCarta } from './estado-carta.js';
 export class ServicoOrquestracao {
   constructor({ consultar, raiz = RAIZ, estado = criarEstadoOrquestracao({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }),
     escritorHandoff = null, escritorGate = null, projetoEscrita = null, autorEscrita = null,
-    identidadesEscrita = {}, executor = null, execucaoHabilitada = false, agora = Date.now, frota = null, pausasFrota = null } = {}) {
+    identidadesEscrita = {}, situacaoIdentidade = null, cartaReservada = null, executor = null, execucaoHabilitada = false, agora = Date.now, frota = null, pausasFrota = null } = {}) {
     this.consultar = consultar;
     this.raiz = raiz;
     this.estado = estado;
@@ -31,6 +31,10 @@ export class ServicoOrquestracao {
     this.frota = frota ?? new ArquivoFrota({ diretorio: estado.diretorio, agora });
     this.pausasFrota = pausasFrota ?? new PausasFrota({ diretorio: estado.diretorio, agora });
     this.identidades = new Map(Object.entries(identidadesEscrita));
+    // Conferência de arranque (J56): sem ela (testes que injetam a identidade pronta), vale a entrada.
+    this.lerSituacaoIdentidade = situacaoIdentidade;
+    // Reserva viva de outra sessão (porta reservas.js, item 9): a fila marca a carta impedida.
+    this.cartaReservada = cartaReservada;
     if (projetoEscrita && autorEscrita) {
       if (this.identidades.has(projetoEscrita)) throw new Error('identidade de escrita duplicada para o projeto');
       this.identidades.set(projetoEscrita, { escritorHandoff, escritorGate, autorEscrita });
@@ -46,7 +50,12 @@ export class ServicoOrquestracao {
   }
 
   identidade(projetoId) {
+    if (this.lerSituacaoIdentidade && this.lerSituacaoIdentidade(projetoId)?.estado !== 'ok') return null;
     return this.identidades.get(projetoId) ?? null;
+  }
+
+  situacaoIdentidade(projetoId) {
+    return this.lerSituacaoIdentidade?.(projetoId) ?? null;
   }
 
   podeDespachar(projetoId) {
@@ -101,6 +110,7 @@ export function criarServicoOrquestracao(opcoes) {
     mudarEstado: (a, b, c, d, e) => s.mudarEstado(a, b, c, d, e),
     contrato: (id) => s.contrato(id),
     podeDespachar: (id) => s.podeDespachar(id),
+    identidade: (id) => s.identidade(id),
     lerHistorico: (id) => s.estado.lerHistorico(id),
     recuperarInterrupcoes: () => s.estado.recuperarInterrupcoes(),
   };

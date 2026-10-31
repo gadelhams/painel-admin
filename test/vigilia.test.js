@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { criarEstadoOrquestracao } from '../orquestrador/estado.js';
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { codificarGate } from '../orquestrador/gate-plane.js';
+import { atividadesDoCaminhoFeliz } from './fixtures/recibo-gate.js';
 import { criarVigilia } from '../orquestrador/vigilia.js';
 import { PlayHangar } from '../orquestrador/play.js';
 import { criarConfirmacoesPlay, criarApiPlay } from '../orquestrador/api-play.js';
@@ -68,7 +69,7 @@ async function ambiente({ executar, contrato = contratoBase, agora, frota = FROT
     const c = { id, sequence_id: seq, name: `Carta ${seq}`, parent: null, state: { name: nome, group: grupo },
       labels: gate ? [{ id: `label-${gate}`, name: gate }] : [], description_html: '<p>Sem dependências.</p>', updated_at: bump() };
     cards.push(c); comentarios.set(id, []);
-    if (gate && recibo) comentarios.get(id).push({ id: randomUUID(), actor: AUTOR, created_at: c.updated_at,
+    if (gate && recibo) comentarios.get(id).push({ id: randomUUID(), actor: AUTOR, created_at: c.updated_at, external_source: 'orquestrador-gate-v1', edited_at: null,
       comment_html: codificarGate({ projetoId: PROJETO, cartaId: id, chaveIdempotencia: randomUUID(), versaoCarta: c.updated_at,
         gate, justificativa: 'Escopo e dependências revisados.', evidencias: ['Sem dependências formais, declarado na carta.'] }) });
     return c;
@@ -77,6 +78,8 @@ async function ambiente({ executar, contrato = contratoBase, agora, frota = FROT
     if (url.startsWith('/projects/?')) return { results: [{ id: PROJETO, name: 'Painel', identifier: 'PAINEL' }] };
     if (url.includes('/work-items/?')) return { results: cards.map(c => ({ ...c })) };
     if (url.includes('/relations/')) return { blocked_by: [] };
+    const atv = /\/work-items\/([0-9a-f-]{36})\/activities\//.exec(url);
+    if (atv) { const c = cards.find(x => x.id === atv[1]); return atividadesDoCaminhoFeliz(c, comentarios.get(c.id) ?? [], AUTOR); }
     const m = /\/work-items\/([0-9a-f-]{36})\/(comments\/)?/.exec(url);
     if (m && m[2]) return { results: comentarios.get(m[1]) ?? [], next_page_results: false };
     if (m) { const c = cards.find(x => x.id === m[1]); return { id: c.id, updated_at: c.updated_at, name: c.name, description_html: c.description_html, labels: c.labels, state: c.state }; }
@@ -84,7 +87,8 @@ async function ambiente({ executar, contrato = contratoBase, agora, frota = FROT
   };
   const escritas = [];
   const falhas = { estado: false };
-  const comentar = (cartaId, html) => { const id = randomUUID(); comentarios.get(cartaId).push({ id, actor: AUTOR, created_at: bump(), comment_html: html }); cards.find(c => c.id === cartaId).updated_at = bump(); return id; };
+  const comentar = (cartaId, html) => { const id = randomUUID(); comentarios.get(cartaId).push({ id, actor: AUTOR, created_at: bump(), comment_html: html,
+    external_source: html.includes('GATE/v1 ') ? 'orquestrador-gate-v1' : 'orquestrador-handoff-v1', edited_at: null }); cards.find(c => c.id === cartaId).updated_at = bump(); return id; };
   const identidadesEscrita = { [PROJETO]: { autorEscrita: AUTOR,
     escritorHandoff: async ({ cartaId, html }) => { escritas.push('handoff'); return comentar(cartaId, html); },
     escritorGate: async ({ cartaId, gate, html, remover }) => {

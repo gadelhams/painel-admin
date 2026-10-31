@@ -18,7 +18,7 @@ export function criarConfirmacoesDespacho({ servico, agora }) {
           aviso: 'Confirmar iniciará uma tentativa real somente se todos os portões ainda passarem e a frota for a mesma. Não há fallback de modelo.' } };
     },
     executar: (g, identidade) => servico.iniciarDespacho({ cartaId: g.carta, comandoId: g.comando, versaoCarta: g.versaoCarta,
-      frotaVersao: g.frotaVersao, frotaHash: g.frotaHash, chaveIdempotencia: g.chaveIdempotencia, usuarioId: identidade.usuarioId }),
+      frotaVersao: g.frotaVersao, frotaHash: g.frotaHash, chaveIdempotencia: g.chaveIdempotencia, usuarioId: identidade.usuarioId, origemDespacho: 'dono' }),
   });
 }
 

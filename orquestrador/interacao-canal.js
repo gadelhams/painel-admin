@@ -21,6 +21,9 @@ export function normalizarInteracao(comentario) {
     autor: comentario.actor?.display_name ?? comentario.actor?.name ?? comentario.created_by?.display_name ?? 'autor não identificado',
     autorId: typeof comentario.actor === 'string' ? comentario.actor : comentario.actor?.id ??
       (typeof comentario.created_by === 'string' ? comentario.created_by : comentario.created_by?.id ?? null),
+    // Proveniência do recibo (J54, J74): a fonte externa gravada pelo escritor e a edição posterior.
+    fonteExterna: typeof comentario.external_source === 'string' ? comentario.external_source : null,
+    editadoEm: comentario.edited_at ?? null,
     papel: cabecalho?.[1]?.toLowerCase() ?? 'geral',
     tentativaId: cabecalho?.[2] ?? null,
     texto: cabecalho ? bruto.slice(cabecalho[0].length).trim() : bruto,

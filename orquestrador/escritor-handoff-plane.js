@@ -6,11 +6,13 @@ export function criarEscritorHandoffPlane({ chave, projetoPermitido, autorEspera
   apiBase = process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095', fetchImpl = fetch }) {
   if (!chave || !UUID.test(projetoPermitido ?? '') || !UUID.test(autorEsperado ?? '')) throw new Error('identidade de escrita restrita ausente');
   return async ({ projetoId, cartaId, html, chaveIdempotencia }) => {
+    // `chave` pode ser função (identidade do catálogo): uma cópia por operação (J56).
+    const k = typeof chave === 'function' ? await chave() : chave;
     if (projetoId !== projetoPermitido || !UUID.test(cartaId ?? '') || !UUID.test(chaveIdempotencia ?? '')) {
       throw new Error('projeto ou carta fora do escopo da identidade de escrita');
     }
     const resposta = await fetchImpl(`${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/work-items/${cartaId}/comments/`, {
-      method: 'POST', redirect: 'error', headers: { 'X-API-Key': chave, 'content-type': 'application/json' },
+      method: 'POST', redirect: 'error', headers: { 'X-API-Key': k, 'content-type': 'application/json' },
       body: JSON.stringify({ comment_html: html, external_source: 'orquestrador-handoff-v1', external_id: chaveIdempotencia }),
       signal: AbortSignal.timeout(15_000),
     });
@@ -18,7 +20,7 @@ export function criarEscritorHandoffPlane({ chave, projetoPermitido, autorEspera
     if (resposta.status === 409 && UUID.test(comentario?.id ?? '')) {
       // 409 com id = external_id já gravado no card: a escrita anterior chegou; relê para conferir autoria.
       const releitura = await fetchImpl(`${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/work-items/${cartaId}/comments/${comentario.id}/`,
-        { redirect: 'error', headers: { 'X-API-Key': chave }, signal: AbortSignal.timeout(15_000) });
+        { redirect: 'error', headers: { 'X-API-Key': k }, signal: AbortSignal.timeout(15_000) });
       if (!releitura.ok) throw new Error('Plane recusou o handoff (HTTP 409 sem releitura)');
       comentario = await releitura.json();
     } else if (!resposta.ok) throw new Error(`Plane recusou o handoff (HTTP ${resposta.status})`);

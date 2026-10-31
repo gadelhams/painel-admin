@@ -19,6 +19,9 @@ export function comandoEstaticoSeguro(comando) {
   return a.length === 1 && SCRIPT_PYTHON.test(a[0]) && !a[0].includes('..');
 }
 
+// `instalarEm` (F4 item 7): subpastas com lock próprio, caminho relativo simples, sem `.`/`..`.
+export const SUBPASTA_INSTALACAO = /^(?!.*(?:^|\/)\.\.?(?:\/|$))[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/;
+
 export function validarContrato(valor, projectId) {
   const erros = [];
   if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return ['contrato inválido'];
@@ -42,6 +45,9 @@ export function validarContrato(valor, projectId) {
   ) || new Set(valor.agentes.map(a => a?.id)).size !== valor.agentes.length ||
     new Set(valor.agentes.map(a => `${a?.provedor}/${a?.modelo}`)).size !== valor.agentes.length
   ) erros.push('agentes/modelos/esforço inválidos');
+  if (valor.instalarEm !== undefined && (!Array.isArray(valor.instalarEm) || valor.instalarEm.length > 10 ||
+      valor.instalarEm.some(x => typeof x !== 'string' || x.length > 120 || !SUBPASTA_INSTALACAO.test(x)) ||
+      new Set(valor.instalarEm).size !== valor.instalarEm.length)) erros.push('instalarEm inválido (subpastas relativas, sem ..)');
   if (!erros.length) erros.push(...errosDaVigilia(valor));
   return erros;
 }

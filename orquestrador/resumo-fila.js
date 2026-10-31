@@ -1,7 +1,7 @@
 // Conta cartas por projeto e fecha o envelope da fila. Não julga a carta.
 
 export class ResumoFila {
-  static de({ itens, projetos, catalogo, podeExecutar, frota = null }) {
+  static de({ itens, projetos, catalogo, podeExecutar, frota = null, identidade = () => null }) {
     const contagens = new Map();
     for (const item of itens) {
       const atual = contagens.get(item.projetoId) ?? { cartas: 0, candidatas: 0, elegiveis: 0 };
@@ -16,6 +16,7 @@ export class ResumoFila {
       acessivel: visiveis.has(id),
       ...(contagens.get(id) ?? { cartas: 0, candidatas: 0, elegiveis: 0 }),
       impedimento: visiveis.has(id) ? null : 'Sem acesso de leitura ao projeto no Plane para a identidade Guest do Painel',
+      identidade: identidade(id),
     }));
     return { modo: podeExecutar ? 'despacho-controlado' : 'leitura-e-simulacao',
       execucaoHabilitada: podeExecutar,

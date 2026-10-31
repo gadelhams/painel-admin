@@ -1,11 +1,24 @@
-// Recupera lease e diário depois de uma queda. Cada formato mora no módulo ao lado.
+// Recupera lease e diário depois de uma queda; uma tentativa por vez no Hangar inteiro (J51). Cada formato mora no módulo ao lado.
 
 import { randomUUID } from 'node:crypto';
 import { TravaDisco } from './trava.js';
 import { ArquivoLease } from './arquivo-lease.js';
 import { DiarioTouchpoints } from './diario-touchpoints.js';
 
-export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), duracaoLeaseMs = 15 * 60_000 } = {}) {
+// Grupo de processos ainda vivo? EPERM = existe, de outro dono: vivo para efeito da trava.
+export function grupoVivo(pgid) {
+  if (!Number.isInteger(pgid) || pgid <= 1) return false;
+  try { process.kill(-pgid, 0); return true; }
+  catch (e) { return e.code === 'EPERM'; }
+}
+
+// Recusa sem reserva: nada foi gravado (a vigília anota o motivo e segue; a API devolve 422).
+const ocupado = mensagem => Object.assign(new Error(mensagem), { semReserva: true, semEscrita: true });
+
+// `cartaReservada(cartaId)` (porta reservas.js, PAINEL-54 item 9): reserva viva de uma sessão
+// interativa na carta; consultada sob a trava, junto com os leases da frota.
+export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), duracaoLeaseMs = 15 * 60_000,
+  vivo = grupoVivo, cartaReservada = null } = {}) {
   if (!diretorio) throw new Error('diretório de estado obrigatório');
   const trava = new TravaDisco(diretorio);
   const comTrava = (acao) => trava.segurar(acao);
@@ -63,9 +76,25 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
       .find(x => x.tipo === 'TENTATIVA' && x.chaveIdempotencia === chaveIdempotencia) ?? null);
   }
 
+  // J51: "uma por vez" mora no disco, não na memória da vigília. Sob a trava, todo outro lease
+  // é reconciliado: ativo ocupa; em revisão ocupa enquanto o grupo de processos gravado nele
+  // (o filho `detached` que sobrevive a uma queda do painel) estiver vivo; ilegível ocupa.
+  async function outraEmCurso(cartaId) {
+    const propria = leases.nome(cartaId);
+    for (const id of await leases.ids()) {
+      if (id.toLowerCase() === propria) continue;
+      let r;
+      try { r = await reconciliarSobTrava(id); }
+      catch { return `lease ilegível em ${id}; uma tentativa pode estar em curso`; }
+      if (r.situacao === 'ativo') return `tentativa em curso em ${r.lease.carta ?? id}`;
+      if (r.situacao === 'revisao' && vivo(r.lease.pgid)) return `tentativa em curso em ${r.lease.carta ?? id} (processo ${r.lease.pgid} vivo, lease em revisão)`;
+    }
+    return null;
+  }
+
   // `conferir` roda sob a trava, antes de gravar o lease: é ali que a tentativa relê a
   // frota (e a vigília, as pausas) para nada mudar entre a checagem e a reserva (J-A).
-  async function reservar({ cartaId, agente, chaveIdempotencia, modoReal = false, contexto = null, frota = null, conferir = null }) {
+  async function reservar({ cartaId, carta = null, agente, chaveIdempotencia, modoReal = false, contexto = null, frota = null, conferir = null }) {
     leases.nome(cartaId);
     if (!agente || !chaveIdempotencia) throw new Error('agente e chave de idempotência obrigatórios');
     return comTrava(async () => {
@@ -81,10 +110,14 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
       }
       if (reconciliacao.situacao === 'ativo') throw new Error('lease ativo');
       if (reconciliacao.situacao === 'revisao') throw new Error('execução inconclusa exige revisão humana antes de novo despacho');
+      const emCurso = await outraEmCurso(cartaId);
+      if (emCurso) throw ocupado(emCurso);
+      const reserva = cartaReservada ? await cartaReservada(cartaId).catch(() => ({ motivo: 'reservas ilegíveis' })) : null;
+      if (reserva) throw ocupado(`carta reservada por outra sessão: ${reserva.motivo}`);
       if (conferir) await conferir();
       const tentativaId = randomUUID();
       // A frota congelada (J3) viaja no lease e no TENTATIVA: trocar a frota depois não muda esta tentativa.
-      const lease = { cartaId, tentativaId, agente, chaveIdempotencia, modoReal, ...(frota ? { frota } : {}),
+      const lease = { cartaId, ...(carta ? { carta } : {}), tentativaId, agente, chaveIdempotencia, modoReal, ...(frota ? { frota } : {}),
         adquiridoEm: new Date(agora()).toISOString(), expiraEm: new Date(agora() + duracaoLeaseMs).toISOString() };
       await leases.gravar(cartaId, lease, tentativaId);
       const tentativa = { tipo: 'TENTATIVA', cartaId, tentativaId, agente, chaveIdempotencia,
@@ -107,6 +140,18 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
     });
   }
 
+  // O grupo do processo filho que roda agora (ProcessoCli `detached`: pgid = pid). Gravado no
+  // lease para a reserva seguinte saber se uma tentativa em revisão ainda tem processo vivo.
+  async function marcarProcesso({ cartaId, tentativaId, pgid }) {
+    if (!Number.isInteger(pgid) || pgid <= 1) throw new Error('grupo de processo inválido');
+    return comTrava(async () => {
+      const lease = await leases.ler(cartaId);
+      if (!lease || lease.tentativaId !== tentativaId) throw new Error('lease não pertence à tentativa ativa');
+      lease.pgid = pgid;
+      await leases.gravar(cartaId, lease, randomUUID());
+    });
+  }
+
   async function concluir({ cartaId, tentativaId, resultado }) {
     return comTrava(async () => {
       const historico = await diario.daCarta(cartaId);
@@ -125,6 +170,6 @@ export function criarEstadoOrquestracao({ diretorio, agora = () => Date.now(), d
     });
   }
 
-  return { diretorio, lerLease: (id) => leases.ler(id), lerHistorico: (id) => diario.daCarta(id), consultarTentativa, reservar, renovar, concluir,
+  return { diretorio, lerLease: (id) => leases.ler(id), lerHistorico: (id) => diario.daCarta(id), consultarTentativa, reservar, renovar, concluir, marcarProcesso,
     reconciliar, recuperarInterrupcoes, comTrava, registrarEvento: (evento) => diario.anotar(evento) };
 }

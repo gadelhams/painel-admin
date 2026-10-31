@@ -8,6 +8,9 @@
 // `sigla` = a do projeto no Plane, copiada da tabela de praticantes de
 // ../../PADROES-BACKLOG.md; é a lista branca do Hangar para `SIGLA-N` citado
 // num comando (`UTF-8` e `SHA-256` têm a mesma forma e não são carta).
+// `identidadeEscrita` = a identidade técnica que grava handoff, gate e estado no projeto
+// (orquestrador/identidades-escrita.js, J56): `arquivo` da chave em ~/.config/plane/<arquivo>.token
+// e o `ator` fixo; CKBL e PLAYER (`legadoEnv`) leem chave e ator do .env até o arquivo existir.
 export const PROJETOS = [
   {
     // Reescrita do Felipe (repo privado feliperodrigues/lore-engine), clonada
@@ -131,6 +134,7 @@ export const PROJETOS = [
     entrada: 'README.md',
     plane: 'bbcd79e6-ff42-4a2e-8d9d-72011021e664',
     sigla: 'PLAYER',
+    identidadeEscrita: { arquivo: 'orquestrador-player', legadoEnv: 'PLAYER_' },
     portas: [
       { porta: 5173, servico: 'Dev (Vite)' },
       { porta: 5433, servico: 'Postgres (pfml-local-pg)' },
@@ -163,6 +167,7 @@ export const PROJETOS = [
     entrada: 'CLAUDE.md',
     plane: 'c24e3d36-2e2a-4760-a3f3-53998297a245',
     sigla: 'PAINEL',
+    identidadeEscrita: { arquivo: 'orquestrador-painel', ator: 'eb1cf02c-bae5-4381-8ed3-2f64d52b1b17' },
     portas: [{ porta: 7777, servico: 'Dashboard + C-3PO' }],
   },
   {
@@ -177,6 +182,7 @@ export const PROJETOS = [
     entrada: 'AGENTS.md',
     plane: '2001df58-5cc1-44a1-8f77-035c04f5a02f',
     sigla: 'CAD',
+    identidadeEscrita: { arquivo: 'orquestrador-cad', ator: 'f59f036c-5bd9-4470-a17a-389511dad9a5' },
     // Desde a Fase 2 (23/09/2026) são DOIS endereços: o loopback, por onde o
     // Caddy entra, e o gateway da rede `astargne_sso`, por onde o container do
     // filosofia valida sessão (ADR-0005 do CadastroUnico).
@@ -193,6 +199,7 @@ export const PROJETOS = [
     entrada: 'AGENTS.md',
     plane: '7ce26c40-6e46-49a8-9a7d-bf06bbda6542',
     sigla: 'CKBL',
+    identidadeEscrita: { arquivo: 'orquestrador-ckbl', legadoEnv: '' },
     portas: [],
   },
   {
@@ -206,6 +213,7 @@ export const PROJETOS = [
     entrada: 'docs/00_PLANO.md',
     plane: '87dd03dc-ff75-4b86-b265-44740e0f112e',
     sigla: 'EMU',
+    identidadeEscrita: { arquivo: 'orquestrador-emu', ator: 'ff32ae91-bb6b-407f-bc51-8919cc932142' },
     portas: [
       { porta: 8787, servico: 'Site estático (dev)' },
       { porta: 8788, servico: 'Serviço de upload (dev)' },

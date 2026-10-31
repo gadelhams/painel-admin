@@ -15,7 +15,10 @@ export class TentativaDespacho {
     this.checagem = checagem;
   }
 
-  async iniciar({ cartaId, comandoId, versaoCarta, frotaVersao, frotaHash, chaveIdempotencia, usuarioId, conferirSobTrava = null, aposReservar = null }) {
+  // `origemDespacho` (J70): 'dono' (duas ações na aba) ou 'hangar' (vigília com o play ligado);
+  // vai nos dois HANDOFF junto com a origem do gate que liberou a carta.
+  async iniciar({ cartaId, comandoId, versaoCarta, frotaVersao, frotaHash, chaveIdempotencia, usuarioId, origemDespacho, conferirSobTrava = null, aposReservar = null }) {
+    if (!['dono', 'hangar'].includes(origemDespacho)) throw new Error('origem do despacho obrigatória (dono ou hangar)');
     if (!this.s.execucaoHabilitada || !this.s.executor || ![...this.s.identidades.keys()].some(id => this.s.podeDespachar(id))) {
       throw new Error('portão de execução desligado');
     }
@@ -41,7 +44,7 @@ export class TentativaDespacho {
       }
       if (conferirSobTrava) await conferirSobTrava(congelada);
     };
-    const reserva = await this.s.estado.reservar({ cartaId, agente: primeiro.plano.papeis.codificacao_testes.agenteId,
+    const reserva = await this.s.estado.reservar({ cartaId, carta: primeiro.carta, agente: primeiro.plano.papeis.codificacao_testes.agenteId,
       chaveIdempotencia, modoReal: true, contexto, frota: origemModelos, conferir });
     if (reserva.duplicada) return { carta: primeiro.carta, duplicada: true,
       tentativaId: reserva.tentativa.tentativaId, observacao: 'tentativa já registrada; não reexecutada' };
@@ -54,9 +57,11 @@ export class TentativaDespacho {
       if (aposReservar) versaoAtual = (await aposReservar({ tentativaId }))?.versaoCarta ?? versaoCarta;
       const segunda = await this.checagem.validar(cartaId, comandoId, versaoAtual, cartaId, congelada);
       if (JSON.stringify(segunda.plano) !== JSON.stringify(primeiro.plano)) throw new Error('plano mudou após a reserva');
+      const origens = { origemDespacho, origemGate: primeiro.origemGate ?? null };
       await this.s.registrarHandoff(cartaId, { papel: 'orquestracao', tentativaId, resultado: 'em_andamento',
-        resumo: `Despacho confirmado pelo usuário ${usuarioId} para ${primeiro.carta}.`,
-        evidencia: [`Comando ${comandoId} do contrato`, `Frota v${congelada.versao} congelada na reserva, sem fallback`], origemModelos },
+        resumo: origemDespacho === 'dono' ? `Despacho confirmado pelo usuário ${usuarioId} para ${primeiro.carta}.`
+          : `Despacho da vigília do Hangar para ${primeiro.carta} (play ligado por ${usuarioId}; gate ${origens.origemGate ?? 'de origem não lida'}).`,
+        evidencia: [`Comando ${comandoId} do contrato`, `Frota v${congelada.versao} congelada na reserva, sem fallback`], origemModelos, ...origens },
       versaoAtual, `${chaveIdempotencia.slice(0, 24)}${tentativaId.slice(24)}`);
       await this.s.estado.registrarEvento({ tipo: 'EXECUCAO_PREPARADA', cartaId, tentativaId, comandoId, frotaVersao: congelada.versao, usuarioId });
       batimento = setInterval(() => { this.s.estado.renovar({ cartaId, tentativaId })
@@ -67,7 +72,10 @@ export class TentativaDespacho {
         }); }, 5 * 60_000);
       batimento.unref?.();
       lancada = true;
-      const resultado = await this.s.executor.executar({ ...segunda, tentativaId });
+      // J51: o grupo de cada filho vai para o lease; um filho órfão de uma queda segue ocupando.
+      const aoProcesso = pgid => this.s.estado.marcarProcesso({ cartaId, tentativaId, pgid })
+        .catch(() => this.s.estado.registrarEvento({ tipo: 'PGID_NAO_GRAVADO', cartaId, tentativaId, pgid }).catch(() => {}));
+      const resultado = await this.s.executor.executar({ ...segunda, tentativaId, aoProcesso });
       if (falhaBatimento) throw new Error('renovação de lease falhou; resultado exige revisão');
       if (!resultado || !['concluido', 'impedido', 'rejeitado'].includes(resultado.resultado) ||
           typeof resultado.resumo !== 'string' || !Array.isArray(resultado.evidencia)) {
@@ -78,7 +86,7 @@ export class TentativaDespacho {
         resultado: resultado.resultado, resumo: resultado.resumo, evidencia: resultado.evidencia, causa, frotaVersao: congelada.versao });
       const cartaAtual = await this.s.cliente()(`/projects/${segunda.projetoId}/work-items/${cartaId}/`);
       await this.s.registrarHandoff(cartaId, { papel: 'orquestracao', tentativaId,
-        resultado: resultado.resultado, resumo: resultado.resumo, evidencia: resultado.evidencia, origemModelos },
+        resultado: resultado.resultado, resumo: resultado.resumo, evidencia: resultado.evidencia, origemModelos, ...origens },
       cartaAtual.updated_at, randomUUID());
       await this.s.estado.concluir({ cartaId, tentativaId, resultado: resultado.resultado });
       return { carta: primeiro.carta, tentativaId, resultado: resultado.resultado, causa, frotaVersao: congelada.versao, duplicada: false };

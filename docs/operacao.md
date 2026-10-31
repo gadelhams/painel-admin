@@ -48,14 +48,20 @@ encaminhamento do Remote-SSH do VS Code (`remote.SSH.defaultForwardedPorts`
 no settings do usuário). O gatilho
 `folderOpen` do `.vscode/tasks.json` da raiz foi removido nos dois lados.
 
+**Reserva de carta** (F4a, 31/10/2026): antes de trabalhar numa carta, todo agente roda
+`node ~/Work/ProjetosPessoais/painel-admin/scripts/reservar.mjs SIGLA-N` (e `--soltar` ao terminar).
+Saída 0 = reservada (ou solta), 1 = recusada (outra sessão viva ou tentativa da frota na carta),
+2 = erro (painel fora do ar: a reserva NÃO foi gravada). O lease fica em
+`~/.local/state/painel-admin/reservas/` (diário `reservas.jsonl`); vence em 4 h sem nova reserva.
+
 ## Variáveis do Orquestrador no `.env` (só nomes; valores nunca em doc)
 
 | Variável | Para quê |
 |---|---|
 | `PLANE_API_KEY` | leitura Guest "painel" (toda a fila) |
 | `ORQ_OWNER_USER_ID` | id estável do dono no Cadastro Único; sem ele **toda** escrita falha fechada (503) |
-| `PLANE_ORQ_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | identidade técnica do CKBL (chave distinta da Guest, projeto único, ator conferido na resposta) |
-| `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER; projeto novo exige a entrada em `montagem.js` (`identidadesDeEscrita`) na mesma entrega |
+| `PLANE_ORQ_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | legado do CKBL: chave e ator enquanto `~/.config/plane/orquestrador-ckbl.token` não existe (com o arquivo, o ator continua daqui) |
+| `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER (`orquestrador-player.token`). Projeto novo: `identidadeEscrita: { arquivo: 'orquestrador-<sigla>', ator }` em `projetos.js` e a chave 600 em `~/.config/plane/`, nunca no `.env`; conferida no arranque (`/users/me`, Member) |
 | `XAI_API_KEY` | transcrição de voz (xAI); sem ela a rota responde 503 |
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
 | `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), lida uma vez por operação (aberta sem seguir elo); antes de escrever, `/users/me` tem de devolver este UUID |

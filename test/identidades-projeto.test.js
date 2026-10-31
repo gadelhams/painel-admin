@@ -6,6 +6,7 @@ import path from 'node:path';
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarEstadoOrquestracao } from '../orquestrador/estado.js';
 import { codificarGate } from '../orquestrador/gate-plane.js';
+import { atividadesDoCaminhoFeliz, etiqueta } from './fixtures/recibo-gate.js';
 
 const projetos = [
   { id: '7ce26c40-6e46-49a8-9a7d-bf06bbda6542', identifier: 'CKBL', name: 'CKBL',
@@ -18,11 +19,11 @@ test('identidades de escrita por projeto decodificam apenas comentários do pró
   const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'orq-identidades-'));
   try {
     const comentarios = new Map(projetos.map(p => [p.id, [
-      { id: 'eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee', actor: p.autor,
+      { id: 'eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee', actor: p.autor, external_source: 'orquestrador-gate-v1', edited_at: null,
         comment_html: codificarGate({ projetoId: p.id, cartaId: p.carta,
           chaveIdempotencia: 'ffffffff-ffff-4fff-ffff-ffffffffffff', versaoCarta: '2026-10-20T08:00:00Z',
           gate: 'READY TO DEV', justificativa: 'Escopo pronto.', evidencias: ['Revisão no Plane'] }) },
-      { id: '11111111-1111-4111-8111-111111111111', actor: projetos.find(x => x.id !== p.id).autor,
+      { id: '11111111-1111-4111-8111-111111111111', actor: projetos.find(x => x.id !== p.id).autor, external_source: 'orquestrador-gate-v1',
         comment_html: codificarGate({ projetoId: p.id, cartaId: p.carta,
           chaveIdempotencia: '22222222-2222-4222-8222-222222222222', versaoCarta: '2026-10-20T08:00:00Z',
           gate: 'READY TO TEST', justificativa: 'Autor errado.', evidencias: ['Não confiar'] }) },
@@ -32,9 +33,10 @@ test('identidades de escrita por projeto decodificam apenas comentários do pró
       const p = projetos.find(x => url.includes(`/projects/${x.id}/`));
       if (!p) throw new Error(`consulta inesperada ${url}`);
       if (url.includes('/work-items/?')) return { results: [{ id: p.carta, name: 'Piloto', sequence_id: 38,
-        parent: null, labels: [{ name: 'READY TO DEV' }], state: { name: 'Todo', group: 'unstarted' },
+        parent: null, labels: [etiqueta('READY TO DEV')], state: { name: 'Todo', group: 'unstarted' },
         description_html: '<p>Sem dependências.</p>', updated_at: '2026-10-20T08:00:00Z' }] };
       if (url.includes('/relations/')) return { blocked_by: [] };
+      if (url.includes('/activities/')) return atividadesDoCaminhoFeliz({ labels: [etiqueta('READY TO DEV')] }, comentarios.get(p.id), p.autor);
       if (url.includes('/comments/')) return { results: comentarios.get(p.id), next_page_results: false };
       if (url.endsWith(`/${p.carta}/`)) return { id: p.carta };
       throw new Error(`consulta inesperada ${url}`);

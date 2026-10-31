@@ -82,7 +82,7 @@ export class PassoVigilia {
     let resultado;
     try {
       resultado = await this.servico.iniciarDespacho({ cartaId: carta.id, comandoId: cfg.comando, versaoCarta: carta.atualizadoEm,
-        frotaVersao: congelada.versao, frotaHash: congelada.hash, chaveIdempotencia: randomUUID(), usuarioId: String(registro?.usuarioId ?? 'vigilia'),
+        frotaVersao: congelada.versao, frotaHash: congelada.hash, chaveIdempotencia: randomUUID(), usuarioId: String(registro?.usuarioId ?? 'vigilia'), origemDespacho: 'hangar',
         conferirSobTrava: async (c) => {
           if (!(await this.play.ligado(id))) throw semReserva('play desligado antes da reserva; nada foi reservado');
           const motivo = pausas.impedimento(await pausas.ler(), c);

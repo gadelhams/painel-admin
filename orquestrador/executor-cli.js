@@ -30,7 +30,7 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
   const bins = { ...BINARIOS_PADRAO, ...binarios };
   const lim = { ...LIMITES_PADRAO, ...limites };
   const env = ambienteLimpo(ambienteBase);
-  const processo = new ProcessoCli({ spawn, env, agora, maxSaidaBytes: lim.maxSaidaBytes });
+  const novoProcesso = (aoIniciar = null) => new ProcessoCli({ spawn, env, agora, maxSaidaBytes: lim.maxSaidaBytes, aoIniciar });
 
   async function binario(nome) {
     const caminho = await resolverBinario(bins[nome], env);
@@ -38,27 +38,30 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
     return caminho;
   }
 
-  const git = new IsolamentoGit({ processo, binario });
-  const papeisCli = new PapelCli({ processo, binario, limites: lim, licoesVivasDir });
+  // Cada tentativa tem o seu processo: o aviso de grupo (J51) vai só para o lease dela.
+  const pecas = (processo) => ({ processo, git: new IsolamentoGit({ processo, binario }),
+    papeisCli: new PapelCli({ processo, binario, limites: lim, licoesVivasDir }),
+    dependencias: new DependenciasWorktree({ processo, binario, limites: lim }) });
+  const { git: gitValidacao } = pecas(novoProcesso());
   const briefing = new BriefingPapel();
-  const dependencias = new DependenciasWorktree({ processo, binario, limites: lim });
 
   async function validar({ pasta, contrato, comando, plano }) {
     for (const nome of ['git', ...new Set(PAPEIS.map(p => plano.papeis[p].provedor === 'claude' ? 'claude' : 'codex'))]) await binario(nome);
     for (const papel of PAPEIS) argumentosModeloCli(plano, papel);
     let raiz;
-    try { raiz = (await git.git(pasta, 'rev-parse', '--show-toplevel')).trim(); }
+    try { raiz = (await gitValidacao.git(pasta, 'rev-parse', '--show-toplevel')).trim(); }
     catch { throw new Error('projeto sem repositório git; isolamento por worktree impossível'); }
     if (path.resolve(raiz) !== path.resolve(pasta)) throw new Error('pasta do projeto não é a raiz do repositório git');
-    await git.git(pasta, 'status', '--porcelain');
+    await gitValidacao.git(pasta, 'status', '--porcelain');
     const inspecao = await inspecionarComando(pasta, comando);
     await fs.mkdir(diretorioEstado, { recursive: true });
     await fs.access(diretorioEstado, FS.W_OK);
     return { inspecao };
   }
 
-  async function executar({ carta, cartaId, projetoId, comandoId, comando, plano, contrato = null, gate: gateDaFila = null, pasta, tentativaId }) {
+  async function executar({ carta, cartaId, projetoId, comandoId, comando, plano, contrato = null, gate: gateDaFila = null, pasta, tentativaId, aoProcesso = null }) {
     if (!UUID.test(tentativaId ?? '')) throw new Error('tentativa inválida');
+    const { processo, git, papeisCli, dependencias } = pecas(novoProcesso(aoProcesso));
     const curto = tentativaId.slice(0, 8);
     const logs = path.join(diretorioEstado, 'saidas', tentativaId);
     await fs.mkdir(logs, { recursive: true });
@@ -76,7 +79,7 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
     catch (erro) { return impedido(`worktree não criado: ${erro.message}`); }
     evidencia.push(cortar(`worktree ${worktree} · ramo ${ramo}`, 500));
 
-    const instalacao = await dependencias.instalar(worktree, logs);
+    const instalacao = await dependencias.instalar(worktree, logs, contrato?.instalarEm ?? []);
     if (instalacao.motivo) return impedido(instalacao.motivo);
     if (instalacao.evidencia) evidencia.push(instalacao.evidencia);
 
