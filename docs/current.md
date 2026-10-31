@@ -19,15 +19,16 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
   identidade técnica (CKBL, PLAYER) por SSO + duas ações —
   [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
-- Executor **ligado** (29/10, piloto PAINEL-34): cada despacho por SSO +
-  duas ações; nenhum rodou ainda. Vigília: todas desligadas.
+- Executor **ligado** (29/10): cada despacho por SSO + duas ações. Vigília:
+  todas desligadas.
 
 ## O que falta
 
 - **Frota**: F2 feita (modelos numa frota só, por SSO; catálogo com 13
   modelos das duas CLIs; sem frota gravada nada despacha); falta F3 ([plano](plano-frota-do-hangar.md)).
-- **Piloto real** (PAINEL-34): ligar a variável e confirmar um despacho em
-  carta descartável é decisão do dono; nenhuma CLI paga rodou pelo Painel.
+- **Piloto real** (PAINEL-34) **passou em 31/10**: PLAYER-38 despachada pelo
+  dono, Codex codificou, Claude validou (APROVADO), integrada no PLAYER.
+  Falta ver no CLI real a mensagem de limite.
 - **Consumo** (PAINEL-40): Codex pelas sessões, Claude pela statusLine (29/10).
 - **Fase 3 do C-3PO** (ações): motor só-leitura; a 1ª ação é a mesa de
   decisão, desenhada e não construída ([plano](plano-mesa-de-decisao.md)).
@@ -37,6 +38,6 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 229 testes + `check-docs` 0 erros (29/10); Playwright 23/23.
+- `npm test`: 237 testes + `check-docs` 0 erros (31/10); Playwright 25/25.
 - Um módulo por responsabilidade; mapa em `mapa.md`, conferido no `npm test`.
 - `main` no GitHub.

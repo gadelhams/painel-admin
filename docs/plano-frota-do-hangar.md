@@ -242,9 +242,16 @@ O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota).
   - **N6:** a fila mostra "frota ≠ ok".
   - **Baratos:** HEAD responde 200 e o 405 leva `Allow`.
   - **Não verificado no CLI real:** o formato das mensagens de limite e de
-    credencial dos dois CLIs; confirmar no piloto PAINEL-34. As fixtures seguem
+    credencial dos dois CLIs; o piloto PAINEL-34 (31/10) não bateu limite
+    nem credencial, então segue sem ver. As fixtures seguem
     o formato documentado ("Claude AI usage limit reached|<epoch>" no `result`,
     com `is_error`).
+- **Piloto PAINEL-34 passou em 31/10/2026.** A 1ª tentativa (PLAYER-38,
+  7240cb3d) foi reprovada sem diff: o briefing não separava ler de executar e
+  o Codex não leu o código. Com os briefings corrigidos, a 71d94f24 entregou
+  (orquestração 113 s, codificação 861 s, validação 204 s, APROVADO) e foi
+  integrada. Lição do integrador: os achados "corrigir" do validador viram
+  trabalho do integrador antes do merge, não carta nova.
 - **Antes do piloto PAINEL-34 (feito em 29/10/2026):**
   - **R1:** duas paradas pela frota na mesma carta em 24 h tiram a carta da
     varredura até a janela passar (`passo-vigilia.js`).
