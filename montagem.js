@@ -41,7 +41,7 @@ import { criarZelador } from './orquestrador/zelador.js';
 import { criarEscritorZelador } from './orquestrador/escritor-zelador-plane.js';
 import { criarServicoChaves, criarConfirmacoesChaves, criarApiChaves } from './chaves.js';
 import { criarAlinhamento } from './alinhamento.js';
-import { criarClientePlane } from './plane.js';
+import { criarClientePlane, limparCachePlane } from './plane.js';
 import { PROJETOS } from './projetos.js';
 import { RespostaHttp } from './http/resposta.js';
 import { ConversaHttp } from './http/conversa.js';
@@ -55,6 +55,9 @@ import { propostas } from './acoes/propostas.js';
 import { criarDiarioAcoes } from './acoes/diario-acoes.js';
 import { criarExecutorAcoes } from './acoes/executor-acoes.js';
 import { criarApiAcoes, criarConfirmacoesAcoes } from './acoes/api-acoes.js';
+import { RotasDecisao } from './http/rotas-decisao.js';
+import { criarMesaDecisao } from './decisao/mesa.js';
+import { criarApiDecisao, criarApiRetomada } from './decisao/api-decisao.js';
 import { RoteadorPainel } from './http/roteador.js';
 import { criarRegistroEncomendas } from './encomendas/registro-encomendas.js';
 import { criarApiEncomendas, criarConfirmacoesEncomendas } from './encomendas/api-encomendas.js';
@@ -109,12 +112,13 @@ function identidadesDeEscrita(ambiente, proprietarioId, fetchPlane, log) {
  * - agora: o relógio; diretorioCodex: as sessões do Codex lidas pelo consumo;
  * - ocupacaoSessoes, executarGit, arquivoChaveZelador, cliZelador: o leitor estrito de sessões,
  *   o git só-leitura, o arquivo 600 da chave e a CLI do zelador (F3).
+ * - arquivoChaveAdmin: o arquivo 600 da chave do Painel Admin (mesa de decisão).
  */
 export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEstado = DIRETORIO_ESTADO,
   publico = PUBLICO, externos = {}, log = console.error } = {}) {
   const { executarSsh, leituraSsh, sso = {}, fetchPlane, consultarPlane, conversar = conversarReal,
     transcrever, fetchVoz, spawnCli, coletores = COLETORES, agora = Date.now, diretorioCodex,
-    ocupacaoSessoes = ocupacaoPorSessoes, executarGit, arquivoChaveZelador, cliZelador } = externos;
+    ocupacaoSessoes = ocupacaoPorSessoes, executarGit, arquivoChaveZelador, cliZelador, arquivoChaveAdmin } = externos;
   const diretorioOrquestracao = path.join(diretorioEstado, 'orquestracao');
   const proprietarioId = ambiente.ORQ_OWNER_USER_ID?.trim();
   const verificar = sso.verificar ?? criarVerificadorCadastro({ executar: executarSsh });
@@ -188,6 +192,10 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   // Encomenda de nave (PAINEL-50): o painel registra o pedido por SSO + duas ações em
   // <estado>/encomendas.jsonl; quem cria o projeto no Plane é o orquestrador.
   const encomendas = criarRegistroEncomendas({ diretorio: diretorioEstado, agora });
+  // Mesa de decisão (PAINEL-53): grava a decisão do dono no Plane com a identidade Painel Admin,
+  // só a lista fechada, só por SSO + duas ações, sob a mesma trava global da orquestração.
+  const mesa = criarMesaDecisao({ ambiente, fetchPlane, diretorio: path.join(diretorioEstado, 'c3po'), estado: estadoOrquestracao,
+    agora, arquivoChave: arquivoChaveAdmin, limparCache: limparCachePlane, log });
 
   const resposta = new RespostaHttp({ publico, maxCorpo: MAX_CORPO });
   const roteador = new RoteadorPainel({
@@ -224,6 +232,9 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     alinhamento: new RotasAlinhamento({ resposta, alinhamento }),
     chaves: new RotasChaves({ resposta, chaves, apiChaves: confirmar(criarApiChaves, criarConfirmacoesChaves, { servico: chaves }) }),
     acoes: new RotasAcoes({ resposta, apiAcoes }),
+    decisao: new RotasDecisao({ resposta, servico: mesa.servico, log,
+      apiDecisao: criarApiDecisao({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.confirmacoes }),
+      apiRetomada: criarApiRetomada({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.retomada }) }),
   });
 
   return {

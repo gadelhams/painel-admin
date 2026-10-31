@@ -21,19 +21,14 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - Executor **ligado** (29/10): cada despacho por SSO + duas ações. Play por
   nave: todos desligados; agenda só com `ORQ_AGENDADOR` na unit (falta pôr).
 
-## O que falta
+## Feito em 31/10 e o que falta
 
-- **Frota**: F2 e F3 feitas (frota por SSO; play por nave e zelador de
-  limpeza, sem chave provisionada); falta a F4, puxar ([plano](plano-frota-do-hangar.md)).
-- **Piloto real** (PAINEL-34) **passou em 31/10**: PLAYER-38 despachada pelo
-  dono, Codex codificou, Claude validou (APROVADO), integrada no PLAYER.
-  Falta ver no CLI real a mensagem de limite.
-- **Consumo** (PAINEL-40): Codex pelas sessões; Claude por statusLine e `~/.claude.json`.
-- **Fase 3 do C-3PO** (31/10): lê ssh e git, só propõe rodar a suíte; o dono
-  confirma no cartão (SSO + duas ações; diário em `c3po/acoes.jsonl`).
-  Falta a mesa de decisão ([plano](plano-mesa-de-decisao.md)).
-- **Hangar**: encomenda de nave registrada por SSO (31/10); o orquestrador
-  atende à mão ([operacao.md](operacao.md)); Grok sem CLI.
+- **Frota**: F2 e F3 feitas (play por nave, zelador de limpeza); falta a F4,
+  puxar ([plano](plano-frota-do-hangar.md)). Piloto PAINEL-34 passou (PLAYER-38).
+- **C-3PO**: lê ssh e git e só propõe rodar a suíte (cartão, SSO); mesa de
+  decisão grava como Painel Admin por SSO ([plano](plano-mesa-de-decisao.md)).
+- **Hangar**: encomenda de nave por SSO; o orquestrador atende à mão
+  ([operacao.md](operacao.md)). Consumo: Codex e Claude com fonte local.
 
 ## Portão e repositório
 

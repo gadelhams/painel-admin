@@ -49,7 +49,7 @@ toda porta externa entra por `externos` (`executarSsh`, `leituraSsh`, `sso`, `fe
 produção. Os testes montam o mesmo painel com falsos (`test/painel-falso.js`):
 `test/fronteira-http.test.js` sobe um `http.Server` de porta efêmera e faz requisição real
 (guarda de Host e origem, sessão, estático), e a fronteira de `/api/contas/*` em
-`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, diário, play, zelador, jogo nativo e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE) e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, diário, play, zelador, jogo nativo e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `rotas-decisao.js`, `conversa.js` (SSE) e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -64,7 +64,7 @@ motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 (aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
 `prontidao`, `canal?carta&projeto`, `frota`, `consumo`, `diario`, `play`, `zelador`, `nativo`; POST
 `simular`, `{frota,handoff,gates,despacho,play,nativo}/{preparar,confirmar}`,
-`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `POST /api/acoes/{preparar,confirmar}` (ação proposta pelo C-3PO, § motor.js; `rotas-acoes.js`); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
+`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `POST /api/acoes/{preparar,confirmar}` (ação proposta pelo C-3PO, § motor.js; `rotas-acoes.js`); `GET /api/decisao/{carta,pendentes}` e `POST /api/decisao/{,retomada/}{preparar,confirmar}` (mesa de decisão, § decisao/); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
 varre toda rota (literais de `http/` e de `montagem.js`) pelo painel montado com POST, PUT, PATCH e DELETE pela borda, sem sessão — 401 ou 405 no próprio handler,
 sem ler corpo, tocar porta externa nem gravar no estado; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
@@ -84,12 +84,13 @@ com autoteste, não configuração de ferramenta:
   `// exceção de tamanho: <por quê>; partir quando <condição>.` (sem "partir quando" não vale).
   Autoteste com fixture temporária: `test/mapa-modulos.test.js`.
 - `test/fronteiras-modulos.test.js` lê os `import` e recusa: de fora de `alinhamento/`,
-  `chaves/`, `coletores/`, `contas/`, `encomendas/`, `motor/` e `plane/`, importar outra coisa que a porta
+  `chaves/`, `coletores/`, `contas/`, `decisao/`, `encomendas/`, `motor/` e `plane/`, importar outra coisa que a porta
   `<área>.js`; de fora de `orquestrador/`, importar módulo fora das portas dele (`sso`, `fila`,
   `triagem`, `consulta-c3po`, `api-duas-acoes`, `desafio-duas-acoes`, `leitor-jsonl`, `uuid`);
   `http/` montado por outro que não `montagem.js`; `servidor.js` importar outra coisa que a
   montagem; `publico/` e servidor se importarem; o fecho do motor alcançar escritor do Plane,
-  `estado-plane`, `executor-cli`, `api-*` de escrita ou o registro das encomendas. `montagem.js` é isenta da regra de porta
+  `estado-plane`, `executor-cli`, `api-*` de escrita, o registro das encomendas ou o escritor, a aplicação e as duas ações
+  da mesa de decisão (a porta `decisao.js` só reexporta a leitura da carta). `montagem.js` é isenta da regra de porta
   (quem compõe liga as peças). As violações de 31/10 ficaram como exceções nomeadas no teste,
   com o porquê; exceção resolvida reprova até sair da lista.
 
@@ -406,7 +407,7 @@ mesmas funções — o motor nunca faz HTTP para o próprio processo.
 
 ### motor.js
 
-Porta da conversa. O catálogo das onze ferramentas (dez de leitura, entre elas `encomendas` e `diario_zelador` desde 31/10, e `propor_acao`) mora em
+Porta da conversa. O catálogo das doze ferramentas (onze de leitura, entre elas `encomendas`, `diario_zelador` e `carta_plane` desde 31/10, e `propor_acao`) mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
 aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
@@ -466,6 +467,10 @@ ação com portão:
   `confirmacao` (antes de rodar; sem diário, não roda) e `resultado` (código,
   sinal, duração, resumo de 500 caracteres filtrado), com o `usuarioId` da sessão.
 
+Ferramenta `carta_plane` (31/10/2026, PAINEL-53): lê UMA carta agora, sem cache, pela porta
+`decisao.js` (título, estado, labels, descrição e os últimos 30 comentários em texto; os da mesa
+marcados), com a chave Guest. É o que o C-3PO usa na gaveta da mesa de decisão (§ decisao/).
+
 Ferramenta `decisoes` (24/10/2026, pedido do dono): `decisoes-c3po.js` dá ao
 C-3PO a mesma leitura da aba Decisões e do bloco "Astargne" — grupos
 `dono_*` (chaves, push/deploy, provas, produto), `bloqueada_pelo_dono` (cadeias
@@ -473,6 +478,85 @@ que uma decisão dele destrava), `bloqueada_por_terceiro`, `rotacao_registrada`
 (já feita na aba Chaves, card a fechar), pós-playtest e sem escopo; projetos
 `congelado` ficam de fora. Só leitura (inventário de chaves sem valores); o
 vínculo entre cards vem do detalhe da etiqueta, não de um grafo formal.
+### decisao/ (mesa de decisão, PAINEL-53, 31/10/2026)
+
+O dono discute uma carta que espera decisão dele (`ASTARGNE`, a legada `DONO` ou `PRODUTO`)
+com o C-3PO e grava a decisão no Plane. Plano e escolhas em
+[plano-mesa-de-decisao.md](plano-mesa-de-decisao.md). Porta `decisao.js` = só a leitura
+(`criarLeitorCarta`, `cartaParaLeitura`), para o motor; o resto só a montagem liga
+(`decisao/mesa.js` compõe).
+
+- **Quais projetos** (`permissao.js`): os do catálogo com `plane` e `sigla`, menos congelados
+  e menos o Anya — recusado pelo id do projeto, não pela sigla. O projeto vem da sigla de
+  `SIGLA-N`, nunca do pedido.
+- **Leitura** (`leitor-carta.js`): chave Guest, sem cache e sem as vagas de `plane/cliente.js`
+  (10 s por chamada): `/work-items/SIGLA-N/` acha o id, e a releitura pelo caminho do projeto
+  confere `project`, `sequence_id` e o id antes de comentários, labels e estados. Descrição e
+  comentários saem como texto. `GET /api/decisao/carta?carta=SIGLA-N` (aberta, como as outras
+  leituras do Plane) devolve isso, mais `escrita: {habilitada, motivo}` e as pendências da carta.
+- **Efeitos** (`efeitos.js`), lista fechada: `destravar` (tira `ASTARGNE`/`DONO` e troca só o
+  marcador `(ASTARGNE…)`/`(DONO…)` da descrição por `(decidido em DD/MM: …)`), `produto`
+  (`manter`/`por`/`tirar`), `estado` (um dos cinco). O pedido vira um delta por NOME; avisos
+  quando a carta fica despachável ou segue com `PRODUTO`. A versão da carta é a **digital** do
+  conteúdo (estado, ids das labels, nome, hash da descrição, ids dos comentários), porque o
+  `updated_at` do Plane muda sozinho.
+- **Protocolo** (`protocolo-decisao.js`): o comentário `DECISAO/v1` é HTML com o primeiro
+  parágrafo fixo `<p><strong>DECISAO/v1</strong> · Painel Admin (C-3PO) · decisão do dono</p>`
+  e um parágrafo por campo — `Carta`, `Decisão`, `Motivo`, `Efeitos`, `Data` (ISO) e
+  `Autor: Astargne via painel` —, com `external_source: painel-decisao-v1` e
+  `external_id` = a chave da decisão. O recibo `DECISAO-APLICACAO/v1` (`Resultado`,
+  `Mudanças verificadas`, `Notas`, `Data`) usa `external_id` = `<chave>:aplicacao`. **Para um
+  zelador, só é recibo do dono** o comentário com esse cabeçalho, essa fonte, ator = o UUID de
+  `PLANE_ADMIN_ACTOR_ID` e `edited_at` nulo (`lerDecisao`). A prosa do dono passa por NFKC, perde
+  caracteres invisíveis, é escapada e não pode conter `GATE/`, `HANDOFF/`, `ZELADOR/`, `[ORQ/`,
+  `DECISAO/`, `COMPACTADO/`, `PERFIL-IA/` nem `TENTATIVA/`; texto com cara de segredo
+  (`acoes/filtro-segredo.js`) é recusado sem ecoar o trecho. O Plane passa o HTML pelo `nh3`
+  ao gravar (entidades de aspas viram aspas); a leitura decodifica os dois.
+- **Escritor** (`escritor-decisao-plane.js`), identidade **Painel Admin (C-3PO)**, ADMIN do
+  workspace — por isso o que ele aceita é a proteção: comentário só no formato da mesa, PATCH
+  só com `labels`, `state` e `description_html`, só nos projetos da mesa (Anya recusado de novo
+  por id). A chave mora em `~/.config/plane/painel-admin.token`, relida a cada operação
+  (`lstat`: arquivo comum, sem bits de grupo/outros, dono = o usuário do processo); nunca entra
+  em `process.env`, log nem mensagem. Antes de toda escrita, `/users/me` = `PLANE_ADMIN_ACTOR_ID`.
+  O 409 do comentário (o Plane procura o `external_id` no PROJETO) só vale como idempotência se
+  o comentário relido pelo caminho da carta é da mesa, do ator e da chave.
+- **Duas ações** (`api-decisao.js` sobre `criarDesafios` + `criarApiDuasAcoes`, autorizador SSO
+  do dono): `POST /api/decisao/preparar` {carta, decisao, motivo, efeitos} relê a carta, recusa
+  carta sem decisão do dono, com lease ativo da orquestração ou com aplicação pendente, e
+  devolve as mudanças e o texto do comentário; nada é gravado. `POST /api/decisao/confirmar`
+  {confirmacaoId} grava (abaixo). Retomar: `POST /api/decisao/retomada/{preparar,confirmar}`
+  {chave}.
+- **Ordem do confirmar** (`aplicacao-decisao.js`), sob a trava global da orquestração e com um
+  teto de 40 s para o lote de chamadas: identidade → releitura; digital igual ou recusa → lease
+  → delta igual ao do preparar e ids resolvidos por nome → diário `DECISAO_PENDENTE` →
+  comentário de intenção (timeout não segue; 4xx explícito fecha como `DECISAO_ABANDONADA`) →
+  `COMENTARIO_GRAVADO` → releitura → um PATCH = releitura ± delta (só os campos que mudam) →
+  releitura de verificação, qualquer que tenha sido a resposta: `aplicado`, `não aplicado`,
+  `divergente` (ou `só registro`) → atividades da carta: alteração de outro ator desde a
+  releitura vira `divergente` → recibo → `DECISAO_CONCLUIDA` → `limparCachePlane()`. Antes do
+  diário, toda falha é recusa limpa ("nada foi gravado"); depois, o resultado é incerto e a
+  decisão fica pendente.
+- **Retomada.** `GET /api/decisao/pendentes` lista as decisões sem `CONCLUIDA`/`ABANDONADA`; a
+  gaveta e a aba Decisões mostram "aplicação pendente" com "Retomar" (SSO + duas ações, a mesma
+  chave). De `COMENTARIO_GRAVADO`, recomeça na releitura (o delta é idempotente). De `PENDENTE`,
+  procura o próprio comentário na carta; se não está e a carta mudou (ou tem lease), abandona
+  sem gravar; senão comenta de novo (o 409 evita duplicar).
+- **Diário**: `~/.local/state/painel-admin/c3po/decisoes.jsonl` (`anexarJsonl`), com quem, a
+  decisão, o delta, o HTML e a digital.
+- **O que não garante (resíduo).** (1) Entre a última releitura e o PATCH há uma janela de
+  milissegundos que o Plane v1 não fecha contra escritores de fora do painel (MCP, Codex,
+  tela): o PATCH de labels apaga e recria. As atividades lidas depois só a tornam visível; elas
+  são gravadas por um worker em segundo plano, então a marca é de melhor esforço. (2) No Plane
+  v1 o POST de comentário aceita `created_by` no corpo: quem pode comentar no projeto consegue
+  forjar o ator. O recibo do Plane é sinal, não prova; a prova é o diário local.
+- **Front** (`publico/mesa-decisao.js`, `mesa-conversa.js`, `mesa-decisao.css`): a gaveta, um
+  componente só, abre pelo botão "Discutir com o C-3PO" dos popups de decisão do Hangar
+  (`[data-mesa]`, escutado no documento) e das linhas `ASTARGNE` da aba Decisões. À esquerda a
+  carta; à direita o chat (`/api/conversa`, sessão por carta em `sessionStorage`, volta onde
+  parou; na primeira abertura o C-3PO lê a carta e diz a pergunta e o que ela trava) e o
+  registro. "Pedir rascunho" preenche decisão e motivo a partir de um JSON pedido ao C-3PO;
+  qualquer outra chave da resposta é descartada e os efeitos voltam desmarcados.
+
 ### projetos.js
 
 Catálogo dos projetos: metadados que não dão para derivar
@@ -564,6 +648,8 @@ Aba Decisões: todas as decisões agrupadas por projeto
 (top 3 por contagem abertos, resto em "Outros N projetos" colapsado).
 A página é `PaginaDecisoes`; o agrupamento mora em `decisoes-grupo.js`,
 a linha em `decisoes-linha.js` e o bloco do dono em `decisoes-astargne.js`.
+Linha `ASTARGNE` com carta do Plane ganha "Discutir com o C-3PO" (a gaveta da
+mesa, § decisao/); as aplicações pendentes da mesa aparecem depois do bloco do dono.
 
 #### contas.js (publico/)
 
@@ -645,7 +731,9 @@ ações: a liberação do jogo nativo, o play e o registro da encomenda de nave 
   andamento/feitas (canceladas fora), próximas fases (cartas abertas na ordem
   do Plane), decisões, o mapa UUID da carta → peça e o reverso `SIGLA-N` → UUID. Decisão = carta aberta
   que espera o dono: label `PRODUTO` vai para a **estação de planejamento**,
-  `ASTARGNE` (ou a legada `DONO`) vira **peça no chão** do módulo; bloqueio por
+  `ASTARGNE` (ou a legada `DONO`) vira **peça no chão** do módulo (cada decisão no popup leva
+  "Discutir com o C-3PO", que abre a gaveta da mesa, § decisao/ — a única porta de escrita a
+  partir do Hangar, e ela mora fora dele); bloqueio por
   outra carta, `TAREFA DONO`, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`), e nave congelada não tem peça no chão. Mais o
   inventário da Oficina (`acervo.js`: `PADROES-*`, orientações da raiz,
   skills, `licoes-vivas/`). `GET /api/hangar/sessoes` (`coletores/sessoes.js`,
@@ -821,7 +909,8 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   dela, nunca um id de confirmação; preparar, confirmar e executar são do dono,
   pela UI, com SSO + duas ações. Nenhum módulo que o motor importa (fecho
   transitivo) alcança `acoes/executor-acoes.js` nem `acoes/api-acoes.js`
-  (`test/acoes.test.js`).
+  (`test/acoes.test.js`), nem o escritor da mesa de decisão
+  (`test/fronteiras-modulos.test.js`); `carta_plane` só lê.
 - **Voz não fura o canon de deploy**: qualquer ação futura que mude estado no
   `astargne.com` continua exigindo `validador-deploy` + validação de
   premissas, como para qualquer agente.
@@ -856,7 +945,13 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   têm o play ligado pelo dono (SSO + duas ações) e só a lista fechada da zeladoria; a chave dele
   mora em `~/.config/plane/zelador.token` (600, dono conferidos a cada operação), nunca em
   `process.env`, e o ator é conferido contra o UUID fixo da identidade "Zelador (Hangar)".
-  Nenhuma chave aparece no navegador, código, log, commit ou resposta HTTP.
+  **Exceção, delimitada** (31/10/2026, mesa de decisão): a chave do Painel Admin, ADMIN do
+  workspace, mora fora do `.env`, em `~/.config/plane/painel-admin.token` (600), lida só pelo
+  escritor da mesa a cada operação; do `.env` vem só o UUID do ator, `PLANE_ADMIN_ACTOR_ID`.
+  Esse escritor atua em vários projetos, mas só na lista fechada (comentário da mesa, labels
+  `ASTARGNE`/`DONO`/`PRODUTO`, o marcador da descrição e o estado), só por SSO + duas ações e
+  sem o Anya (§ decisao/). Nenhuma chave aparece no navegador, código, log, commit ou resposta
+  HTTP.
 
 ## Origem
 
@@ -885,7 +980,7 @@ vivo tinha; provas e evidências ficaram em
 - **Autenticação do motor**: o login do Claude Code já existente na máquina;
   funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
 - **Só-leitura estrutural** (`motor.js`; desde 31/10/2026 "lê e só propõe", § motor.js): `tools: []` + servidor MCP em
-  processo com só as ferramentas do catálogo (dez desde a F3 da frota, 31/10/2026) + `allowedTools` nelas +
+  processo com só as ferramentas do catálogo (doze desde 31/10/2026) + `allowedTools` nelas +
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.

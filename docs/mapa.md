@@ -13,6 +13,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `chaves.js` — Porta da tela Chaves. Catálogo, troca, confirmação e HTTP moram em chaves/.
 - `coletores.js` — Porta única dos coletores. Rotas e ferramentas do C-3PO importam daqui.
 - `contas.js` — Porta da aba Contas. A tabela, o ssh e a fronteira HTTP moram em contas/.
+- `decisao.js` — Porta da mesa de decisão para quem só LÊ (o motor do C-3PO): a leitura da carta e a forma de texto dela. O escritor, a aplicação e as duas ações ficam fora daqui de propósito — só a montagem os liga.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
 - `encomendas.js` — Porta das encomendas de nave, só o lado de leitura. O registro e as duas ações moram em encomendas/ e só a montagem os liga.
 - `guarda.js` — O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão SSO do dono desde 29/10/2026 para Contas, antes para o resto.
@@ -97,6 +98,20 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `ssh.js` — Porta do ssh das contas. O processo, a redação e a leitura da saída moram ao lado.
 - `tabela.js` — Tabela fechada do Cadastro Único. Método e rota nascem aqui; o id entra só depois de validado.
 
+## decisao/
+
+- `api-decisao.js` — Duas ações da mesa de decisão (gravar e retomar): o esqueleto de SSO + desafio de 2 min de orquestrador/, com os campos fechados da mesa. Não lê nem grava o Plane sozinho.
+- `aplicacao-decisao.js` — A ordem de escrita do confirmar e da retomada, sob a trava global da orquestração: releitura e digital, diário PENDENTE, comentário de intenção, PATCH da leitura ± delta, verificação, recibo, CONCLUÍDA. Não valida a prosa nem monta o pedido.
+- `diario-decisao.js` — Diário de acréscimo da mesa de decisão (pendente, comentário gravado, concluída, abandonada) e a leitura das aplicações pendentes. Só grava e lê; não fala com o Plane.
+- `efeitos.js` — Lista fechada dos efeitos da mesa contra a carta ATUAL: o pedido do dono vira um delta por nome, a impressão digital da carta, o corpo do PATCH e a verificação depois dele. Puro; não lê nem grava.
+- `escritor-decisao-plane.js` — Escritor da mesa de decisão no Plane com a identidade Painel Admin: comentário da mesa e o PATCH da lista fechada. Lê a chave do arquivo a cada operação; não decide o que gravar.
+- `leitor-carta.js` — Lê UMA carta do Plane sem cache, pelo caminho do projeto (carta, comentários, labels, estados e atividades), com a chave Guest. Não escreve nem decide.
+- `mesa.js` — Compõe a mesa de decisão a partir do ambiente: leitor Guest, escritor Painel Admin (ou o motivo de não haver), diário, aplicação e os desafios das duas ações. Não registra rota nem autoriza.
+- `permissao.js` — Quais projetos a mesa de decisão abre: os do catálogo com Plane e sigla, menos os congelados e menos o Anya (recusado pelo id do projeto, não pela sigla). Não lê o Plane.
+- `protocolo-decisao.js` — Texto dos comentários da mesa no Plane — DECISAO/v1 (a decisão do dono) e DECISAO-APLICACAO/v1 (o recibo) — e a leitura deles. Não lê nem grava o Plane.
+- `servico-decisao.js` — O que a mesa de decisão oferece às rotas: a carta para a gaveta, o preparar (prosa, efeitos e digital, sem escrita), as aplicações pendentes e o preparo da retomada. A escrita mora em aplicacao-decisao.js.
+- `texto-html.js` — HTML do Plane ⇄ texto da mesa: escape do que vai para o comentário e texto puro do que vem da descrição e dos comentários. Puro.
+
 ## e2e/
 
 - `esperar-modelos.mjs`
@@ -109,6 +124,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 - `c3po-acoes.spec.mjs`
 - `hangar.spec.mjs`
+- `mesa-decisao.spec.mjs`
 - `orquestrador.spec.mjs`
 
 ## encomendas/
@@ -131,6 +147,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-backlog.js` — Backlog lido do Plane ou do markdown.
 - `rotas-chaves.js` — Inventário e troca de chaves. A recusa genérica vem depois das rotas específicas.
 - `rotas-contas.js` — Repassa o Cadastro Único. Escrita só com sessão SSO; o corpo só é lido depois dela, e só quando a rota está na tabela fechada.
+- `rotas-decisao.js` — Rotas da mesa de decisão: a carta da gaveta e as aplicações pendentes (GET, chave Guest), gravar e retomar (POST, SSO + duas ações). Não monta o serviço.
 - `rotas-decisoes.js` — Decisões paradas do backlog.
 - `rotas-encomendas.js` — Encomendas de nave do Hangar: a leitura das pendentes é aberta; registrar é preparar e confirmar, pelas duas ações com SSO. Não cria projeto.
 - `rotas-hangar.js` — Naves e droids do Hangar. Só GET; o guard do roteador já rodou antes.
@@ -162,7 +179,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `acao-proposta.js` — A ferramenta propor_acao e a leitura do seu resultado no fluxo da conversa. Só propõe: não prepara, não confirma, não executa.
 - `doc-projeto.js` — Lê ou lista um .md dentro da pasta do projeto. Não registra a ferramenta.
 - `envelope-coletor.js` — Embrulha a falha de um coletor interno. Não escolhe a ferramenta.
-- `ferramentas.js` — Catálogo das ferramentas do C-3PO: dez de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+- `ferramentas.js` — Catálogo das ferramentas do C-3PO: onze de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 - `leitura-pesada.js` — Leituras que varrem o Plane inteiro (fila, triagem, decisões: 15–35 s cada) para as ferramentas do C-3PO.
 - `persona.js` — Voz do C-3PO. Não é portão: a permissão mora em tools: [] e na lista de ferramentas.
 
@@ -302,7 +319,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `contas.js` — Estado da aba Contas. O pedido mora em contas-pedido.js; o desenho, em contas-desenho.js.
 - `decisoes-astargne.js` — Bloco Astargne da aba Decisões. Classifica o que depende do dono; não desenha o resto da aba.
 - `decisoes-grupo.js` — Agrupamento das decisões paradas. A página só escolhe o que mostrar.
-- `decisoes-linha.js` — Uma linha da aba Decisões. O clique abre o console; o link do card não abre junto.
+- `decisoes-linha.js` — Uma linha da aba Decisões. O clique abre o console; o link do card e o botão da mesa de decisão não abrem junto.
 - `decisoes.js` — Aba Decisões: o que está visível, os três grupos maiores e o resto colapsado.
 - `docs-desenho.js` — Desenho da aba Docs: rótulos, links e a lista de sinais.
 - `docs.js` — Aba Docs: lê a última varredura. O desenho mora em docs-desenho.js.
@@ -310,6 +327,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `estado-painel.js` — Estado compartilhado das abas. Projetos e Backlog leem o mesmo projeto em foco.
 - `grafo.js` — Aba Grafo — relações entre projetos, desenhadas via Mermaid (já vendorizado para os diagramas dos docs de projeto) em vez de SVG à mão: zero precedente de desenho manual no projeto, e o tamanho do catálogo (~10 nós) é exatamente o que o layout automático do Mermaid resolve bem.
 - `idade-curta.js` — Idade curta de uma data. Não desenha seção.
+- `mesa-conversa.js` — Conversa da mesa de decisão com o C-3PO: uma sessão por carta (volta onde parou), a abertura em que ele diz a pergunta e o que a carta trava, e o pedido de rascunho. Não grava nada no Plane.
+- `mesa-decisao.js` — Gaveta da mesa de decisão (PAINEL-53): a carta inteira à esquerda, o C-3PO à direita e o registro de decisão, que grava no Plane só por SSO + duas ações. Abre do Hangar ([data-mesa]) e da aba Decisões.
 - `nomes-curtos.js` — Nome curto da tira e dos bloqueios.
 - `orquestrador.js` — Liga as vistas da aba. Cada assunto mora no próprio arquivo.
 - `palco-bloqueios.js` — Os cinco bloqueios mais antigos do palco.
@@ -396,6 +415,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `contas.test.js` — Testes do módulo contas.js (aba Contas). Nunca chamam ssh: o executor é injetado (I5) e captura args + stdin, devolvendo saída pré-gravada no formato que o script remoto produz (corpo JSON, "\n", status HTTP).
 - `correcoes-auditoria.test.js` — Correções da auditoria de 23-24/10/2026: cada teste pina um mecanismo que a auditoria mostrou furado (mutação nomeada no título do caso).
 - `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css. Não confere cascata nem visual.
+- `decisao.test.js` — Mesa de decisão (PAINEL-53): protocolo DECISAO/v1, lista fechada de efeitos, escritor Painel Admin e a ordem de escrita do confirmar e da retomada.
 - `decisoes-c3po.test.js`
 - `despacho-controlado.test.js`
 - `diario-resumo.test.js`
@@ -419,6 +439,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `orquestrador-ui.test.js`
 - `orquestrador-v2.test.js`
 - `painel-falso.js` — Monta o painel REAL (montagem.js) com falsos em toda porta externa e um diretório de estado temporário; não sobe processo nem toca ssh, Plane, LLM, voz ou CLI de verdade.
+- `plane-mesa-falso.js` — Plane falso, em memória, só com as rotas que a mesa de decisão usa (Plane v1.4.2 lido no container em 31/10/2026): carta pelo identificador e pelo projeto, comentários (409 por external_id no PROJETO), labels, estados, atividades, users/me e o PATCH que apaga e recria as labels. Nunca abre rede.
 - `plane.test.js`
 - `politica-fala.test.js`
 - `protocolo-ui.test.js`

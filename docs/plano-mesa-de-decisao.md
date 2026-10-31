@@ -1,6 +1,7 @@
 # Mesa de decisão — discutir com o C-3PO e destravar a carta (painel-admin)
 
-Plano de 28/10/2026, ainda não construído. Decidido pelo dono: grava **comentário +
+Plano de 28/10/2026, **construído em 31/10/2026** (veja "Feito e escolhas" no fim; o mecanismo
+vivo está em [arquitetura.md](arquitetura.md) § decisao/). Decidido pelo dono: grava **comentário +
 destravar** (lista fechada) e mora no **Hangar e na aba Decisões** (um componente só).
 Só carta que espera decisão do dono (`ASTARGNE`/`PRODUTO`) entra na mesa; bloqueio
 por outra carta não é decisão (dono, 28/10/2026). Destravar = tirar `ASTARGNE` e
@@ -104,3 +105,39 @@ ações, e a chave nunca sai do servidor.
 ## Fora desta entrega
 Ingest em `docs/decisoes.md` (depende do estudo do LLM Wiki); voz na mesa;
 cartas filhas geradas pela decisão.
+
+## Feito e escolhas (31/10/2026)
+
+Construída em `decisao/` (porta `decisao.js` só com a leitura), `http/rotas-decisao.js`,
+`motor/ferramentas.js` (`carta_plane`) e `publico/mesa-{decisao,conversa}.js` + CSS. O que
+ficou diferente do texto acima, e por quê:
+
+- **Chave fora do `.env`.** A chave do Painel Admin fica em `~/.config/plane/painel-admin.token`
+  (600), relida a cada operação só pelo escritor; do `.env` vem só `PLANE_ADMIN_ACTOR_ID`
+  (sem ela, a mesa fica só leitura e diz por quê). Briefing do orquestrador de 31/10: é ADMIN
+  do workspace, e chave no `.env` vira `process.env`. Não há `PLANE_ADMIN_KEY`.
+- **Lista de permissão derivada**, não um campo novo: `decisao/permissao.js` lê `projetos.js`
+  (com `plane` e `sigla`, sem congelados, sem o Anya por id).
+- **Retomada em rota própria** (`/api/decisao/retomada/{preparar,confirmar}` {chave}), porque o
+  esqueleto das duas ações aceita um conjunto só de campos. Entrou o fim
+  `DECISAO_ABANDONADA`: 4xx explícito no comentário de intenção, ou retomada que não acha o
+  próprio comentário e vê a carta mudada — nos dois casos nada foi gravado.
+- **Atividades** (fato do Plane v1.4.2 lido em 31/10): depois do PATCH, alteração de outro ator
+  desde a releitura marca `divergente`. Não fecha a janela; só a torna visível.
+- **Rascunho sem rota nova**: a gaveta pede ao C-3PO, pela `/api/conversa`, um JSON com decisão
+  e motivo; o resto da resposta é descartado e os efeitos voltam desmarcados.
+- **Lease** conferido também no preparar, e pendência aberta da mesma carta recusa outro
+  preparar. O aviso "fica despachável" é heurístico: destravar deixa `READY TO DEV`/`TEST` sem
+  `ASTARGNE` nem `BLOQUEADA`.
+- **Módulo** na gaveta vem de quem abre (o Hangar e a aba Decisões já o têm); a leitura sem
+  cache não consulta módulos (seria uma consulta por módulo).
+- **Diário** em `c3po/decisoes.jsonl` (o "diário do C-3PO" deste plano); teto de 40 s para o lote
+  de chamadas sob a trava.
+- **Resíduo novo**: o POST de comentário do Plane aceita `created_by` no corpo, então o ator de
+  um comentário é forjável por quem comenta no projeto; o recibo no Plane é sinal, o diário é a
+  prova (`arquitetura.md` § decisao/).
+- **Fora desta fatia**: a linha do Painel Admin no `../../PADROES-BACKLOG.md` (diz "só
+  administração") mora fora deste repositório — fica para o orquestrador.
+
+**Falta:** `PLANE_ADMIN_ACTOR_ID` no `.env` e a prova real (uma decisão escolhida pelo dono
+gravada numa carta, comentário e efeito relidos pela chave Guest).

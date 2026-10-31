@@ -20,11 +20,14 @@ const chip = (cor, texto) => `<span class="hg-chip" style="--c:${cor}">${texto}<
 const blocoCartas = (n) => `<div class="hg-cartas"><div style="--c:#ac9b81"><b>${n.cartas.aberto}</b><span>em aberto</span></div><div style="--c:var(--hg-alerta)"><b>${n.cartas.andamento}</b><span>em andamento</span></div><div style="--c:var(--hg-ok)"><b>${n.cartas.feito}</b><span>feitas</span></div></div>`;
 const vazio = (t) => `<p class="hg-vazio">${t}</p>`;
 
+// A gaveta da mesa (publico/mesa-decisao.js) escuta [data-mesa] no documento inteiro.
+const botaoMesa = (x) => (x.id ? `<button type="button" class="hg-link hg-mesa" data-mesa="${esc(x.id)}" data-mesa-titulo="${esc(x.titulo)}" data-mesa-modulo="${esc(x.modulo ?? '')}">Discutir com o C-3PO</button>` : '');
+
 function blocoDecisao(x, produto) {
   return `<div class="hg-decisao"><span class="hg-sobre">${produto ? 'decisão de produto · estação de planejamento' : `trava o módulo ${esc(x.modulo)} · peça no chão`}</span>
     <p>${x.id ? `<b class="hg-mono">${esc(x.id)}</b> ` : ''}${esc(x.titulo)}</p>
     ${x.detalhe ? `<p class="hg-detalhe">${esc(x.detalhe)}</p>` : ''}
-    <span class="hg-linha-chips">${x.tags.map((t) => chip('var(--hg-alerta)', esc(t))).join('')}${linkFora(x.url, 'abrir no Plane')}</span></div>`;
+    <span class="hg-linha-chips">${x.tags.map((t) => chip('var(--hg-alerta)', esc(t))).join('')}${linkFora(x.url, 'abrir no Plane')}${botaoMesa(x)}</span></div>`;
 }
 
 // Carta citada por SIGLA-N que o índice reverso não achou (Plane fora, carta de
