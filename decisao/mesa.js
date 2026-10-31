@@ -1,4 +1,4 @@
-// Compõe a mesa de decisão a partir do ambiente: leitor Guest, escritor Painel Admin (ou o motivo de não haver), diário, aplicação e os desafios das duas ações. Não registra rota nem autoriza.
+// Compõe a mesa de decisão a partir do ambiente: leitor Guest, escritor Painel Admin (ou o motivo de não haver), diário, aplicação e os desafios das duas ações (gravar, retomar, abandonar). Não registra rota nem autoriza.
 //
 // A chave do Painel Admin NÃO vem do ambiente: o escritor a lê do arquivo a cada operação.
 // Do ambiente vem só o UUID fixo do ator (`PLANE_ADMIN_ACTOR_ID`), contra o qual `/users/me`
@@ -8,7 +8,7 @@ import { criarEscritorDecisaoPlane } from './escritor-decisao-plane.js';
 import { criarDiarioDecisao } from './diario-decisao.js';
 import { criarAplicacaoDecisao } from './aplicacao-decisao.js';
 import { criarServicoDecisao } from './servico-decisao.js';
-import { criarConfirmacoesDecisao, criarConfirmacoesRetomada } from './api-decisao.js';
+import { criarConfirmacoesAbandono, criarConfirmacoesDecisao, criarConfirmacoesRetomada } from './api-decisao.js';
 import { projetosDaMesa } from './permissao.js';
 
 function escritorDaMesa({ ambiente, fetchPlane, arquivoChave, log }) {
@@ -29,7 +29,7 @@ export function criarMesaDecisao({ ambiente, fetchPlane, diretorio, estado, agor
   const { escritor = null, motivo = null } = escritorDaMesa({ ambiente, fetchPlane, arquivoChave, log });
   const diario = criarDiarioDecisao({ diretorio, agora });
   const aplicacao = criarAplicacaoDecisao({ leitor, escritor, diario, comTrava: estado.comTrava, lerLease: estado.lerLease, agora, limparCache });
-  const servico = criarServicoDecisao({ leitor, escritor, motivoSemEscrita: motivo, diario, aplicacao, agora });
+  const servico = criarServicoDecisao({ leitor, escritor, motivoSemEscrita: motivo, diario, aplicacao, agora, ambiente });
   return { servico, confirmacoes: criarConfirmacoesDecisao({ servico, aplicacao, agora }),
-    retomada: criarConfirmacoesRetomada({ servico, aplicacao, agora }) };
+    retomada: criarConfirmacoesRetomada({ servico, aplicacao, agora }), abandono: criarConfirmacoesAbandono({ servico, aplicacao, agora }) };
 }

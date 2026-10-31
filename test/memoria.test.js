@@ -218,10 +218,12 @@ test('diário de conversas: só pergunta e resposta, filtradas e cortadas; reten
     yield { tipo: 'token', texto: `achei PLANE_API_KEY=plane_api_abcdefghijklmnopq e ${'z'.repeat(3000)}` };
     yield { tipo: 'fim', sessao: 's1' };
   }
-  const http = new ConversaHttp({ resposta, conversar, maxMensagem: 8000, diarioConversas: diario, log: () => {} });
+  // Com a sessão do dono: sem ela o turno não entra no diário (test/correcoes-memoria.test.js, B1.1).
+  const http = new ConversaHttp({ resposta, conversar, maxMensagem: 8000, diarioConversas: diario, log: () => {},
+    sessao: { ler: async () => ({ estado: 'dono' }) } });
   const res = { writeHead() {}, flushHeaders() {}, on() {}, write() {}, end() {} };
   try {
-    await http.atender({}, res);
+    await http.atender({ headers: {} }, res);
     const [l] = await diario.ler();
     assert.equal(l.sessao, 's1');
     assert.equal(l.pergunta, 'a chave é ***?');

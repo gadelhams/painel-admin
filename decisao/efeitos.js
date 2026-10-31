@@ -1,22 +1,43 @@
 // Lista fechada dos efeitos da mesa contra a carta ATUAL: o pedido do dono vira um delta por nome, a impressão digital da carta, o corpo do PATCH e a verificação depois dele. Puro; não lê nem grava.
 //
 // Efeitos v1 (docs/plano-mesa-de-decisao.md): destravar (tira ASTARGNE ou a legada DONO e
-// troca só o marcador "(ASTARGNE…)"/"(DONO…)" da descrição), pôr ou tirar PRODUTO, mudar o
+// troca só o marcador "(ASTARGNE…)"/"(DONO…)" da descrição — exatamente um, dentro de um nó
+// de texto), pôr ou tirar PRODUTO, mudar o
 // estado para um dos cinco do projeto. Nada mais: nem READY TO DEV/TEST, nem BLOQUEADA,
 // nem texto livre na descrição. O `updated_at` do Plane muda sozinho e com a própria escrita,
 // por isso a versão da carta é a digital do conteúdo, não ele.
 import { createHash } from 'node:crypto';
 import { RecusaMesa } from './permissao.js';
 import { FONTE } from './protocolo-decisao.js';
-import { esc } from './texto-html.js';
+import { esc, textoDeHtml } from './texto-html.js';
 
 const TRAVAS = ['ASTARGNE', 'DONO'];
 const PRODUTO = 'PRODUTO';
 const ESTADOS = ['Backlog', 'Todo', 'In Progress', 'Done', 'Cancelled'];
 const GATES = ['READY TO DEV', 'READY TO TEST'];
-const MARCADOR = /\((?:ASTARGNE|DONO)(?![\p{L}])[^)]{0,200}\)/gu;
-// Sem o estado do /g: testar não pode mexer no lastIndex de quem troca.
-const temMarcador = t => new RegExp(MARCADOR.source, 'u').test(String(t ?? ''));
+const ABRE_MARCADOR = /\((?:ASTARGNE|DONO)(?![\p{L}])/gu;
+const MAX_MARCADOR = 2_000;
+
+// O marcador vive num nó de texto: de "(ASTARGNE"/"(DONO" até o ")" que o fecha, contando os
+// parênteses aninhados, sem atravessar "<" (uma tag). Um que não fecha antes da tag é `solto`
+// e não se troca: trocar através do HTML apagaria a lista ou o parágrafo do meio.
+function marcadores(html) {
+  const s = String(html ?? '');
+  const achados = [];
+  const soltos = [];
+  for (const m of s.matchAll(ABRE_MARCADOR)) {
+    if (achados.some(a => m.index > a.inicio && m.index < a.fim)) continue; // aninhado num marcador já achado
+    let prof = 0;
+    let fim = -1;
+    for (let i = m.index; i < s.length && i - m.index < MAX_MARCADOR && s[i] !== '<'; i += 1) {
+      if (s[i] === '(') prof += 1;
+      else if (s[i] === ')' && --prof === 0) { fim = i + 1; break; }
+    }
+    if (fim < 0) soltos.push(m.index); else achados.push({ inicio: m.index, fim, html: s.slice(m.index, fim) });
+  }
+  return { achados, soltos: soltos.filter(i => !achados.some(a => i > a.inicio && i < a.fim)) };
+}
+const temMarcador = t => marcadores(t).achados.length > 0;
 const sha = t => createHash('sha256').update(String(t ?? '')).digest('hex');
 const idDe = x => (x && typeof x === 'object' ? x.id : x);
 const nomes = carta => carta.labels.map(l => l.name);
@@ -57,11 +78,14 @@ export function calcularDelta(r, pedido, { decisao, quando }) {
     if (!travas.length) throw new RecusaMesa('destravar: a carta não tem a label ASTARGNE (nem a legada DONO)');
     tirar.push(...travas);
     linhas.push(...travas.map(t => `tirar a label ${t}`));
-    const achados = String(r.carta.description_html ?? '').match(MARCADOR) ?? [];
+    const { achados, soltos } = marcadores(r.carta.description_html);
+    // Exatamente um: com dois, qual se troca é escolha do dono, não da mesa (a recusa não ecoa a carta).
+    if (achados.length + soltos.length > 1) throw new RecusaMesa(`destravar: a descrição tem mais de um marcador (ASTARGNE…)/(DONO…) — ${achados.length + soltos.length}; deixe um só no Plane e prepare de novo`);
     if (achados.length) {
-      marcador = { antes: achados, depois: textoMarcador(decisao, quando) };
-      linhas.push(`trocar na descrição ${achados.join(' e ')} por ${marcador.depois}`);
-    } else avisos.push('a descrição não tem o marcador (ASTARGNE…)/(DONO…): só a label sai');
+      marcador = { antes: textoDeHtml(achados[0].html, MAX_MARCADOR), depois: textoMarcador(decisao, quando) };
+      linhas.push(`trocar na descrição ${marcador.antes} por ${marcador.depois}`);
+    } else if (soltos.length) avisos.push('a descrição tem "(ASTARGNE…"/"(DONO…" que não fecha no mesmo trecho de texto (atravessa HTML): ela não é trocada, só a label sai');
+    else avisos.push('a descrição não tem o marcador (ASTARGNE…)/(DONO…): só a label sai');
   }
   if (pedido.produto === 'por') {
     if (atuais.includes(PRODUTO)) throw new RecusaMesa('pôr PRODUTO: a carta já tem a label');
@@ -87,14 +111,36 @@ export function calcularDelta(r, pedido, { decisao, quando }) {
   return { tirar, por, estado, marcador: Boolean(marcador), textoMarcador: marcador?.depois ?? null, linhas, avisos };
 }
 
-// Mesmo delta? (o que o dono viu no preparar contra a leitura do confirmar)
-export const mesmoDelta = (a, b) => JSON.stringify([a.tirar, a.por, a.estado, a.marcador]) === JSON.stringify([b.tirar, b.por, b.estado, b.marcador]);
+// Mesmo delta? (o que o dono viu no preparar contra a leitura do confirmar ou da retomada)
+export const mesmoDelta = (a, b) => JSON.stringify([a.tirar, a.por, a.estado, a.marcador, a.textoMarcador ?? null]) ===
+  JSON.stringify([b.tirar, b.por, b.estado, b.marcador, b.textoMarcador ?? null]);
+
+// O delta guardado (diário editável) ainda é o que o pedido e a prosa produzem? Reconferido no
+// ponto de escrita, inclusive na retomada: só a lista fechada, só o que o dono pediu.
+export function conferirDelta(delta, pedido, { decisao, quando }) {
+  const podeTirar = [...(pedido.destravar ? TRAVAS : []), ...(pedido.produto === 'tirar' ? [PRODUTO] : [])];
+  const ok = delta && Array.isArray(delta.tirar) && Array.isArray(delta.por) &&
+    delta.tirar.every(n => podeTirar.includes(n)) && new Set(delta.tirar).size === delta.tirar.length &&
+    (!pedido.destravar || delta.tirar.some(n => TRAVAS.includes(n))) && (pedido.produto !== 'tirar' || delta.tirar.includes(PRODUTO)) &&
+    JSON.stringify(delta.por) === JSON.stringify(pedido.produto === 'por' ? [PRODUTO] : []) &&
+    (pedido.estado ? delta.estado?.para === pedido.estado && typeof delta.estado.de === 'string' : delta.estado === null) &&
+    typeof delta.marcador === 'boolean' &&
+    (delta.marcador ? pedido.destravar && delta.textoMarcador === textoMarcador(decisao, quando) : delta.textoMarcador === null);
+  if (!ok) throw new RecusaMesa('o delta guardado não é o que o pedido do dono produz');
+  return delta;
+}
 
 // Conteúdo que importa à decisão; comentários da própria aplicação (`proprias`) não contam.
-export function digital(r, { proprias = [] } = {}) {
-  const comentarios = r.comentarios.filter(c => !(c.external_source === FONTE && proprias.includes(c.external_id))).map(c => c.id).sort();
-  return sha(JSON.stringify({ estado: idDe(r.carta.state), labels: r.carta.labels.map(l => l.id).sort(), nome: r.carta.name,
-    descricao: sha(r.carta.description_html), comentarios }));
+// `textoDescricao`: a descrição pelo texto, não pelo HTML — para reconhecer a carta já com o
+// delta aplicado, depois de o Plane passar o HTML gravado pelo nh3.
+export function digital(r, { proprias = [], textoDescricao = false } = {}) {
+  const comentarios = r.comentarios.filter(c => !(c.external_source === FONTE && proprias.includes(c.external_id)))
+    .map(c => `${c.id}:${c.edited_at ?? ''}`).sort();
+  const c = r.carta;
+  return sha(JSON.stringify({ estado: idDe(c.state), labels: c.labels.map(l => l.id).sort(), nome: c.name,
+    descricao: sha(textoDescricao ? textoDeHtml(c.description_html, Infinity) : c.description_html), comentarios,
+    arquivada: c.archived_at ?? null, pai: idDe(c.parent) ?? null,
+    modulos: [...(c.module_ids ?? c.modules ?? [])].map(idDe).sort() }));
 }
 
 // Ids por nome, na leitura dada. Label a tirar que já saiu não é erro: o delta é idempotente.
@@ -112,8 +158,20 @@ export function corpoDoPatch(r, delta, ids) {
   if ([...alvo].sort().join() !== [...atuais].sort().join()) corpo.labels = alvo;
   if (ids.estado && idDe(r.carta.state) !== ids.estado) corpo.state = ids.estado;
   const descricao = String(r.carta.description_html ?? '');
-  if (delta.marcador && delta.textoMarcador && temMarcador(descricao)) corpo.description_html = descricao.replace(MARCADOR, esc(delta.textoMarcador));
+  const { achados } = marcadores(descricao);
+  // Por posição, não por String.replace: "$&", "$'" e "$`" da decisão entram literais.
+  if (delta.marcador && delta.textoMarcador && achados.length === 1) {
+    const [a] = achados;
+    corpo.description_html = `${descricao.slice(0, a.inicio)}${esc(delta.textoMarcador)}${descricao.slice(a.fim)}`;
+  }
   return { corpo, labelsEsperadas: alvo };
+}
+
+// A carta como o PATCH a deixaria (para a digital da carta já aplicada; ver `digital`).
+export function cartaDepois(r, corpo) {
+  const labels = corpo.labels ? corpo.labels.map(id => r.labels.find(l => l.id === id) ?? { id, name: '?' }) : r.carta.labels;
+  return { ...r, carta: { ...r.carta, labels, ...(corpo.state ? { state: corpo.state } : {}),
+    ...('description_html' in corpo ? { description_html: corpo.description_html } : {}) } };
 }
 
 // Depois do PATCH: aplicado (tudo vale e nenhuma label fora do delta mudou), não aplicado
@@ -124,7 +182,8 @@ export function verificar(depois, delta, labelsEsperadas) {
     ...delta.tirar.map(n => ({ ok: !atuais.includes(n), texto: `label ${n} fora` })),
     ...delta.por.map(n => ({ ok: atuais.includes(n), texto: `label ${n} posta` })),
     ...(delta.estado ? [{ ok: depois.carta.state?.name === delta.estado.para, texto: `estado ${delta.estado.para}` }] : []),
-    ...(delta.marcador ? [{ ok: !temMarcador(depois.carta.description_html), texto: 'marcador trocado' }] : []),
+    ...(delta.marcador ? [{ ok: !temMarcador(depois.carta.description_html) &&
+      textoDeHtml(depois.carta.description_html, Infinity).includes(delta.textoMarcador), texto: 'marcador trocado' }] : []),
   ];
   const conjuntoIgual = depois.carta.labels.map(l => l.id).sort().join() === [...labelsEsperadas].sort().join();
   const valem = checagens.filter(c => c.ok);

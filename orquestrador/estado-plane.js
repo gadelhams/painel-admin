@@ -11,7 +11,7 @@ export function criarEscritorEstadoPlane({ chave, projetoPermitido, autorEsperad
   if (!chave || !UUID.test(projetoPermitido ?? '') || !UUID.test(autorEsperado ?? '')) throw new Error('identidade de escrita restrita ausente');
   const prefixo = `${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/`;
   async function pedir(caminho, opcoes = {}) {
-    const r = await fetchImpl(`${prefixo}${caminho}`, { ...opcoes,
+    const r = await fetchImpl(`${prefixo}${caminho}`, { ...opcoes, redirect: 'error',
       headers: { 'X-API-Key': chave, ...(opcoes.body ? { 'content-type': 'application/json' } : {}) },
       signal: AbortSignal.timeout(15_000) });
     if (!r.ok) throw new Error(`Plane recusou a mudança de estado (HTTP ${r.status})`);

@@ -72,14 +72,21 @@ export function criarApiMemoria({ autorizar, confirmacoes }) {
     falhaConfirmar: { mensagem: 'gravação incerta; confira o histórico da memória antes de repetir' } });
 }
 
-// O que a tela mostra: texto, versão, últimas entradas do histórico e a pendente da reflexão.
+// O que a tela mostra: texto, versão, últimas entradas do histórico (até a linha ruim, se
+// houver), se o arquivo foi editado fora do painel desde a última versão e a pendente da reflexão.
 export async function estadoMemoria({ leitor, pendente }) {
   const atual = await leitor.ler();
   let historico = [];
   let erroHistorico = null;
-  try { historico = await leitor.ultimas(10); } catch (e) { erroHistorico = e.message; }
+  let foraDoPainel = false;
+  try {
+    const r = await leitor.retrato(10);
+    ({ versoes: historico, foraDoPainel } = r);
+    if (r.linhaRuim) erroHistorico = `linha ${r.linhaRuim} do memoria-historico.jsonl ilegível: as versões depois dela não aparecem nem servem para desfazer`;
+  } catch (e) { erroHistorico = e.message; }
   const p = await pendente.ler();
-  return { ...atual, historico, erroHistorico,
+  return { ...atual, historico, erroHistorico, foraDoPainel,
+    avisoForaDoPainel: foraDoPainel ? 'editada fora do painel desde a última versão registrada (a próxima gravação registra isso no histórico)' : null,
     pendente: p && !p.ilegivel ? { id: p.id, quando: p.quando, motivo: p.motivo, diff: p.diff, base: p.base, fracaoApagada: p.fracaoApagada } : null,
     aviso: 'Memória L1 do C-3PO: entra em toda conversa como dado, não como ordem. Editar pede a sessão do dono.' };
 }

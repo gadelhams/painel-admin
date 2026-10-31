@@ -9,8 +9,9 @@ export function textoDeHtml(html, max = 6_000) {
   const texto = String(html ?? '')
     .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|li|h[1-6]|div|blockquote|pre|tr)>/gi, '\n')
     .replace(/<[^>]*>/g, '')
-    .replace(/&(?:amp|lt|gt|quot|#39|#x27|nbsp);/g, e => ENTIDADES[e])
-    .replace(/&#(\d{1,7});/g, (_, n) => String.fromCodePoint(Number(n) <= 0x10ffff ? Number(n) : 0xfffd))
+    // Uma passada só: "&amp;#71;" é o texto "&#71;", nunca "G" (decodificar duas vezes forjaria prefixos).
+    .replace(/&(?:amp|lt|gt|quot|#39|#x27|nbsp|#(\d{1,7}));/g, (e, n) => (n === undefined ? ENTIDADES[e]
+      : String.fromCodePoint(Number(n) <= 0x10ffff ? Number(n) : 0xfffd)))
     .replace(/\n{3,}/g, '\n\n').trim();
   return texto.length > max ? `${texto.slice(0, max)}…` : texto;
 }

@@ -7,6 +7,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { anexarJsonl, lerJsonl } from '../orquestrador/leitor-jsonl.js';
+import { RecusaMesa } from './permissao.js';
 
 const DIRETORIO = path.join(os.homedir(), '.local', 'state', 'painel-admin', 'c3po');
 const ETAPAS = ['DECISAO_PENDENTE', 'COMENTARIO_GRAVADO', 'DECISAO_CONCLUIDA', 'DECISAO_ABANDONADA'];
@@ -14,10 +15,13 @@ const ETAPAS = ['DECISAO_PENDENTE', 'COMENTARIO_GRAVADO', 'DECISAO_CONCLUIDA', '
 export function criarDiarioDecisao({ diretorio = DIRETORIO, agora = () => Date.now() } = {}) {
   const arquivo = path.join(diretorio, 'decisoes.jsonl');
 
+  // Falha de leitura é LOCAL: a mensagem diz o arquivo, nunca "o Plane" (a fronteira repassa a recusa).
   async function linhas() {
     let texto;
-    try { texto = await fs.readFile(arquivo, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return []; throw e; }
-    return lerJsonl(texto, 'diário da mesa').linhas;
+    try { texto = await fs.readFile(arquivo, 'utf8'); }
+    catch (e) { if (e.code === 'ENOENT') return []; throw new RecusaMesa(`diário local da mesa ilegível (c3po/decisoes.jsonl: ${e.code ?? 'erro'}); nada foi gravado`, 503); }
+    try { return lerJsonl(texto, 'diário local da mesa').linhas; }
+    catch (e) { throw new RecusaMesa(`${e.message} (c3po/decisoes.jsonl; falha local, não do Plane): conserte o arquivo antes de gravar`, 503); }
   }
 
   // Uma entrada por chave, com a etapa mais adiantada e o registro de abertura.

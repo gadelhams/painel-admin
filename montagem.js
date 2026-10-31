@@ -57,7 +57,7 @@ import { criarExecutorAcoes } from './acoes/executor-acoes.js';
 import { criarApiAcoes, criarConfirmacoesAcoes } from './acoes/api-acoes.js';
 import { RotasDecisao } from './http/rotas-decisao.js';
 import { criarMesaDecisao } from './decisao/mesa.js';
-import { criarApiDecisao, criarApiRetomada } from './decisao/api-decisao.js';
+import { criarApiAbandono, criarApiDecisao, criarApiRetomada } from './decisao/api-decisao.js';
 import { RotasMemoria } from './http/rotas-memoria.js';
 import { criarLeitorMemoria } from './memoria/arquivo-memoria.js';
 import { criarEscritorMemoria } from './memoria/escritor-memoria.js';
@@ -216,7 +216,8 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     recusa: criarGuarda(porta),
     resposta,
     // O diário de conversas é o insumo da reflexão: só pergunta e resposta, filtradas, 14 dias.
-    conversa: new ConversaHttp({ resposta, conversar, maxMensagem: MAX_MENSAGEM, log,
+    // Só entra o turno com a sessão SSO do dono (o loopback e o executor não alimentam a reflexão).
+    conversa: new ConversaHttp({ resposta, conversar, maxMensagem: MAX_MENSAGEM, log, sessao: sessaoPainel,
       diarioConversas: criarDiarioConversas({ diretorio: diretorioC3po, agora, ambiente }) }),
     voz: new RotasVoz({ resposta, proxyEleven: new ProxyElevenLabs(fetchVoz ? { fetchImpl: fetchVoz } : {}), autorizarTts: autorizarPrivilegiado }),
     painel: new RotasPainel({
@@ -249,7 +250,8 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     acoes: new RotasAcoes({ resposta, apiAcoes }),
     decisao: new RotasDecisao({ resposta, servico: mesa.servico, log,
       apiDecisao: criarApiDecisao({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.confirmacoes }),
-      apiRetomada: criarApiRetomada({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.retomada }) }),
+      apiRetomada: criarApiRetomada({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.retomada }),
+      apiAbandono: criarApiAbandono({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.abandono }) }),
     memoria: new RotasMemoria({ resposta, apiMemoria, lerEstado: () => estadoMemoria(memoria) }),
   });
 

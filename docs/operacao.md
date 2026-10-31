@@ -58,7 +58,7 @@ no settings do usuário). O gatilho
 | `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER; projeto novo exige a entrada em `montagem.js` (`identidadesDeEscrita`) na mesma entrega |
 | `XAI_API_KEY` | transcrição de voz (xAI); sem ela a rota responde 503 |
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
-| `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), relida a cada escrita; antes de escrever, `/users/me` tem de devolver este UUID |
+| `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), lida uma vez por operação (aberta sem seguir elo); antes de escrever, `/users/me` tem de devolver este UUID |
 | `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ligada em 24/10/2026** depois de REPROVADO (1ª) e APROVADO (2ª) do `validador-deploy`; remover a linha desliga a troca no servidor (o inventário continua) |
 | `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada, a **vigília** de um projeto com o **play da nave** ligado (Hangar, SSO + confirmação) passa a despachar sozinha dentro dos freios do contrato |
 | `ORQ_AGENDADOR` | `true` deixa ESTA instância agendar a vigília e o zelador (trava em `agendador.json`, pid conferido a cada volta). **Só na unit systemd, nunca no `.env`**: o smoke na 7787 lê o mesmo `.env` e o mesmo estado, e dois agendadores despachariam duas vezes. Linha a acrescentar em `~/.config/systemd/user/painel-admin.service`, seção `[Service]`: `Environment=ORQ_AGENDADOR=true` (depois `systemctl --user daemon-reload` e `restart`) |
@@ -80,8 +80,14 @@ remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 Mesa de decisão (PAINEL-53, 31/10/2026): diário de acréscimo em
 `~/.local/state/painel-admin/c3po/decisoes.jsonl` — `DECISAO_PENDENTE`,
 `COMENTARIO_GRAVADO`, `DECISAO_CONCLUIDA` ou `DECISAO_ABANDONADA` por chave. Uma
-decisão sem fim aparece como "aplicação pendente" na aba Decisões e na gaveta;
-retomar é por lá (SSO + duas ações), nunca editando o arquivo.
+decisão sem fim aparece como "aplicação pendente" na aba Decisões e na gaveta, com
+**Retomar** e **Abandonar** (as duas por SSO + duas ações), nunca editando o arquivo.
+Retomar relê a carta e mostra as mudanças recalculadas; se a carta mudou desde a
+decisão, tem lease ou a pendência passou de 24 h, ela recusa e o caminho é
+**Abandonar**: grava `DECISAO_ABANDONADA` (com quem) e, se a carta estiver
+acessível, um recibo `DECISAO-APLICACAO/v1` "abandonada" nela — carta apagada,
+projeto congelado ou Plane fora não impedem fechar a pendência. Diário ilegível é
+falha local (a mensagem diz `c3po/decisoes.jsonl`): conserte o arquivo antes.
 
 Ações do C-3PO (fase 3, 31/10/2026): diário de acréscimo em
 `~/.local/state/painel-admin/c3po/acoes.jsonl` — uma linha por etapa (proposta,
@@ -121,10 +127,18 @@ Arquivos em `~/.local/state/painel-admin/c3po/`: `MEMORIES.md` (a memória L1, a
 8 KB), `memoria-historico.jsonl` (toda versão, com diff e os dois textos),
 `memoria-pendente.json` (proposta da reflexão que apagaria demais),
 `conversas.jsonl` (pergunta e resposta filtradas, 14 dias) e `reflexao.jsonl`
-(uma linha por noite). Editar pela tela: `/c3po/#memoria` (preparar → confirmar,
-com a sessão do Cadastro Único); desfazer é o botão de cada versão do histórico.
-Editar o arquivo à mão também vale: a próxima versão gravada pelo painel sai com
-`foraDoPainel: true`.
+(a noite marcada `iniciada` antes da CLI e a linha do resultado depois). Editar pela
+tela: `/c3po/#memoria` (preparar → confirmar, com a sessão do Cadastro Único);
+desfazer é o botão de cada versão aplicada do histórico (versão que nunca virou a
+atual não tem o botão; linha ruim no meio do histórico: a tela diz qual, e as
+versões antes dela continuam servindo). Editar o arquivo à mão também vale: o painel
+avisa "editada fora do painel" e a próxima versão gravada sai com `foraDoPainel: true`.
+
+**Diário de conversas só com a sessão do dono** (31/10/2026): `/api/conversa` segue
+aberta, mas só o turno cuja requisição traz a sessão SSO do dono entra em
+`conversas.jsonl` — o loopback, um processo local ou o executor não alimentam a
+reflexão. O filtro de segredo do diário é de melhor esforço (formatos conhecidos e
+os valores do `.env`).
 
 A reflexão roda por **timer de usuário**, entregue em `deploy/` e não instalado
 pelo painel. Instalar (uma vez, na Omarchy):
@@ -139,7 +153,10 @@ systemctl --user list-timers painel-reflexao.timer   # próxima: 03:30
 
 Rodar já, para conferir: `systemctl --user start painel-reflexao.service` e
 `journalctl --user -u painel-reflexao` (uma linha `[reflexao] <data> <resultado>`);
-a segunda vez no mesmo dia responde `ja-rodou`. Pré-requisitos: frota gravada com o
+a segunda vez no mesmo dia (ou antes de 20 h da última) responde `ja-rodou`. A
+reflexão só aplica sozinha se não apagar mais de 30% — contra o texto de antes e
+contra a última versão gravada pelo dono; passou, vira proposta pendente no painel.
+Pré-requisitos: frota gravada com o
 bloco zelador num modelo `claude` (aba Orquestração → Frota) e o `claude` logado na
 assinatura. Desligar: `systemctl --user disable --now painel-reflexao.timer`.
 

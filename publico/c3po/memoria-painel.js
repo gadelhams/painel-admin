@@ -15,20 +15,27 @@
     return prepararEConfirmar({ alvo: $('mem-confirmacao'), estado: $('mem-estado'), corpo, aoGravar: carregar });
   }
 
+  const ROTULO_ESTADO = { 'nunca-aplicada': ' · nunca aplicada (a gravação caiu antes de trocar o arquivo)', pendente: ' · desfecho desconhecido' };
+
+  // Só versão aplicada tem "Desfazer": evento (desfecho de outra versão) e versão que nunca
+  // virou a atual não são um texto para onde voltar.
   function itemHistorico(h) {
     const li = el('li');
     const quando = new Date(h.quando).toLocaleString('pt-BR');
+    if (h.evento) { li.append(el('span', 'mem-nota', `${quando} · ${h.evento}`)); return li; }
     const origem = h.origem && ROTULO_ORIGEM[h.origem] ? ` (${ROTULO_ORIGEM[h.origem]})` : '';
-    li.append(el('span', 'mem-quem', `${quando} · ${ROTULO_QUEM[h.quem] ?? h.quem}${origem}${h.foraDoPainel ? ' · havia edição à mão antes' : ''}`));
+    li.append(el('span', 'mem-quem', `${quando} · ${ROTULO_QUEM[h.quem] ?? h.quem}${origem}${h.foraDoPainel ? ' · havia edição à mão antes' : ''}${ROTULO_ESTADO[h.estado] ?? ''}`));
     const detalhes = el('details');
     detalhes.append(el('summary', null, `+${h.linhasAcrescentadas ?? '?'} −${h.linhasRemovidas ?? '?'} linhas · versão ${String(h.hashDepois).slice(0, 12)}`));
     const pre = el('pre', 'mem-diff');
     diffEm(pre, h.diff);
     detalhes.append(pre);
+    li.append(detalhes);
+    if (h.estado && h.estado !== 'aplicada') return li;
     const desfazer = el('button', 'mem-desfazer', 'Desfazer (voltar ao texto de antes)');
     desfazer.type = 'button';
     desfazer.addEventListener('click', () => fluxo({ base: atual.hash, origem: 'versao', valor: h.hashAntes }));
-    li.append(detalhes, desfazer);
+    li.append(desfazer);
     return li;
   }
 
@@ -53,13 +60,14 @@
     atual = d;
     const versao = d.hash ? ` · versão ${d.hash.slice(0, 12)}` : '';
     const estado = { ausente: 'vazia', ok: 'em dia', grande: 'acima do teto (editada à mão)', ilegivel: 'ilegível' }[d.estado] ?? d.estado;
-    $('mem-resumo').textContent = `${estado} · ${d.bytes}/${d.teto} bytes${versao}${d.motivo ? ` · ${d.motivo}` : ''}`;
+    $('mem-resumo').textContent = `${estado} · ${d.bytes}/${d.teto} bytes${versao}${d.motivo ? ` · ${d.motivo}` : ''}${d.foraDoPainel ? ` · ${d.avisoForaDoPainel}` : ''}`;
     $('mem-texto').value = d.texto ?? '';
     $('mem-confirmacao').hidden = true;
     mostrarPendente(d.pendente);
     const lista = $('mem-historico');
     lista.replaceChildren(...(d.historico ?? []).map(itemHistorico));
-    if (!lista.children.length) lista.append(el('li', 'mem-nota', d.erroHistorico ? `histórico ilegível: ${d.erroHistorico}` : 'nenhuma versão gravada pelo painel ainda'));
+    if (d.erroHistorico) lista.append(el('li', 'mem-nota', `histórico com defeito: ${d.erroHistorico}`));
+    if (!lista.children.length) lista.append(el('li', 'mem-nota', 'nenhuma versão gravada pelo painel ainda'));
   }
 
   function alternar(abrir) {

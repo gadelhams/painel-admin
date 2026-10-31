@@ -24,35 +24,63 @@ const CONTROLE = /[\u0000-\u0009\u000B-\u001F\u007F]/;
 const LIMITES = { decisao: 300, motivo: 2_000 };
 
 
-function limpar(campo, valor, { max, min = 0, linhas = false }) {
+const temReservado = t => { const m = String(t ?? '').normalize('NFKC').replace(INVISIVEIS, '').toUpperCase(); return RESERVADOS.some(r => m.includes(r)); };
+const recusaReservado = campo => new RecusaMesa(`${campo}: não pode citar o prefixo de um protocolo do canal (${RESERVADOS.join(', ')})`);
+
+// `ambiente`: o do processo, só para comparar valores de variáveis com nome de segredo — nunca ecoa.
+function limpar(campo, valor, { max, min = 0, linhas = false, ambiente }) {
   if (typeof valor !== 'string') throw new RecusaMesa(`${campo}: texto obrigatório`);
   const t = valor.normalize('NFKC').replace(INVISIVEIS, '').replace(/\r\n?/g, '\n').trim();
   if (t.length < min || t.length > max) throw new RecusaMesa(`${campo}: de ${min} a ${max} caracteres`);
   if (CONTROLE.test(t) || (!linhas && t.includes('\n'))) throw new RecusaMesa(`${campo}: ${linhas ? 'caractere de controle' : 'uma linha só'}`);
-  const maiusculo = t.toUpperCase();
-  if (RESERVADOS.some(r => maiusculo.includes(r))) throw new RecusaMesa(`${campo}: não pode citar o prefixo de um protocolo do canal (${RESERVADOS.join(', ')})`);
+  if (temReservado(t)) throw recusaReservado(campo);
   // A recusa nunca ecoa o trecho: o texto inteiro volta para o dono, que sabe o que colou.
-  if (filtrarSegredo(t, {}) !== t) throw new RecusaMesa(`${campo}: o texto parece conter um segredo (chave, token ou senha); tire-o antes de gravar`);
+  if (filtrarSegredo(t, ambiente) !== t) throw new RecusaMesa(`${campo}: o texto parece conter um segredo (chave, token ou senha); tire-o antes de gravar`);
   return t;
 }
 
-export function validarProsa({ decisao, motivo }) {
-  return { decisao: limpar('decisão', decisao, { min: 3, max: LIMITES.decisao }),
-    motivo: limpar('motivo', motivo ?? '', { max: LIMITES.motivo, linhas: true }) };
+export function validarProsa({ decisao, motivo }, { ambiente = process.env } = {}) {
+  return { decisao: limpar('decisão', decisao, { min: 3, max: LIMITES.decisao, ambiente }),
+    motivo: limpar('motivo', motivo ?? '', { max: LIMITES.motivo, linhas: true, ambiente }) };
+}
+
+// Tudo o que vai ao comentário passa pela mesma régua, inclusive o que veio da carta (o
+// marcador da descrição na linha de Efeitos): só o cabeçalho fixo pode citar DECISAO/.
+// O escritor confere de novo no ponto de escrita, com o HTML que vai sair.
+export function conferirComentarioMesa(html) {
+  const cabecalho = [P_CABECALHO, P_RECIBO].find(c => String(html ?? '').startsWith(c));
+  if (!cabecalho) throw new RecusaMesa('comentário fora do formato da mesa');
+  if (temReservado(textoDeHtml(html.slice(cabecalho.length), 20_000))) throw recusaReservado('comentário');
+  return html;
 }
 
 const paragrafo = (campo, valor) => `<p>${campo}: ${esc(valor).replace(/\n/g, '<br>')}</p>`;
 
 export function codificarDecisao({ identificador, decisao, motivo, efeitos, quando }) {
-  return [P_CABECALHO, paragrafo('Carta', identificador), paragrafo('Decisão', decisao),
+  return conferirComentarioMesa([P_CABECALHO, paragrafo('Carta', identificador), paragrafo('Decisão', decisao),
     paragrafo('Motivo', motivo || '—'), paragrafo('Efeitos', efeitos.length ? efeitos.join('; ') : 'nenhum (só o registro)'),
-    paragrafo('Data', new Date(quando).toISOString()), paragrafo('Autor', AUTOR_TEXTO)].join('');
+    paragrafo('Data', new Date(quando).toISOString()), paragrafo('Autor', AUTOR_TEXTO)].join(''));
 }
 
 export function codificarRecibo({ identificador, resultado, mudancas, notas, quando }) {
   return [P_RECIBO, paragrafo('Carta', identificador), paragrafo('Resultado', resultado),
     paragrafo('Mudanças verificadas', mudancas.length ? mudancas.join('; ') : 'nenhuma'),
     paragrafo('Notas', notas.length ? notas.join('; ') : '—'), paragrafo('Data', new Date(quando).toISOString())].join('');
+}
+
+const campos = (html, inicio) => {
+  const c = {};
+  for (const [, nome, valor] of html.slice(inicio.length).matchAll(/<p>([^<:]{1,40}): ([\s\S]*?)<\/p>/g)) c[nome] = textoDeHtml(valor, 4_000);
+  return c;
+};
+const separar = t => (!t || t === '—' || t === 'nenhuma' ? [] : t.split('; '));
+
+// O recibo que já está na carta (409 do external_id): ele manda no resultado da retomada.
+export function lerRecibo(html) {
+  const h = String(html ?? '');
+  if (!h.startsWith(P_RECIBO)) return null;
+  const c = campos(h, P_RECIBO);
+  return c.Resultado ? { resultado: c.Resultado, mudancas: separar(c['Mudanças verificadas']), notas: separar(c.Notas) } : null;
 }
 
 const idDe = x => (x && typeof x === 'object' ? x.id : x);
@@ -63,9 +91,8 @@ export function lerDecisao(comentario, { autorEsperado }) {
   const html = String(comentario?.comment_html ?? '');
   if (!autorEsperado || comentario?.external_source !== FONTE || idDe(comentario.actor ?? comentario.created_by) !== autorEsperado ||
       comentario.edited_at || !html.startsWith(P_CABECALHO)) return null;
-  const campos = {};
-  for (const [, nome, valor] of html.slice(P_CABECALHO.length).matchAll(/<p>([^<:]{1,40}): ([\s\S]*?)<\/p>/g)) campos[nome] = textoDeHtml(valor, 4_000);
-  if (!campos.Carta || !campos.Decisão || campos.Autor !== AUTOR_TEXTO) return null;
-  return { carta: campos.Carta, decisao: campos.Decisão, motivo: campos.Motivo === '—' ? '' : campos.Motivo,
-    efeitos: campos.Efeitos ?? '', data: campos.Data ?? null, chave: comentario.external_id ?? null };
+  const c = campos(html, P_CABECALHO);
+  if (!c.Carta || !c.Decisão || c.Autor !== AUTOR_TEXTO) return null;
+  return { carta: c.Carta, decisao: c.Decisão, motivo: c.Motivo === '—' ? '' : c.Motivo,
+    efeitos: c.Efeitos ?? '', data: c.Data ?? null, chave: comentario.external_id ?? null };
 }

@@ -73,7 +73,9 @@ test('aplica: L1 nova com histórico (quem reflexao) e diff no diário; isolamen
     assert.equal(await fs.readFile(a.leitor.arquivo, 'utf8'), nova);
     const h = (await a.leitor.lerHistorico()).at(-1);
     assert.deepEqual([h.quem, h.origem, h.hashAntes, h.hashDepois], ['reflexao', 'reflexao', hashTexto(ANTIGA), hashTexto(nova)]);
-    const [d] = await a.diarioReflexao();
+    // A noite é marcada antes da CLI ("iniciada", B6.2) e fechada depois.
+    const [inicio, d] = await a.diarioReflexao();
+    assert.deepEqual([inicio.data, inicio.resultado], ['2026-11-01', 'iniciada']);
     assert.deepEqual([d.data, d.resultado, d.modelo, d.esforco, d.conversas], ['2026-11-01', 'aplicada', 'claude-sonnet-5-5', 'medium', 2]);
     assert.match(d.diff, /^\+- o Mestre prefere respostas curtas$/m);
     const [c] = cli.chamadas;
@@ -121,7 +123,7 @@ test('segredo na memória nova: recusa, nada gravado e nem o diff entra no diár
     assert.deepEqual([r.resultado, r.motivo], ['recusada', 'memória nova com segredo pelo filtro']);
     assert.equal(await fs.readFile(a.leitor.arquivo, 'utf8'), ANTIGA);
     const bruto = await fs.readFile(path.join(a.dir, 'reflexao.jsonl'), 'utf8');
-    assert.ok(!bruto.includes(SEGREDO) && !('diff' in JSON.parse(bruto)));
+    assert.ok(!bruto.includes(SEGREDO) && !('diff' in JSON.parse(bruto.trim().split('\n').at(-1))));
     await assert.rejects(fs.access(path.join(a.dir, 'memoria-pendente.json')), { code: 'ENOENT' });
   } finally { await a.limpar(); }
 });
@@ -148,7 +150,7 @@ test('segunda execução no mesmo dia não faz nada; sem insumo sai sem CLI; res
     assert.equal((await a.rodar(cli)).resultado, 'sem-mudanca');
     assert.deepEqual(await a.rodar(cli), { resultado: 'ja-rodou', data: '2026-11-01' });
     assert.equal(cli.chamadas.length, 1);
-    assert.equal((await a.diarioReflexao()).length, 1);
+    assert.deepEqual((await a.diarioReflexao()).map(l => l.resultado), ['iniciada', 'sem-mudanca']);
   } finally { await a.limpar(); }
   const b = await arredores({ conversas: 0, memoria: null });
   const cliB = cliFalsa(() => comMemoria('x\n'));

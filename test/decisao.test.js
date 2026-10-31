@@ -120,7 +120,8 @@ test('efeitos: destravar sem ASTARGNE/DONO recusa (etiqueta ausente); com DONO l
   const plane = criarPlaneFalso();
   const leitor = criarLeitorCarta({ chave: GUEST_KEY, fetchImpl: plane.fetchImpl });
   plane.carta.labels = [plane.L.ASTARGNE.id, plane.L.DONO.id, plane.L['READY TO DEV'].id];
-  plane.carta.description_html = '<p>A (DONO: escolher) e B (ASTARGNE) — (BLOQUEADA: PAINEL-1) fica.</p>';
+  // Um marcador só por descrição (A1.2, 31/10/2026): com dois, a mesa recusa (test/correcoes-mesa.test.js).
+  plane.carta.description_html = '<p>A (DONO: escolher) e B — (BLOQUEADA: PAINEL-1) fica.</p>';
   const r = await leitor.retrato('PAINEL-53');
   assert.ok(esperaDecisao(r.carta));
   const delta = calcularDelta(r, { destravar: true, produto: 'manter', estado: null }, { decisao: 'Usar (A) agora', quando: Date.parse('2026-10-31T12:00:00Z') });
@@ -180,7 +181,7 @@ test('escritor: autoria contra o UUID fixo — /users/me de outro ator recusa se
     await assert.rejects(escritor.conferirIdentidade(), (e) => e.semEscrita && /não é do Painel Admin configurado/.test(e.message));
     const html = codificarDecisao({ identificador: 'PAINEL-53', decisao: 'Usar A', motivo: '', efeitos: [], quando: 0 });
     await assert.rejects(escritor.comentar({ projetoId: PROJ, cartaId: CARTA, html, externalId: '11111111-1111-4111-8111-111111111111' }),
-      /não confirmou o comentário da mesa e sua autoria/);
+      (e) => e.semEscrita && /não é do Painel Admin configurado/.test(e.message)); // cada escrita avulsa confere a identidade antes (A4.1)
   } finally { await fs.rm(dir, { recursive: true }); }
 });
 
@@ -327,7 +328,8 @@ test('timeout no comentário de intenção não segue; a retomada usa a mesma ch
     delete m.plane.antes[rotaComentario];
     await assert.rejects(m.gravar.preparar(PEDIDO, DONO), (e) => e.status === 409 && /aplicação pendente desta carta/.test(e.message));
     const prep = await m.retomar.preparar({ chave: pendente.chave }, DONO);
-    assert.match(prep.aviso, /pode não ter chegado/);
+    // A preparação relê a carta (A3.1): o comentário chegou, só a resposta se perdeu.
+    assert.match(prep.aviso, /já está na carta/);
     const r = await m.retomar.confirmar(prep.confirmacaoId, DONO);
     assert.equal(r.resultado, 'aplicado');
     assert.equal(m.plane.comentarios.filter(c => c.external_id === pendente.chave).length, 1);

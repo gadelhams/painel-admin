@@ -1,23 +1,26 @@
-// Rotas da mesa de decisão: a carta da gaveta e as aplicações pendentes (GET, chave Guest), gravar e retomar (POST, SSO + duas ações). Não monta o serviço.
+// Rotas da mesa de decisão: a carta da gaveta e as aplicações pendentes (GET, chave Guest), gravar, retomar e abandonar (POST, SSO + duas ações). Não monta o serviço.
 
 const ESCRITA = ['/api/decisao/preparar', '/api/decisao/confirmar'];
 const RETOMADA = ['/api/decisao/retomada/preparar', '/api/decisao/retomada/confirmar'];
+const ABANDONO = ['/api/decisao/abandono/preparar', '/api/decisao/abandono/confirmar'];
 const LEITURA = ['/api/decisao/carta', '/api/decisao/pendentes'];
 
 export class RotasDecisao {
-  constructor({ resposta, servico, apiDecisao, apiRetomada, log = console.error }) {
+  constructor({ resposta, servico, apiDecisao, apiRetomada, apiAbandono, log = console.error }) {
     this.resposta = resposta;
     this.servico = servico;
     this.apiDecisao = apiDecisao;
     this.apiRetomada = apiRetomada;
+    this.apiAbandono = apiAbandono;
     this.log = log;
   }
 
   async tentar(req, res, url) {
     const { pathname } = url;
-    if (![...ESCRITA, ...RETOMADA, ...LEITURA].includes(pathname)) return false;
+    if (![...ESCRITA, ...RETOMADA, ...ABANDONO, ...LEITURA].includes(pathname)) return false;
     res.setHeader('cache-control', 'no-store');
-    const api = ESCRITA.includes(pathname) ? this.apiDecisao : RETOMADA.includes(pathname) ? this.apiRetomada : null;
+    const api = ESCRITA.includes(pathname) ? this.apiDecisao : RETOMADA.includes(pathname) ? this.apiRetomada
+      : ABANDONO.includes(pathname) ? this.apiAbandono : null;
     if (api && req.method === 'POST') {
       const { status, corpo } = await api(req, pathname, (pedido) => this.resposta.corpo(pedido));
       this.resposta.json(res, corpo, status);

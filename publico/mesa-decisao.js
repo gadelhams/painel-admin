@@ -206,20 +206,28 @@
     resumo(r.dados, 'Confirmar e gravar', () => postar('/api/decisao/confirmar', { confirmacaoId: r.dados.confirmacaoId }));
   }
 
-  function blocoPendente(p) {
-    const retomar = botao('mesa-acao mesa-secundaria', 'Retomar');
-    retomar.addEventListener('click', async () => {
+  // Retomar mostra as mudanças recalculadas contra a carta de agora; Abandonar fecha a pendência
+  // (carta mudou, sumiu ou congelou) sem aplicar nada. As duas pedem SSO + duas ações.
+  function acaoPendente(p, rotulo, base, preparando, confirmar) {
+    const b = botao('mesa-acao mesa-secundaria', rotulo);
+    b.addEventListener('click', async () => {
       if (!G || G.raiz.hidden || atual?.carta !== p.identificador) await abrir({ carta: p.identificador });
-      retomar.disabled = true;
-      situacao('preparando a retomada…');
+      b.disabled = true;
+      situacao(preparando);
       let r;
-      try { r = await postar('/api/decisao/retomada/preparar', { chave: p.chave }); } catch { r = null; }
-      retomar.disabled = false;
+      try { r = await postar(`${base}/preparar`, { chave: p.chave }); } catch { r = null; }
+      b.disabled = false;
       if (!r?.ok) { situacao(r ? recusa(r) : 'o painel não respondeu', 'mesa-erro'); return; }
       situacao(null);
-      resumo(r.dados, 'Confirmar a retomada', () => postar('/api/decisao/retomada/confirmar', { confirmacaoId: r.dados.confirmacaoId }));
+      resumo(r.dados, confirmar, () => postar(`${base}/confirmar`, { confirmacaoId: r.dados.confirmacaoId }));
     });
-    return el('div', 'mesa-pendente', el('p', 'mesa-texto', `${p.identificador} · ${p.decisao} · ${ETAPA[p.etapa] ?? p.etapa}`), retomar);
+    return b;
+  }
+
+  function blocoPendente(p) {
+    return el('div', 'mesa-pendente', el('p', 'mesa-texto', `${p.identificador} · ${p.decisao} · ${ETAPA[p.etapa] ?? p.etapa}`),
+      acaoPendente(p, 'Retomar', '/api/decisao/retomada', 'preparando a retomada (a carta é relida)…', 'Confirmar a retomada'),
+      acaoPendente(p, 'Abandonar', '/api/decisao/abandono', 'preparando o abandono…', 'Confirmar o abandono'));
   }
 
   async function abrir({ carta, titulo, modulo }) {

@@ -10,7 +10,7 @@ export function criarEscritorHandoffPlane({ chave, projetoPermitido, autorEspera
       throw new Error('projeto ou carta fora do escopo da identidade de escrita');
     }
     const resposta = await fetchImpl(`${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/work-items/${cartaId}/comments/`, {
-      method: 'POST', headers: { 'X-API-Key': chave, 'content-type': 'application/json' },
+      method: 'POST', redirect: 'error', headers: { 'X-API-Key': chave, 'content-type': 'application/json' },
       body: JSON.stringify({ comment_html: html, external_source: 'orquestrador-handoff-v1', external_id: chaveIdempotencia }),
       signal: AbortSignal.timeout(15_000),
     });
@@ -18,7 +18,7 @@ export function criarEscritorHandoffPlane({ chave, projetoPermitido, autorEspera
     if (resposta.status === 409 && UUID.test(comentario?.id ?? '')) {
       // 409 com id = external_id já gravado no card: a escrita anterior chegou; relê para conferir autoria.
       const releitura = await fetchImpl(`${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/work-items/${cartaId}/comments/${comentario.id}/`,
-        { headers: { 'X-API-Key': chave }, signal: AbortSignal.timeout(15_000) });
+        { redirect: 'error', headers: { 'X-API-Key': chave }, signal: AbortSignal.timeout(15_000) });
       if (!releitura.ok) throw new Error('Plane recusou o handoff (HTTP 409 sem releitura)');
       comentario = await releitura.json();
     } else if (!resposta.ok) throw new Error(`Plane recusou o handoff (HTTP ${resposta.status})`);

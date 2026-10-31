@@ -81,6 +81,14 @@ async function fixtures(page, { comSessao = true, pendentes = [] } = {}) {
       estado.gravou += 1;
       return json({ identificador: 'ALFA-3', resultado: 'aplicado', comentarioId: 'c1', reciboId: 'c2', mudancas: ['label ASTARGNE fora', 'marcador trocado'], notas: [] });
     }
+    if (url.pathname === '/api/decisao/abandono/preparar') {
+      return json({ confirmacaoId: CONFIRMACAO, expiraEm: new Date(Date.now() + 120_000).toISOString(), chave: corpo.chave, identificador: 'ALFA-3',
+        decisao: 'Usar B', etapa: 'comentario-gravado', mudancas: [], aviso: 'Abandonar fecha esta pendência sem aplicar mais nada.' });
+    }
+    if (url.pathname === '/api/decisao/abandono/confirmar' && corpo.confirmacaoId === CONFIRMACAO) {
+      estado.abandonou = (estado.abandonou ?? 0) + 1;
+      return json({ identificador: 'ALFA-3', resultado: 'abandonada', reciboId: 'c3', mudancas: [], notas: [] });
+    }
     return json({ erro: 'operação indisponível' }, 405);
   });
   return { chamadas, errosPagina, estado };
@@ -137,12 +145,13 @@ test('do Hangar: a peça abre a gaveta, o C-3PO abre a conversa, o rascunho vem 
   expect(audit.errosPagina).toEqual([]);
 });
 
-test('da aba Decisões: o botão abre a mesma gaveta sem abrir o console; reabrir volta onde parou; pendência aparece com Retomar', async ({ page }) => {
+test('da aba Decisões: o botão abre a mesma gaveta sem abrir o console; reabrir volta onde parou; pendência aparece com Retomar e Abandonar', async ({ page }) => {
   const pendentes = [{ chave: '0a1b2c3d-0000-4000-8000-0000000000aa', identificador: 'ALFA-3', quando: '2026-10-31T12:00:00Z', decisao: 'Usar B', etapa: 'comentario-gravado' }];
   const audit = await fixtures(page, { pendentes });
   await page.goto('/#/decisoes');
   await expect(page.locator('.mesa-pendentes')).toContainText('ALFA-3 · Usar B · comentário gravado, mudanças por aplicar');
   await expect(page.locator('.mesa-pendentes').getByRole('button', { name: 'Retomar' })).toBeVisible();
+  await expect(page.locator('.mesa-pendentes').getByRole('button', { name: 'Abandonar' })).toBeVisible();
   await page.locator('.linha-decisoes-tab').getByRole('button', { name: 'Discutir com o C-3PO' }).click();
   await expect(mesa(page)).toBeVisible();
   await expect(page.locator('#mesa-titulo')).toHaveText('ALFA-3 · Qual fonte usar?');
@@ -159,6 +168,20 @@ test('da aba Decisões: o botão abre a mesma gaveta sem abrir o console; reabri
   await expect(page.locator('#mesa-historico .mesa-fala-c3po')).toHaveCount(2);
   expect(conversas(audit)).toHaveLength(2);
   expect(audit.chamadas.filter((c) => c.caminho === '/api/conversa').at(-1).corpo.sessao).toBe('sessao-mesa');
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('pendência sem saída: Abandonar prepara (nada gravado) e só o confirmar fecha, com a sessão do dono', async ({ page }) => {
+  const pendentes = [{ chave: '0a1b2c3d-0000-4000-8000-0000000000aa', identificador: 'ALFA-3', quando: '2026-10-31T12:00:00Z', decisao: 'Usar B', etapa: 'comentario-gravado' }];
+  const audit = await fixtures(page, { pendentes });
+  await page.goto('/#/decisoes');
+  await page.locator('.mesa-pendentes').getByRole('button', { name: 'Abandonar' }).click();
+  await expect(page.locator('#mesa-preparo')).toContainText('Abandonar fecha esta pendência sem aplicar mais nada.');
+  expect(audit.estado.abandonou ?? 0).toBe(0);
+  expect(audit.chamadas.find((c) => c.caminho === '/api/decisao/abandono/preparar').corpo).toEqual({ chave: pendentes[0].chave });
+  await page.getByRole('button', { name: 'Confirmar o abandono' }).click();
+  await expect(page.locator('#mesa-situacao')).toContainText('abandonada');
+  expect(audit.estado.abandonou).toBe(1);
   expect(audit.errosPagina).toEqual([]);
 });
 

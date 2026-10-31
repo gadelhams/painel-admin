@@ -26,11 +26,12 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - **Frota**: F2 e F3 feitas (play por nave, zelador de limpeza); falta a F4,
   puxar ([plano](plano-frota-do-hangar.md)). Piloto PAINEL-34 passou (PLAYER-38).
 - **C-3PO**: lê ssh e git e só propõe rodar a suíte (cartão, SSO); mesa de
-  decisão grava como Painel Admin por SSO ([plano](plano-mesa-de-decisao.md)).
+  decisão grava como Painel Admin por SSO, com retomar e abandonar
+  ([plano](plano-mesa-de-decisao.md)); varredura pré-aceite corrigida (31/10).
 - **Hangar**: encomenda de nave por SSO; o orquestrador atende à mão
   ([operacao.md](operacao.md)). Consumo: Codex e Claude com fonte local.
 - **Memória L1** do C-3PO: editável por SSO em `/c3po/#memoria`; reflexão
-  noturna 03:30 por timer de usuário.
+  noturna 03:30 por timer de usuário, só com conversas da sessão do dono.
 
 ## Portão e repositório
 

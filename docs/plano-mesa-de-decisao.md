@@ -139,5 +139,35 @@ ficou diferente do texto acima, e por quê:
 - **Fora desta fatia**: a linha do Painel Admin no `../../PADROES-BACKLOG.md` (diz "só
   administração") mora fora deste repositório — fica para o orquestrador.
 
+### Correções da varredura pré-aceite (31/10/2026)
+
+O validador de invariantes devolveu NÃO RATIFICÁVEL; corrigido no mesmo dia (provas em
+`test/correcoes-mesa.test.js`):
+
+- **Marcador** só dentro de um nó de texto, com parênteses aninhados e sem teto de 200;
+  exatamente um (dois recusam o preparar); a troca é por posição, nunca `String.replace` com a
+  decisão (`$&`, `$'` e `` $` `` entram literais), e a verificação exige o texto novo presente.
+- **Lista fechada e protocolos reconferidos no ponto de escrita**: o escritor recusa comentário
+  com prefixo de outro protocolo fora do cabeçalho (inclusive o marcador da carta na linha de
+  Efeitos), e a retomada reconfere o registro do diário (prosa, pedido, delta, HTML) antes de
+  escrever. O texto do Plane é decodificado numa passada só, e o filtro de segredo da prosa usa
+  o ambiente real do processo.
+- **CKBL fora da mesa** (decisão do integrador): o `AGENTS.md` dele só aceita as identidades
+  Codex/Claude e a ponte REST; recusado por id, como o Anya.
+- **Digital** com `edited_at` dos comentários, `archived_at`, pai e módulos; a janela das
+  atividades começa antes da primeira releitura sob a trava (cobre a releitura → POST do
+  comentário; o resto segue declarado em `invariants.md` §6).
+- **Retomada recalculada**: segue só com a carta igual à da decisão (delta recalculado, que é o
+  que a tela mostra) ou já com o delta aplicado (`digitalAplicada`), sem lease e com até 24 h;
+  senão recusa e manda abandonar. **Abandonar pendência** (SSO + duas ações,
+  `/api/decisao/abandono/*`) fecha com `DECISAO_ABANDONADA` e, se der, um recibo "abandonada"
+  na carta — carta 404 ou congelada não trancam mais a carta.
+- **Rótulo pela fase**: depois do comentário de intenção, qualquer falha é "resultado incerto",
+  nunca "nada foi gravado". Recibo que já estava na carta manda no resultado; a retomada e o
+  abandono registram quem; diário ilegível é falha local.
+- **Chave**: lida uma vez por operação (`O_NOFOLLOW` + `fstat` do descritor), a mesma cópia em
+  todas as chamadas; nenhum pedido com chave segue redirecionamento (também os escritores de
+  handoff, gate, estado e zelador e os leitores Guest).
+
 **Falta:** `PLANE_ADMIN_ACTOR_ID` no `.env` e a prova real (uma decisão escolhida pelo dono
 gravada numa carta, comentário e efeito relidos pela chave Guest).

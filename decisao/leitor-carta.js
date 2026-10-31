@@ -19,7 +19,7 @@ export function criarLeitorCarta({ chave, apiBase = process.env.PLANE_API_BASE ?
   async function pedir(caminho, sinal) {
     if (!chave) throw new RecusaMesa('sem PLANE_API_KEY: a mesa não lê o Plane', 503);
     const sinais = [AbortSignal.timeout(timeoutMs), ...(sinal ? [sinal] : [])];
-    const r = await fetchImpl(`${raiz}${caminho}`, { headers: { 'X-API-Key': chave }, signal: AbortSignal.any(sinais) });
+    const r = await fetchImpl(`${raiz}${caminho}`, { redirect: 'error', headers: { 'X-API-Key': chave }, signal: AbortSignal.any(sinais) });
     if (r.status === 404) throw new RecusaMesa('carta não encontrada no Plane', 404);
     const corpo = await r.json().catch(() => null);
     if (!r.ok || !corpo) throw new Error(`Plane recusou a leitura (HTTP ${r.status})`);

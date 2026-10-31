@@ -30,7 +30,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `api-acoes.js` — Duas ações das propostas do C-3PO: preparar mostra projeto, pasta e comando; confirmar, com a mesma sessão SSO do dono, roda uma vez e registra no diário. Não registra proposta.
 - `diario-acoes.js` — Diário de acréscimo das ações do C-3PO (proposta, preparo, confirmação, resultado). Só grava; não decide nem executa.
 - `executor-acoes.js` — Roda o comando de uma ação confirmada pelo dono: uma por vez, sem shell, ambiente por lista branca, tempo e saída limitados e saída filtrada. Não confere SSO, proposta nem contrato.
-- `filtro-segredo.js` — Tira segredo de texto que vai para o chat ou para o diário (saída de teste, git). Não decide o que mostrar.
+- `filtro-segredo.js` — Tira segredo de texto que vai para o chat ou para o diário (saída de teste, git, conversa, memória). Não decide o que mostrar.
 - `propostas.js` — Propostas de ação do C-3PO: registra {projeto, comandoId} conferido contra o contrato e devolve um id de proposta. Nunca executa nem emite confirmação.
 
 ## alinhamento/
@@ -100,16 +100,17 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## decisao/
 
-- `api-decisao.js` — Duas ações da mesa de decisão (gravar e retomar): o esqueleto de SSO + desafio de 2 min de orquestrador/, com os campos fechados da mesa. Não lê nem grava o Plane sozinho.
-- `aplicacao-decisao.js` — A ordem de escrita do confirmar e da retomada, sob a trava global da orquestração: releitura e digital, diário PENDENTE, comentário de intenção, PATCH da leitura ± delta, verificação, recibo, CONCLUÍDA. Não valida a prosa nem monta o pedido.
+- `api-decisao.js` — Duas ações da mesa de decisão (gravar, retomar e abandonar): o esqueleto de SSO + desafio de 2 min de orquestrador/, com os campos fechados da mesa. Não lê nem grava o Plane sozinho.
+- `aplicacao-decisao.js` — A ordem de escrita do confirmar, da retomada e do abandono, sob a trava global da orquestração: releitura e digital, diário PENDENTE, comentário de intenção, PATCH da leitura ± delta, verificação, recibo, CONCLUÍDA. Não valida a prosa nem monta o pedido.
 - `diario-decisao.js` — Diário de acréscimo da mesa de decisão (pendente, comentário gravado, concluída, abandonada) e a leitura das aplicações pendentes. Só grava e lê; não fala com o Plane.
 - `efeitos.js` — Lista fechada dos efeitos da mesa contra a carta ATUAL: o pedido do dono vira um delta por nome, a impressão digital da carta, o corpo do PATCH e a verificação depois dele. Puro; não lê nem grava.
-- `escritor-decisao-plane.js` — Escritor da mesa de decisão no Plane com a identidade Painel Admin: comentário da mesa e o PATCH da lista fechada. Lê a chave do arquivo a cada operação; não decide o que gravar.
+- `escritor-decisao-plane.js` — Escritor da mesa de decisão no Plane com a identidade Painel Admin: comentário da mesa e o PATCH da lista fechada. Lê a chave do arquivo uma vez por operação; não decide o que gravar.
 - `leitor-carta.js` — Lê UMA carta do Plane sem cache, pelo caminho do projeto (carta, comentários, labels, estados e atividades), com a chave Guest. Não escreve nem decide.
-- `mesa.js` — Compõe a mesa de decisão a partir do ambiente: leitor Guest, escritor Painel Admin (ou o motivo de não haver), diário, aplicação e os desafios das duas ações. Não registra rota nem autoriza.
-- `permissao.js` — Quais projetos a mesa de decisão abre: os do catálogo com Plane e sigla, menos os congelados e menos o Anya (recusado pelo id do projeto, não pela sigla). Não lê o Plane.
+- `mesa.js` — Compõe a mesa de decisão a partir do ambiente: leitor Guest, escritor Painel Admin (ou o motivo de não haver), diário, aplicação e os desafios das duas ações (gravar, retomar, abandonar). Não registra rota nem autoriza.
+- `permissao.js` — Quais projetos a mesa de decisão abre: os do catálogo com Plane e sigla, menos os congelados, o Anya e o CKBL (recusados pelo id do projeto, não pela sigla). Não lê o Plane.
 - `protocolo-decisao.js` — Texto dos comentários da mesa no Plane — DECISAO/v1 (a decisão do dono) e DECISAO-APLICACAO/v1 (o recibo) — e a leitura deles. Não lê nem grava o Plane.
-- `servico-decisao.js` — O que a mesa de decisão oferece às rotas: a carta para a gaveta, o preparar (prosa, efeitos e digital, sem escrita), as aplicações pendentes e o preparo da retomada. A escrita mora em aplicacao-decisao.js.
+- `retomada-decisao.js` — O que a retomada pode fazer com uma aplicação pendente: reconfere o registro do diário (lista fechada, prosa, HTML) e recalcula o delta contra a carta ATUAL. Puro; não lê nem grava.
+- `servico-decisao.js` — O que a mesa de decisão oferece às rotas: a carta para a gaveta, o preparar (prosa, efeitos e digital, sem escrita), as aplicações pendentes e o preparo da retomada (delta recalculado) e do abandono. A escrita mora em aplicacao-decisao.js.
 - `texto-html.js` — HTML do Plane ⇄ texto da mesa: escape do que vai para o comentário e texto puro do que vem da descrição e dos comentários. Puro.
 
 ## e2e/
@@ -138,7 +139,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 ## http/
 
 - `arquivo-publico.js` — Serve um arquivo de publico/ sem sair da pasta.
-- `conversa.js` — Conversa do C-3PO em SSE. Cada evento do motor sai na hora; no fim, o par pergunta/resposta vai ao diário de conversas, se houver.
+- `conversa.js` — Conversa do C-3PO em SSE. Cada evento do motor sai na hora; no fim, o par pergunta/resposta vai ao diário de conversas, se houver e se o turno trouxe a sessão SSO do dono.
 - `corpo-limitado.js` — Lê o corpo do pedido até o teto. Acima disso corta a conexão.
 - `redirecionamento-c3po.js` — Leva /c3po à barra final e os endereços antigos /severino e /severino/ ao novo. Não atende a API.
 - `resposta-json.js` — Escreve JSON na resposta. Não lê arquivo nem o corpo do pedido.
@@ -148,7 +149,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-backlog.js` — Backlog lido do Plane ou do markdown.
 - `rotas-chaves.js` — Inventário e troca de chaves. A recusa genérica vem depois das rotas específicas.
 - `rotas-contas.js` — Repassa o Cadastro Único. Escrita só com sessão SSO; o corpo só é lido depois dela, e só quando a rota está na tabela fechada.
-- `rotas-decisao.js` — Rotas da mesa de decisão: a carta da gaveta e as aplicações pendentes (GET, chave Guest), gravar e retomar (POST, SSO + duas ações). Não monta o serviço.
+- `rotas-decisao.js` — Rotas da mesa de decisão: a carta da gaveta e as aplicações pendentes (GET, chave Guest), gravar, retomar e abandonar (POST, SSO + duas ações). Não monta o serviço.
 - `rotas-decisoes.js` — Decisões paradas do backlog.
 - `rotas-encomendas.js` — Encomendas de nave do Hangar: a leitura das pendentes é aberta; registrar é preparar e confirmar, pelas duas ações com SSO. Não cria projeto.
 - `rotas-hangar.js` — Naves e droids do Hangar. Só GET; o guard do roteador já rodou antes.
@@ -183,9 +184,11 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `conversas.js` — Diário mínimo das conversas do C-3PO (`c3po/conversas.jsonl`): pergunta e resposta truncadas e filtradas de segredo, retidas 14 dias. É o insumo da reflexão noturna; não decide nada.
 - `diff.js` — Diff unificado curto, linha a linha, entre duas versões da memória L1, com a conta do que foi apagado. Não lê nem grava arquivo.
 - `escritor-memoria.js` — Única escrita da memória L1: confere a base sob trava, registra a versão no histórico e troca o arquivo de uma vez. Não confere SSO nem decide se a mudança é boa.
+- `marcas.js` — Neutraliza, num texto que vai ao modelo como DADO, tudo o que tem cara de uma das marcas que o delimitam (tags como memoria_l1 e linhas como <<<FIM>>>). Puro; não lê nem grava.
 - `pendente-memoria.js` — Proposta pendente da reflexão noturna (`c3po/memoria-pendente.json`): a versão que a reflexão não aplicou sozinha por apagar demais. Não grava a memória; o dono aceita pelo SSO.
 - `propostas-memoria.js` — Propostas de memória do C-3PO: monta a L1 nova (acrescentar ao fim ou trocar um trecho exato) contra a versão atual e guarda em memória com prazo. Nunca grava a memória.
-- `reflexao.js` — Reflexão noturna do C-3PO (PAINEL-9): junta as conversas do dia, pede ao Claude da assinatura a memória L1 nova e só a aplica se passar nos critérios; senão vira proposta pendente ou recusa. Uma por data, tudo no diário.
+- `reflexao.js` — Reflexão noturna do C-3PO (PAINEL-9): junta as conversas do dia, pede ao Claude da assinatura a memória L1 nova e só a aplica se passar nos critérios; senão vira proposta pendente ou recusa. Uma por noite, tudo no diário.
+- `trava.js` — Trava entre processos por diretório (mkdir é atômico) para a memória L1 e a reflexão, com a recuperação da trava velha por rename. Não sabe o que protege.
 
 ## motor/
 
@@ -432,6 +435,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `consulta-c3po.test.js`
 - `contas.test.js` — Testes do módulo contas.js (aba Contas). Nunca chamam ssh: o executor é injetado (I5) e captura args + stdin, devolvendo saída pré-gravada no formato que o script remoto produz (corpo JSON, "\n", status HTTP).
 - `correcoes-auditoria.test.js` — Correções da auditoria de 23-24/10/2026: cada teste pina um mecanismo que a auditoria mostrou furado (mutação nomeada no título do caso).
+- `correcoes-memoria.test.js` — Correções da varredura pré-aceite da memória L1 e da reflexão (validador de invariantes, 31/10/2026): diário só com a sessão do dono, queda entre o histórico e o rename, edição de fora avisada, travas, pendente, histórico com linha ruim, neutralização das marcas, filtro de segredo e a reflexão (20 h, marca antes, teto acumulado, insumo pelo fim).
+- `correcoes-mesa.test.js` — Correções da varredura pré-aceite da mesa de decisão (validador de invariantes, 31/10/2026): substituição com "$" na descrição, marcador por nó de texto, lista fechada relida na escrita e na retomada, CKBL fora, digital, janela das atividades, retomada recalculada, abandonar pendência, rótulo pela fase, chave por operação, redirect e o filtro de segredo com o ambiente real.
 - `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css. Não confere cascata nem visual.
 - `decisao.test.js` — Mesa de decisão (PAINEL-53): protocolo DECISAO/v1, lista fechada de efeitos, escritor Painel Admin e a ordem de escrita do confirmar e da retomada.
 - `decisoes-c3po.test.js`

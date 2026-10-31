@@ -479,14 +479,23 @@ Arquivos em `~/.local/state/painel-admin/c3po/`; código em `memoria/`:
   `memoria-historico.jsonl`: uma linha por versão — quando, quem (`dono`, `reflexao`,
   `proposta-aceita`), origem (`dono`, `desfazer`, `c3po`, `reflexao`), `usuarioId`, hash
   antes/depois, diff unificado curto (4 000 caracteres), `foraDoPainel` (o arquivo foi
-  editado à mão desde a última versão) e os dois textos, para desfazer por hash.
+  editado à mão desde a última versão aplicada) e os dois textos, para desfazer por hash — só
+  se o texto guardado bate com o hash. Cada versão nasce `rename: 'pendente'` e um evento
+  depois diz o desfecho (`aplicada`/`nunca-aplicada`); versão sem desfecho (queda entre o
+  histórico e o `rename`) é reconciliada pelo hash do arquivo na gravação seguinte, sob a
+  trava. Linha ruim no meio do histórico não derruba as anteriores: a tela as mostra, diz a
+  linha, e desfazer para elas continua possível. A tela avisa "editada fora do painel"
+  quando o arquivo não é o da última versão aplicada; só versão aplicada tem "Desfazer".
 - Escrita só em `memoria/escritor-memoria.js`: trava entre processos (`mkdir` de
-  `.memoria.trava`, recuperada após 60 s), base conferida sob a trava, histórico antes do
-  `rename` (queda no meio deixa evento `nunca-aplicada`, nunca versão sem registro).
+  `.memoria.trava`, `memoria/trava.js`; a velha, após 60 s, é recuperada por `rename` para um
+  nome único, e só quem consegue o `rename` a recria), base conferida sob a trava, histórico
+  antes do `rename` (nunca versão atual sem registro). A pendente da reflexão só se apaga se
+  ainda é a que o dono viu (`rename` condicional e `link` de volta).
 - Motor: `motor.js` lê a L1 a cada turno e a põe no fim do `systemPrompt` por
   `motor/memoria-l1.js` — regra de tratamento fora do bloco, texto dentro de
-  `<memoria_l1>`, com a marca neutralizada se aparecer no texto (texto hostil não fecha o
-  bloco). `propor_memoria` {motivo, acrescentar | de+para} (`motor/memoria-proposta.js` sobre
+  `<memoria_l1>`, com a marca neutralizada se aparecer no texto em qualquer forma de tag
+  (`memoria/marcas.js`: NFKC, sem invisíveis, entidades de `<`/`>` decodificadas, e o `<` vira
+  `‹`) — texto hostil não fecha o bloco. `propor_memoria` {motivo, acrescentar | de+para} (`motor/memoria-proposta.js` sobre
   `memoria/propostas-memoria.js`): monta a L1 nova contra a atual, guarda 30 min em memória
   e devolve id, base e diff; o SSE emite `proposta_memoria` e o chat mostra o cartão de
   `publico/c3po/memoria-proposta.js` (no `/c3po/`, no console e no popup do Hangar).
@@ -499,21 +508,29 @@ Arquivos em `~/.local/state/painel-admin/c3po/`; código em `memoria/`:
   direto; o popup do Hangar tem o link).
 - Diário de conversas (`conversas.jsonl`, `memoria/conversas.js`): até 31/10 o painel não
   registrava conversa (só a transcrição própria do SDK em `~/.claude/projects`, com
-  resultado cru de ferramenta). `http/conversa.js` anota, ao fim de cada turno, pergunta
-  (600) e resposta (1 200) truncadas e filtradas de segredo; a reflexão poda o que passou de
-  14 dias. Uma conversa anotada durante a poda pode se perder (a poda reescreve às 03:30).
+  resultado cru de ferramenta). `http/conversa.js` anota, ao fim de cada turno **que trouxe a
+  sessão SSO do dono** (`SessaoPainel.ler`, estado `dono`; decisão do integrador, 31/10/2026 —
+  a rota segue aberta, mas o loopback, um processo local ou o executor não alimentam a
+  reflexão), pergunta (600) e resposta (1 200) truncadas e filtradas de segredo; a reflexão
+  poda o que passou de 14 dias. Uma conversa anotada durante a poda pode se perder (a poda reescreve às 03:30).
 - Reflexão (`scripts/reflexao-noturna.mjs` → `memoria/reflexao.js`, timer de usuário
-  `deploy/painel-reflexao.timer`, 03:30): uma por data local (marca = linha do dia em
-  `reflexao.jsonl`; segunda execução não faz nada); frota com bloco zelador `ok` e provedor
+  `deploy/painel-reflexao.timer`, 03:30): uma por noite — data local nova E 20 h desde a última
+  execução; a linha `iniciada` entra em `reflexao.jsonl` ANTES da CLI, e a do resultado depois
+  (queda no meio não roda de novo); frota com bloco zelador `ok` e provedor
   `claude`, senão recusa; sem conversa nas últimas 24 h, `sem-insumo` sem CLI. Roda
   `claude -p --output-format json --model/--effort` do zelador, `--system-prompt` próprio,
   `--restricted --tools "" --strict-mcp-config --mcp-config '{"mcpServers":{}}'
   --no-session-persistence --disable-slash-commands --max-turns 1`, `ambienteLimpo`, cwd num
-  diretório vazio, insumo por stdin, 10 min. Pede a L1 inteira entre marcas e aplica
-  (quem `reflexao`) só se mudou, cabe no teto, passa no filtro de segredo e apaga até 30%;
+  diretório vazio, insumo por stdin, 10 min. O insumo (memória e conversas) passa pelo filtro
+  de segredo e pela neutralização das marcas (`<<<MEMORIA>>>`, `<<<FIM>>>`, `<<<SEM MUDANCA>>>`
+  e as tags do bloco) e corta pelo começo: estourou 60 000 caracteres, ficam as conversas mais
+  novas. Pede a L1 inteira entre marcas (exatamente um par) e aplica (quem `reflexao`) só se
+  mudou, cabe no teto, passa no filtro de segredo e apaga até 30% — contra o texto de antes E
+  contra a última versão aplicada gravada pelo dono (`dono` ou `proposta-aceita`, ambas com
+  SSO; decisão do integrador, 31/10/2026), para noites seguidas não apagarem aos poucos;
   apagar mais grava `memoria-pendente.json` para o dono aceitar; segredo recusa sem diff no
-  diário. Cada execução deixa uma linha em `reflexao.jsonl` (resultado, motivo, modelo,
-  diff, custo). Testes: `test/memoria.test.js`, `test/reflexao.test.js`,
+  diário. Cada execução deixa em `reflexao.jsonl` a linha `iniciada` e a do resultado
+  (motivo, modelo, conversas usadas e na janela, frações apagadas, diff filtrado, custo). Testes: `test/memoria.test.js`, `test/reflexao.test.js`,
   `e2e/tests/c3po-memoria.spec.mjs`.
 
 Ferramenta `decisoes` (24/10/2026, pedido do dono): `decisoes-c3po.js` dá ao
@@ -531,9 +548,10 @@ com o C-3PO e grava a decisão no Plane. Plano e escolhas em
 (`criarLeitorCarta`, `cartaParaLeitura`), para o motor; o resto só a montagem liga
 (`decisao/mesa.js` compõe).
 
-- **Quais projetos** (`permissao.js`): os do catálogo com `plane` e `sigla`, menos congelados
-  e menos o Anya — recusado pelo id do projeto, não pela sigla. O projeto vem da sigla de
-  `SIGLA-N`, nunca do pedido.
+- **Quais projetos** (`permissao.js`): os do catálogo com `plane` e `sigla`, menos congelados,
+  o Anya e o CKBL (o `AGENTS.md` dele só aceita no Plane as identidades Codex/Claude e a ponte
+  REST; decisão do integrador, 31/10/2026) — recusados pelo id do projeto, não pela sigla. O
+  projeto vem da sigla de `SIGLA-N`, nunca do pedido.
 - **Leitura** (`leitor-carta.js`): chave Guest, sem cache e sem as vagas de `plane/cliente.js`
   (10 s por chamada): `/work-items/SIGLA-N/` acha o id, e a releitura pelo caminho do projeto
   confere `project`, `sequence_id` e o id antes de comentários, labels e estados. Descrição e
@@ -541,10 +559,14 @@ com o C-3PO e grava a decisão no Plane. Plano e escolhas em
   leituras do Plane) devolve isso, mais `escrita: {habilitada, motivo}` e as pendências da carta.
 - **Efeitos** (`efeitos.js`), lista fechada: `destravar` (tira `ASTARGNE`/`DONO` e troca só o
   marcador `(ASTARGNE…)`/`(DONO…)` da descrição por `(decidido em DD/MM: …)`), `produto`
-  (`manter`/`por`/`tirar`), `estado` (um dos cinco). O pedido vira um delta por NOME; avisos
-  quando a carta fica despachável ou segue com `PRODUTO`. A versão da carta é a **digital** do
-  conteúdo (estado, ids das labels, nome, hash da descrição, ids dos comentários), porque o
-  `updated_at` do Plane muda sozinho.
+  (`manter`/`por`/`tirar`), `estado` (um dos cinco). O marcador vive num nó de texto: vai de
+  `(ASTARGNE`/`(DONO` ao `)` que o fecha, com parênteses aninhados e sem atravessar `<`; um que
+  não fecha antes da tag não se troca (aviso), e mais de um marcador recusa o preparar. A troca
+  é por posição (nunca `String.replace` com a decisão: `$&`, `$'` e `` $` `` entram literais), e
+  a verificação exige o marcador fora e o texto novo presente. O pedido vira um delta por NOME;
+  avisos quando a carta fica despachável ou segue com `PRODUTO`. A versão da carta é a
+  **digital** do conteúdo (estado, ids das labels, nome, hash da descrição, ids e `edited_at` dos
+  comentários, `archived_at`, pai e módulos), porque o `updated_at` do Plane muda sozinho.
 - **Protocolo** (`protocolo-decisao.js`): o comentário `DECISAO/v1` é HTML com o primeiro
   parágrafo fixo `<p><strong>DECISAO/v1</strong> · Painel Admin (C-3PO) · decisão do dono</p>`
   e um parágrafo por campo — `Carta`, `Decisão`, `Motivo`, `Efeitos`, `Data` (ISO) e
@@ -554,15 +576,22 @@ com o C-3PO e grava a decisão no Plane. Plano e escolhas em
   zelador, só é recibo do dono** o comentário com esse cabeçalho, essa fonte, ator = o UUID de
   `PLANE_ADMIN_ACTOR_ID` e `edited_at` nulo (`lerDecisao`). A prosa do dono passa por NFKC, perde
   caracteres invisíveis, é escapada e não pode conter `GATE/`, `HANDOFF/`, `ZELADOR/`, `[ORQ/`,
-  `DECISAO/`, `COMPACTADO/`, `PERFIL-IA/` nem `TENTATIVA/`; texto com cara de segredo
-  (`acoes/filtro-segredo.js`) é recusado sem ecoar o trecho. O Plane passa o HTML pelo `nh3`
-  ao gravar (entidades de aspas viram aspas); a leitura decodifica os dois.
+  `DECISAO/`, `COMPACTADO/`, `PERFIL-IA/` nem `TENTATIVA/` — régua que vale para TUDO o que vai
+  ao comentário fora do cabeçalho (o marcador da carta na linha de Efeitos inclusive), no
+  preparar e de novo no escritor; texto com cara de segredo (`acoes/filtro-segredo.js`, com os
+  valores do ambiente real do processo, só para comparar) é recusado sem ecoar o trecho. O Plane
+  passa o HTML pelo `nh3` ao gravar (entidades de aspas viram aspas); a leitura decodifica as
+  entidades numa passada só (`&amp;#71;` é o texto `&#71;`, nunca `G`).
 - **Escritor** (`escritor-decisao-plane.js`), identidade **Painel Admin (C-3PO)**, ADMIN do
   workspace — por isso o que ele aceita é a proteção: comentário só no formato da mesa, PATCH
-  só com `labels`, `state` e `description_html`, só nos projetos da mesa (Anya recusado de novo
-  por id). A chave mora em `~/.config/plane/painel-admin.token`, relida a cada operação
-  (`lstat`: arquivo comum, sem bits de grupo/outros, dono = o usuário do processo); nunca entra
-  em `process.env`, log nem mensagem. Antes de toda escrita, `/users/me` = `PLANE_ADMIN_ACTOR_ID`.
+  só com `labels`, `state` e `description_html`, só nos projetos da mesa (Anya
+  e CKBL recusados de novo por id). A chave mora em `~/.config/plane/painel-admin.token`, lida UMA vez por
+  operação (`abrir()`: aberta com `O_NOFOLLOW`, conferida pelo `fstat` do descritor — arquivo
+  comum, sem bits de grupo/outros, dono = o usuário do processo —, `/users/me` =
+  `PLANE_ADMIN_ACTOR_ID` com essa cópia, e a mesma cópia em todas as chamadas da operação);
+  nunca entra em `process.env`, log nem mensagem. Nenhum pedido com chave segue redirecionamento
+  (`redirect: 'error'`; idem os escritores de handoff, gate, estado e zelador e os leitores
+  Guest).
   O 409 do comentário (o Plane procura o `external_id` no PROJETO) só vale como idempotência se
   o comentário relido pelo caminho da carta é da mesa, do ator e da chave.
 - **Duas ações** (`api-decisao.js` sobre `criarDesafios` + `criarApiDuasAcoes`, autorizador SSO
@@ -570,28 +599,41 @@ com o C-3PO e grava a decisão no Plane. Plano e escolhas em
   carta sem decisão do dono, com lease ativo da orquestração ou com aplicação pendente, e
   devolve as mudanças e o texto do comentário; nada é gravado. `POST /api/decisao/confirmar`
   {confirmacaoId} grava (abaixo). Retomar: `POST /api/decisao/retomada/{preparar,confirmar}`
-  {chave}.
+  {chave}; abandonar: `POST /api/decisao/abandono/{preparar,confirmar}` {chave}.
 - **Ordem do confirmar** (`aplicacao-decisao.js`), sob a trava global da orquestração e com um
-  teto de 40 s para o lote de chamadas: identidade → releitura; digital igual ou recusa → lease
+  teto de 40 s para o lote de chamadas: identidade (a sessão do escritor) → início da janela das
+  atividades → releitura; digital igual ou recusa → lease
   → delta igual ao do preparar e ids resolvidos por nome → diário `DECISAO_PENDENTE` →
   comentário de intenção (timeout não segue; 4xx explícito fecha como `DECISAO_ABANDONADA`) →
   `COMENTARIO_GRAVADO` → releitura → um PATCH = releitura ± delta (só os campos que mudam) →
   releitura de verificação, qualquer que tenha sido a resposta: `aplicado`, `não aplicado`,
   `divergente` (ou `só registro`) → atividades da carta: alteração de outro ator desde a
-  releitura vira `divergente` → recibo → `DECISAO_CONCLUIDA` → `limparCachePlane()`. Antes do
-  diário, toda falha é recusa limpa ("nada foi gravado"); depois, o resultado é incerto e a
-  decisão fica pendente.
-- **Retomada.** `GET /api/decisao/pendentes` lista as decisões sem `CONCLUIDA`/`ABANDONADA`; a
-  gaveta e a aba Decisões mostram "aplicação pendente" com "Retomar" (SSO + duas ações, a mesma
-  chave). De `COMENTARIO_GRAVADO`, recomeça na releitura (o delta é idempotente). De `PENDENTE`,
-  procura o próprio comentário na carta; se não está e a carta mudou (ou tem lease), abandona
-  sem gravar; senão comenta de novo (o 409 evita duplicar).
+  releitura vira `divergente` → recibo (se o recibo já estava na carta, o 409 traz o resultado
+  dele, e é ele que vale) → `DECISAO_CONCLUIDA` (com quem) → `limparCachePlane()`. Antes do
+  comentário, toda falha é recusa limpa ("nada foi gravado"); depois dele o rótulo vem da
+  FASE, não do erro: qualquer falha é "resultado incerto" e a decisão fica pendente.
+- **Retomada** (`retomada-decisao.js`). `GET /api/decisao/pendentes` lista as decisões sem
+  `CONCLUIDA`/`ABANDONADA`; a gaveta e a aba Decisões mostram "aplicação pendente" com
+  "Retomar" e "Abandonar" (SSO + duas ações, a mesma chave). A retomada primeiro reconfere o
+  registro do diário (editável): projeto pelo catálogo, prosa e pedido pela régua do preparar,
+  delta coerente com o pedido, HTML refeito igual — senão recusa. Depois relê a carta: segue só
+  se ela é a da decisão (mesma digital, sem lease, ainda esperando decisão, pendência com até
+  24 h) — com o delta RECALCULADO contra a carta de agora, que é o que a tela mostra — ou já é
+  a carta com o delta aplicado (`digitalAplicada`, guardada no confirmar: a queda veio depois do
+  PATCH, falta o recibo). Mudou: com o comentário na carta, recusa e manda abandonar; sem ele
+  (`PENDENTE`), abandona sozinha sem gravar. **Abandonar** fecha qualquer pendência
+  (`DECISAO_ABANDONADA` com quem) e, se o comentário de intenção estiver na carta, grava nela
+  um recibo "abandonada" — de melhor esforço: carta 404, projeto congelado ou Plane fora não
+  impedem fechar.
 - **Diário**: `~/.local/state/painel-admin/c3po/decisoes.jsonl` (`anexarJsonl`), com quem, a
-  decisão, o delta, o HTML e a digital.
+  decisão, o delta, o HTML, a digital e a `digitalAplicada`. Ilegível é falha LOCAL (503, a
+  mensagem diz o arquivo), nunca "o Plane".
 - **O que não garante (resíduo).** (1) Entre a última releitura e o PATCH há uma janela de
   milissegundos que o Plane v1 não fecha contra escritores de fora do painel (MCP, Codex,
-  tela): o PATCH de labels apaga e recria. As atividades lidas depois só a tornam visível; elas
-  são gravadas por um worker em segundo plano, então a marca é de melhor esforço. (2) No Plane
+  tela): o PATCH de labels apaga e recria. As atividades lidas depois (desde antes da primeira
+  releitura sob a trava, o que cobre também a janela releitura → POST do comentário) só a
+  tornam visível; elas são gravadas por um worker em segundo plano, então a marca é de melhor
+  esforço. (2) No Plane
   v1 o POST de comentário aceita `created_by` no corpo: quem pode comentar no projeto consegue
   forjar o ator. O recibo do Plane é sinal, não prova; a prova é o diário local.
 - **Front** (`publico/mesa-decisao.js`, `mesa-conversa.js`, `mesa-decisao.css`): a gaveta, um
@@ -988,7 +1030,8 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   executor não tem o cookie. `/api/conversa` fica aberto por decisão do dono:
   roda pelo login da CLI, com as ferramentas do C-3PO (leitura e `propor_acao`); o pior que
   o executor faz por ali é gastar cota da assinatura e deixar propostas que só o
-  dono, com SSO, confirma.
+  dono, com SSO, confirma. O diário de conversas (insumo da reflexão da memória L1) só
+  registra o turno com a sessão do dono (31/10/2026).
 - **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` da identidade
   Guest de leitura e, se habilitado, `PLANE_ORQ_WRITE_KEY` de serviço distinta;
   coberto pelo `.gitignore`). A escrita de gate e handoff exige projeto único, SSO do
@@ -1002,8 +1045,13 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   escritor da mesa a cada operação; do `.env` vem só o UUID do ator, `PLANE_ADMIN_ACTOR_ID`.
   Esse escritor atua em vários projetos, mas só na lista fechada (comentário da mesa, labels
   `ASTARGNE`/`DONO`/`PRODUTO`, o marcador da descrição e o estado), só por SSO + duas ações e
-  sem o Anya (§ decisao/). Nenhuma chave aparece no navegador, código, log, commit ou resposta
-  HTTP.
+  sem o Anya nem o CKBL (§ decisao/); a chave é lida uma vez por operação e nenhum pedido com
+  chave segue redirecionamento. Nenhuma chave aparece no navegador, código, log, commit ou
+  resposta HTTP. **Resíduos declarados (31/10/2026):** na mesa, a janela de milissegundos
+  entre a última releitura e o PATCH contra escritores de fora do painel, que as atividades
+  (lidas desde antes da primeira releitura sob a trava, de melhor esforço) só tornam visível;
+  e o filtro de segredo (`acoes/filtro-segredo.js`), que é de melhor esforço — reconhece
+  formatos conhecidos e os valores do `.env`, não um segredo de formato novo.
 
 ## Origem
 

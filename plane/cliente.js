@@ -23,7 +23,7 @@ export function criarClientePlane({ chave, fetchImpl = fetch, timeoutMs = 15_000
   return async function consultar(caminho) {
     await vaga();
     try {
-      const resposta = await fetchImpl(`${API}${caminho}`, {
+      const resposta = await fetchImpl(`${API}${caminho}`, { redirect: 'error',
         headers: { 'X-API-Key': chave },
         signal: AbortSignal.timeout(timeoutMs),
       });

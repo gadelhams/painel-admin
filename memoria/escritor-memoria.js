@@ -7,7 +7,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { anexarJsonl } from '../orquestrador/leitor-jsonl.js';
-import { criarLeitorMemoria, DIRETORIO_C3PO, TETO_BYTES, bytesDe, hashTexto } from './arquivo-memoria.js';
+import { comTravaDiretorio } from './trava.js';
+import { criarLeitorMemoria, foraDoPainel as editadaFora, situarVersoes, DIRETORIO_C3PO, TETO_BYTES, bytesDe, hashTexto } from './arquivo-memoria.js';
 import { diffMemoria } from './diff.js';
 
 export const QUEM = Object.freeze(['dono', 'reflexao', 'proposta-aceita']);
@@ -17,24 +18,10 @@ const ESPERA_TRAVA_MS = 5_000;
 // Recusa que provadamente não gravou nada; o status vai para a resposta HTTP.
 export const recusaMemoria = (mensagem, status = 422) => Object.assign(new Error(mensagem), { semEscrita: true, status });
 
-// Trava entre processos (o painel e a reflexão do timer): mkdir é atômico. Uma trava
-// mais velha que 60 s é de processo que caiu no meio e é recuperada.
-// O relógio aqui é o de verdade, não o injetado: espera e idade da trava são tempo real.
-async function comTrava(diretorio, fn) {
-  const trava = path.join(diretorio, '.memoria.trava');
-  const limite = Date.now() + ESPERA_TRAVA_MS;
-  for (;;) {
-    try { await fs.mkdir(trava); break; }
-    catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      const info = await fs.stat(trava).catch(() => null);
-      if (info && Date.now() - info.mtimeMs > TRAVA_VELHA_MS) { await fs.rm(trava, { recursive: true, force: true }); continue; }
-      if (Date.now() > limite) throw recusaMemoria('a memória está sendo gravada por outro processo; tente de novo', 409);
-      await new Promise(r => setTimeout(r, 50));
-    }
-  }
-  try { return await fn(); } finally { await fs.rm(trava, { recursive: true, force: true }).catch(() => {}); }
-}
+// Trava entre processos (o painel e a reflexão do timer), em trava.js. Uma trava mais velha
+// que 60 s é de processo que caiu no meio e é recuperada por rename (um só recupera).
+const comTrava = (diretorio, fn) => comTravaDiretorio(path.join(diretorio, '.memoria.trava'), fn, { velhaMs: TRAVA_VELHA_MS,
+  esperaMs: ESPERA_TRAVA_MS, ocupada: () => { throw recusaMemoria('a memória está sendo gravada por outro processo; tente de novo', 409); } });
 
 export function validarTextoMemoria(texto) {
   if (typeof texto !== 'string') throw recusaMemoria('a memória é texto');
@@ -58,22 +45,31 @@ export function criarEscritorMemoria({ diretorio = DIRETORIO_C3PO, agora = Date.
       const diff = diffMemoria(atual.texto, texto);
       const quando = new Date(agora()).toISOString();
       const hashDepois = hashTexto(texto);
-      // Quem editou o arquivo à mão quebra a corrente de hashes: a versão nova diz isso.
-      const anterior = (await leitor.lerHistorico().catch(() => [])).filter(e => !e.evento).at(-1);
-      const foraDoPainel = Boolean(anterior) ? anterior.hashDepois !== atual.hash : atual.estado !== 'ausente';
+      // Versão que ficou sem desfecho (queda entre o histórico e o rename) se reconcilia agora,
+      // sob a trava, pelo hash do arquivo; só então se sabe se houve edição à mão.
+      const situadas = situarVersoes((await leitor.lerHistoricoComDefeito().catch(() => ({ linhas: [] }))).linhas, atual.hash);
+      if (situadas.reconciliar) {
+        await anexarJsonl(leitor.arquivoHistorico, { quando, evento: situadas.reconciliar, versaoId: situadas.ultima.id ?? null,
+          hashDepois: situadas.ultima.hashDepois, reconciliada: true });
+      }
+      const foraDoPainel = editadaFora(situadas, atual);
+      const versaoId = randomUUID();
       const temporario = `${leitor.arquivo}.${randomUUID()}.tmp`;
       try {
         await fs.writeFile(temporario, texto, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-        // O histórico vem antes do rename: queda entre os dois deixa versão registrada que
-        // nunca virou atual (e o evento diz), nunca uma atual sem registro.
-        await anexarJsonl(leitor.arquivoHistorico, { quando, quem, origem, usuarioId, motivo: motivo ? String(motivo).slice(0, 300) : null,
+        // O histórico vem antes do rename, como `pendente`: queda entre os dois deixa versão
+        // sem desfecho, que a próxima gravação reconcilia — nunca uma atual sem registro.
+        await anexarJsonl(leitor.arquivoHistorico, { quando, id: versaoId, rename: 'pendente', quem, origem, usuarioId,
+          motivo: motivo ? String(motivo).slice(0, 300) : null,
           hashAntes: atual.hash, hashDepois, bytes: bytesDe(texto), foraDoPainel, diff: diff.texto,
           linhasRemovidas: diff.linhasRemovidas, linhasAcrescentadas: diff.linhasAcrescentadas, antes: atual.texto, depois: texto });
         try { await renomear(temporario, leitor.arquivo); }
         catch (e) {
-          await anexarJsonl(leitor.arquivoHistorico, { quando, evento: 'nunca-aplicada', hashDepois, motivo: e.code ?? e.message }).catch(() => {});
+          await anexarJsonl(leitor.arquivoHistorico, { quando, evento: 'nunca-aplicada', versaoId, hashDepois, motivo: e.code ?? e.message }).catch(() => {});
           throw new Error(`versão ${hashDepois.slice(0, 12)} da memória não aplicada (${e.code ?? e.message})`);
         }
+        // Se este evento se perder, a próxima leitura acha o arquivo = hashDepois e reconcilia.
+        await anexarJsonl(leitor.arquivoHistorico, { quando, evento: 'aplicada', versaoId, hashDepois }).catch(() => {});
       } finally { await fs.rm(temporario, { force: true }).catch(() => {}); }
       return { quando, quem, hashAntes: atual.hash, hash: hashDepois, bytes: bytesDe(texto), diff: diff.texto };
     });

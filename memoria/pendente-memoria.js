@@ -1,7 +1,8 @@
 // Proposta pendente da reflexão noturna (`c3po/memoria-pendente.json`): a versão que a reflexão não aplicou sozinha por apagar demais. Não grava a memória; o dono aceita pelo SSO.
 //
 // Uma só: a reflexão da noite seguinte substitui a anterior. Aceitar ou descartar
-// apaga o arquivo; a reflexão em si fica no diário `reflexao.jsonl`.
+// apaga o arquivo — só se ele ainda é a pendente que o dono viu (a reflexão pode ter gravado
+// outra entre a leitura e o apagar); a reflexão em si fica no diário `reflexao.jsonl`.
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -27,9 +28,15 @@ export function criarPendenteMemoria({ diretorio = DIRETORIO_C3PO } = {}) {
     return registro;
   }
 
+  // Rename condicional: tira o arquivo do lugar (atômico), lê o que tirou e só apaga se for a
+  // pendente `id`; senão a devolve com link, que não sobrescreve uma ainda mais nova.
   async function descartar(id) {
-    const atual = await ler();
-    if (atual?.id === id) await fs.rm(arquivo, { force: true });
+    const tirado = `${arquivo}.${randomUUID()}.descartar`;
+    try { await fs.rename(arquivo, tirado); } catch (e) { if (e.code === 'ENOENT') return; throw e; }
+    let dados = null;
+    try { dados = JSON.parse(await fs.readFile(tirado, 'utf8')); } catch { dados = null; }
+    if (dados?.id !== id) await fs.link(tirado, arquivo).catch(() => {});
+    await fs.rm(tirado, { force: true });
   }
 
   return { arquivo, ler, gravar, descartar };

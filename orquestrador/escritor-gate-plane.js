@@ -10,7 +10,7 @@ export function criarEscritorGatePlane({ chave, projetoPermitido, autorEsperado,
   if (!chave || !UUID.test(projetoPermitido ?? '') || !UUID.test(autorEsperado ?? '')) throw new Error('identidade de escrita restrita ausente');
   const prefixo = `${apiBase}/api/v1/workspaces/astargne/projects/${projetoPermitido}/`;
   async function pedir(caminho, opcoes = {}) {
-    const r = await fetchImpl(`${prefixo}${caminho}`, { ...opcoes,
+    const r = await fetchImpl(`${prefixo}${caminho}`, { ...opcoes, redirect: 'error',
       headers: { 'X-API-Key': chave, ...(opcoes.body ? { 'content-type': 'application/json' } : {}) },
       signal: AbortSignal.timeout(15_000) });
     if (r.status === 409 && opcoes.method === 'POST') {

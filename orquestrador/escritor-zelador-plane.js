@@ -41,7 +41,7 @@ export function criarEscritorZelador({ escopoPermitido, arquivoChave = ARQUIVO_C
     const chave = await lerChave(arquivoChave);
     if (chavesProibidas.has(chave)) throw new Error('chave do zelador igual a outra identidade');
     const pedir = async (caminho, opcoes = {}) => {
-      const r = await fetchImpl(`${raiz}${caminho}`, { ...opcoes,
+      const r = await fetchImpl(`${raiz}${caminho}`, { ...opcoes, redirect: 'error',
         headers: { 'X-API-Key': chave, ...(opcoes.body ? { 'content-type': 'application/json' } : {}) }, signal: AbortSignal.timeout(15_000) });
       const corpo = await r.json().catch(() => null);
       return { status: r.status, ok: r.ok, corpo };
