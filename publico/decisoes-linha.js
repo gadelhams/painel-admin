@@ -1,10 +1,19 @@
-// Uma linha da aba Decisões. O clique abre o console; o link do card não abre junto.
+// Uma linha da aba Decisões. O clique abre o console; o link do card e o botão da mesa de decisão não abrem junto.
 
 class LinhaDecisao {
   static link(d) {
     const a = el('a', { class: 'id-rastreador', href: d.url, target: '_blank', rel: 'noopener' }, d.identificador);
     a.addEventListener('click', (e) => e.stopPropagation());
     return a;
+  }
+
+  // Só decisão do dono com carta do Plane entra na mesa (PAINEL-53); o clique não abre o console junto.
+  static mesa(d) {
+    if (d.tag !== 'ASTARGNE' || !d.identificador || !d.url || !globalThis.MesaDecisao) return null;
+    const b = el('button', { class: 'mesa-abrir', type: 'button' }, 'Discutir com o C-3PO');
+    b.addEventListener('click', (e) => { e.stopPropagation(); MesaDecisao.abrir({ carta: d.identificador, titulo: d.texto, modulo: d.feature }); });
+    b.addEventListener('keydown', (e) => e.stopPropagation());
+    return b;
   }
 
   static desenhar(d) {
@@ -24,6 +33,7 @@ class LinhaDecisao {
         ),
       ),
       chipTag({ tag: d.tag, detalhe: d.detalhe }),
+      this.mesa(d),
     );
     const abrir = () => abrirConsoleComDecisao(d);
     linha.addEventListener('click', abrir);

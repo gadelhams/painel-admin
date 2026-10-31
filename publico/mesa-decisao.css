@@ -1,0 +1,64 @@
+/* Mesa de decisão (PAINEL-53): a gaveta que abre do Hangar e da aba Decisões —
+   carta à esquerda, C-3PO e o registro à direita. Só usa os tokens --ui-*. */
+
+.mesa { position: fixed; inset: 0 0 0 auto; width: min(1040px, 100vw); z-index: 200; display: flex; flex-direction: column;
+  background: var(--ui-bg); color: var(--ui-text); border-left: 1px solid var(--ui-line); box-shadow: -18px 0 40px -20px var(--ui-scrim);
+  font-family: var(--font-body); }
+.mesa[hidden] { display: none; }
+.mesa-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--ui-line); background: var(--ui-panel); }
+.mesa-olho { margin: 0; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ui-faint); }
+.mesa-titulo { margin: var(--space-1) 0 0; font-family: var(--font-heading); font-size: 22px; }
+.mesa-fechar, .mesa-acao { font: inherit; font-size: 13px; padding: var(--space-2) var(--space-4); border: 1px solid var(--ui-line);
+  background: var(--ui-hot); color: var(--ui-onhot); cursor: pointer; }
+.mesa-fechar, .mesa-secundaria { background: transparent; color: var(--ui-text); }
+.mesa-acao:disabled { opacity: .5; cursor: not-allowed; }
+.mesa-corpo { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); min-height: 0; }
+.mesa-carta, .mesa-lado { overflow-y: auto; padding: var(--space-4) var(--space-5); min-height: 0; }
+.mesa-carta { border-right: 1px solid var(--ui-line); }
+.mesa-lado { display: flex; flex-direction: column; gap: var(--space-4); }
+.mesa-meta, .mesa-quando { margin: 0; font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+.mesa-carta-titulo { margin: var(--space-2) 0; font-family: var(--font-heading); font-size: 20px; }
+.mesa-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-2); }
+.mesa-chip { font-family: var(--font-mono); font-size: 11px; padding: 1px var(--space-2); border: 1px solid var(--ui-line); color: var(--ui-dim); }
+.mesa-link { color: var(--ui-hot); font-size: 13px; }
+.mesa-bloco { margin-top: var(--space-4); }
+.mesa-sub { margin: 0 0 var(--space-2); font-family: var(--font-heading); font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--ui-dim); }
+.mesa-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
+.mesa-comentario { border-left: 2px solid var(--ui-line); padding: var(--space-1) var(--space-3); margin-bottom: var(--space-3); }
+.mesa-comentario-mesa { border-left-color: var(--ui-hot); }
+.mesa-vazio { color: var(--ui-faint); font-size: 13px; }
+.mesa-historico { flex: 1 1 220px; min-height: 160px; overflow-y: auto; border: 1px solid var(--ui-line); padding: var(--space-3); background: var(--ui-panel); }
+.mesa-fala { margin: 0 0 var(--space-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
+.mesa-fala-eu { color: var(--ui-dim); }
+.mesa-fala-eu::before { content: "› "; }
+.mesa-fala-nota { color: var(--ui-faint); font-family: var(--font-mono); font-size: 12px; }
+.mesa-fala-erro { color: var(--falha); }
+.mesa-pergunta { display: flex; gap: var(--space-2); }
+.mesa-pergunta textarea, .mesa-registro input, .mesa-registro textarea, .mesa-registro select { font: inherit; font-size: 14px; background: var(--ui-panel);
+  color: var(--ui-text); border: 1px solid var(--ui-line); padding: var(--space-2); }
+.mesa-pergunta textarea { flex: 1; resize: vertical; }
+.mesa-registro { display: grid; gap: var(--space-2); border-top: 1px solid var(--ui-line); padding-top: var(--space-4); }
+.mesa-rotulo { font-size: 13px; color: var(--ui-dim); }
+.mesa-efeitos { border: 1px solid var(--ui-line); display: grid; gap: var(--space-2); padding: var(--space-3); }
+.mesa-efeitos legend { font-size: 12px; color: var(--ui-faint); }
+.mesa-opcao { font-size: 13px; display: flex; gap: var(--space-2); align-items: center; }
+.mesa-aviso { margin: 0; font-size: 13px; color: var(--alerta); }
+.mesa-nota { margin: 0; font-size: 12px; color: var(--ui-faint); }
+.mesa-preparo { border: 1px solid var(--ui-hot); padding: var(--space-3); display: grid; gap: var(--space-2); }
+.mesa-preparo[hidden] { display: none; }
+.mesa-lista { margin: 0; padding-left: var(--space-5); font-size: 14px; }
+.mesa-comentario-previa { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 12px;
+  background: var(--ui-panel); padding: var(--space-2); }
+.mesa-botoes { display: flex; gap: var(--space-2); }
+.mesa-situacao { margin: 0; font-size: 13px; }
+.mesa-ok { color: var(--ok); }
+.mesa-erro { color: var(--falha); }
+.mesa-pendente { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--ui-line); }
+.mesa-pendentes:empty { display: none; }
+.mesa-pendentes { border: 1px solid var(--alerta); padding: var(--space-3); margin-bottom: var(--space-4); }
+.mesa-abrir { font: inherit; font-size: 12px; padding: 1px var(--space-3); border: 1px solid var(--ui-line); background: transparent;
+  color: var(--ui-hot); cursor: pointer; white-space: nowrap; }
+.hg-mesa { margin-left: 6px; }
+@media (max-width: 760px) { .mesa-corpo { grid-template-columns: 1fr; } .mesa-carta { border-right: 0; border-bottom: 1px solid var(--ui-line); } }

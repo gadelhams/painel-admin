@@ -30,8 +30,10 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   Falta ver no CLI real a mensagem de limite.
 - **Consumo** (PAINEL-40): Codex pelas sessões; Claude por statusLine e `~/.claude.json`.
 - **Fase 3 do C-3PO** (31/10): lê ssh e git, só propõe rodar a suíte; o dono
-  confirma no cartão (SSO + duas ações; diário em `c3po/acoes.jsonl`).
-  Falta a mesa de decisão ([plano](plano-mesa-de-decisao.md)).
+  confirma no cartão (SSO + duas ações).
+- **Mesa de decisão** (31/10): gaveta do Hangar e da aba Decisões;
+  grava como Painel Admin por SSO ([plano](plano-mesa-de-decisao.md)).
+  Falta a prova real e `PLANE_ADMIN_ACTOR_ID` no `.env`.
 - **Hangar**: encomenda de nave é só texto de pedido (falta pedido por SSO);
   Grok sem CLI.
 

@@ -1,7 +1,9 @@
-// Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+// Catálogo das ferramentas do C-3PO: nove de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 //
 // Fase 3 (31/10/2026): consulta_ssh e git_projeto leem; propor_acao registra uma
 // proposta e nada mais — preparar, confirmar e executar são do dono, pela UI, com SSO.
+// Mesa de decisão (PAINEL-53): carta_plane lê UMA carta agora, pela porta decisao.js, que
+// não reexporta o escritor; gravar a decisão é da gaveta, por SSO + duas ações.
 
 import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
@@ -18,6 +20,7 @@ import { criarServicoChaves } from '../chaves.js';
 import { criarAlinhamento } from '../alinhamento.js';
 import { EnvelopeColetor } from './envelope-coletor.js';
 import { DocProjeto } from './doc-projeto.js';
+import { criarLeitorCarta, cartaParaLeitura } from '../decisao.js';
 
 const orquestracaoBase = criarServicoOrquestracao();
 const triagemBase = criarTriagemDev();
@@ -32,6 +35,9 @@ const envelope = new EnvelopeColetor();
 const docs = new DocProjeto();
 const ssh = new LeituraSsh();
 const proposta = new PropostaAcao({ propostas });
+// A chave Guest é lida na hora (o .env já está em process.env); o modelo não a vê.
+const lerCarta = async (carta) => cartaParaLeitura(await criarLeitorCarta({ chave: process.env.PLANE_API_KEY?.trim() }).retrato(carta),
+  { autorMesa: process.env.PLANE_ADMIN_ACTOR_ID?.trim() || null });
 
 export const ferramentas = createSdkMcpServer({
   name: 'c3po',
@@ -105,6 +111,13 @@ export const ferramentas = createSdkMcpServer({
         leitura: z.enum(Object.keys(LEITURAS_GIT)).describe('status, diff_stat ou log.'),
       },
       entrada => envelope.consultar('git_projeto', () => lerGitDoProjeto(entrada)),
+      { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'carta_plane',
+      'Lê UMA carta do Plane agora, sem cache: título, estado, labels, descrição em texto e os últimos comentários (os da mesa de decisão marcados). Use na mesa de decisão para saber qual é a pergunta ao Mestre e o que a carta trava. Projetos congelados e o Anya ficam fora. Só leitura: gravar a decisão é do Mestre, na gaveta.',
+      { carta: z.string().describe('Identificador SIGLA-N da carta, ex.: "PAINEL-53".') },
+      entrada => envelope.consultar('carta_plane', () => lerCarta(entrada.carta)),
       { annotations: { readOnlyHint: true } },
     ),
     tool(

@@ -71,7 +71,8 @@ async function pedir(painel, metodo, caminho, { sessao = false } = {}) {
 test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo, tocar porta externa nem gravar estado', async () => {
   const caminhos = await caminhosDoCodigo();
   for (const esperado of ['/api/orquestracao/frota/preparar', '/api/orquestracao/frota/confirmar', '/api/chaves/confirmar', '/api/hangar',
-    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites', '/api/acoes/preparar', '/api/acoes/confirmar']) {
+    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites', '/api/acoes/preparar', '/api/acoes/confirmar',
+    '/api/decisao/preparar', '/api/decisao/confirmar', '/api/decisao/retomada/preparar', '/api/decisao/retomada/confirmar', '/api/decisao/carta', '/api/decisao/pendentes']) {
     assert.ok(caminhos.includes(esperado), `a varredura precisa achar ${esperado}`);
   }
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');
@@ -107,7 +108,7 @@ test('HEAD continua 200 nos handlers só-leitura (a guarda trata HEAD como segur
   // A varredura de alinhamento é real: a semente do cache evita git e check-docs de verdade.
   const { painel, limpar } = await montarComFalsos({ sementes: { 'alinhamento.json': { resultado: { projetos: [] }, fios: {} } } });
   try {
-    for (const caminho of ['/api/hangar', '/api/hangar/sessoes', '/api/projetos', '/api/projetos/x/docs', '/api/producao', '/api/backlog', '/api/decisoes', '/api/relacoes', '/api/alinhamento']) {
+    for (const caminho of ['/api/hangar', '/api/hangar/sessoes', '/api/projetos', '/api/projetos/x/docs', '/api/producao', '/api/backlog', '/api/decisoes', '/api/relacoes', '/api/alinhamento', '/api/decisao/pendentes']) {
       assert.equal((await pedir(painel, 'HEAD', caminho)).status, 200, caminho);
     }
   } finally { await limpar(); }

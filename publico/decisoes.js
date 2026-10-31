@@ -77,6 +77,7 @@ class PaginaDecisoes {
         toggle,
       ),
       astargneEl,
+      ...(globalThis.MesaDecisao ? [MesaDecisao.blocoPendentes()] : []),
       ...blocos,
     );
   }

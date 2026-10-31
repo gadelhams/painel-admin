@@ -18,7 +18,7 @@ Leitura comum, sempre: `docs/current.md` (estado real, datado) e
 | Coletor, rota HTTP ou catálogo (`coletores/`, `http/`, `projetos.js`, `relacoes.js`) | `docs/arquitetura.md` § servidor.js / coletores.js / projetos.js / relacoes.js; portas e mapa em `../../PORTAS.md` e `../CLAUDE.md` |
 | Front (`publico/`): abas, console, tema, Hangar | `docs/arquitetura.md` § publico/ e § Hangar |
 | Aba Contas / CadastroUnico (`contas/`, `publico/contas*.js`) | `docs/arquitetura.md` § contas.js + `../CadastroUnico/docs/00_PLANO.md` § Decisões do dono; relatório em `docs/RELATORIO-F5-CONTAS.md` |
-| Backlog / Plane (`plane/`, `coletores/backlog.js`, `publico/{backlog,decisoes}*.js`) | `docs/arquitetura.md` § plane.js + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
+| Backlog / Plane e mesa de decisão (`plane/`, `decisao/`, `publico/{backlog,decisoes,mesa}*`) | `docs/arquitetura.md` § plane.js e § decisao/ + `../../PADROES-BACKLOG.md` (tabela única de ids e siglas); `docs/BACKLOG.md` é só ponteiro |
 | Aba Orquestração (`orquestrador/`, `http/rotas-orq-*.js`, `publico/orquestracao/`, contrato `.orquestrador.json`) | `docs/orquestracao-v2-integracao.md` + `../ORQUESTRADOR-PROJETOS.md`; escrita só por identidade técnica com SSO e confirmação; despacho desligado sem `ORQ_EXECUCAO_HABILITADA` (variáveis em `docs/operacao.md`) |
 | Aba Chaves (`chaves/`, `publico/chaves*.js`) e bloco "Astargne" (`publico/decisoes-astargne.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
 | Aba Docs e rotina de alinhamento (`alinhamento/`, `publico/docs*.js`) | `docs/arquitetura.md` § alinhamento.js; regra de compactação em `../../PADROES-BACKLOG.md` |
@@ -51,6 +51,6 @@ de forma genérica — a estrutura destes arquivos é também dado do produto.
 - Backlog = projeto **PAINEL** no Plane (`../../PADROES-BACKLOG.md`); todo
   selo o atualiza na mesma entrega. Projeto novo no catálogo: `projetos.js` +
   `../CLAUDE.md` + `../../PORTAS.md` juntos.
-- Commit e push autorizados em caráter permanente (24/10/2026) com o aceite
+- Commit e push autorizados de vez (24/10/2026) com o aceite
   do orquestrador; deploy só com `validador-deploy` APROVADO. Revise `git status`/`git diff`
   antes do `git add`, nunca `-A`.
