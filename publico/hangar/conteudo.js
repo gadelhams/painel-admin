@@ -6,7 +6,7 @@ import {
 } from './estado.js';
 import { esc, pct, plural, nomeCurto, haQuanto } from './util.js';
 import { estadoDroid } from './simulacao.js';
-import { formaDe } from './formas.js';
+import { conteudoBerco } from './encomenda.js';
 
 // O dono pediu (28/10/2026) as duas categorias de decisão, e que o C-3PO explique a diferença ao abrir cada uma.
 const DIF_CHAO = 'Esta é uma decisão que trava módulo: sem ela, a peça não entra na nave. Decisões de produto são outra coisa: ficam na estação de planejamento e mudam o rumo do projeto inteiro, não de uma peça só.';
@@ -71,17 +71,6 @@ const caminhoAcervo = (x) => (x.nome.startsWith('~') ? x.nome
   : x.setor === 'skills' ? `skill ${x.nome}` : x.setor === 'licoes' ? `~/Work/ProjetosPessoais/licoes-vivas/${x.nome}` : `~/Work/${x.nome}`);
 
 const linksProjeto = (n) => `<p class="hg-vazio"><a class="hg-link" href="#/projeto/${esc(encodeURIComponent(n.id))}">abrir no painel</a>${n.url ? ` · ${linkFora(n.url, 'abrir no Plane')}` : ''}</p>`;
-
-export function pedidoDeNave(d) {
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  return [
-    `Pedido de nave nova (Hangar do painel-admin, ${hoje}):`,
-    `- Projeto: ${d.nome} (sigla ${d.sigla})`,
-    `- Módulos no Plane, nesta ordem: ${d.modulos.map((m, i) => `${i + 1}) ${m}`).join('; ')}`,
-    'Criar o projeto no Plane com esses módulos (MCP plane), pôr os agentes como Member e o painel como Guest,',
-    'e registrar o id em painel-admin/projetos.js junto com ProjetosPessoais/CLAUDE.md e PORTAS.md (PADROES-BACKLOG.md).',
-  ].join('\n');
-}
 
 export function conteudo(a) {
   if (a.tipo === 'droid') {
@@ -235,43 +224,5 @@ export function conteudo(a) {
     };
   }
   return { cor: '#ac9b81', olho: 'C-3PO', titulo: '—', fala: '', corpo: '' };
-}
-
-function conteudoBerco(a) {
-  const v = H.naves.length + 1;
-  if (a.pedido) {
-    return {
-      cor: '#f4b446', olho: 'C-3PO · berço de encomendas', titulo: `Pedido pronto<small>${esc(a.dados.nome)} · vaga ${v}</small>`,
-      fala: 'Criar projeto no Plane é ação privilegiada, mestre, e o painel só lê. Copie o pedido e entregue ao orquestrador. Quando o Plane responder, a quilha aparece sozinha nesta vaga.',
-      corpo: `<pre class="hg-pedido" id="hg-pedido">${esc(pedidoDeNave(a.dados))}</pre>
-        <div class="hg-botoes"><button type="button" class="hg-decidir" data-acao="copiar">Copiar pedido</button><button type="button" class="hg-voltar" data-acao="voltar">Voltar</button></div>
-        <p class="hg-vazio" id="hg-copiado" hidden>Copiado.</p>`,
-    };
-  }
-  if (a.dados) {
-    const d = a.dados;
-    return {
-      cor: '#f4b446', olho: 'C-3PO · berço de encomendas', titulo: `${esc(d.nome)}<small>sigla ${esc(d.sigla)} · vaga ${v} do pátio</small>`,
-      fala: `Confira, mestre: a ${d.nome} nasce com ${d.modulos.length === 1 ? 'uma peça' : `${d.modulos.length} peças`} em planta e nenhuma carta concluída. Confirma?`,
-      corpo: `<h4>Cada módulo vira uma peça</h4>
-        <ul class="hg-linhas">${d.modulos.map((m, i) => `<li>${chip('#f4b446', formaDe(i).nome)}${esc(m)}</li>`).join('')}</ul>
-        <div class="hg-botoes"><button type="button" class="hg-decidir" data-acao="confirmar">Confirmar encomenda</button><button type="button" class="hg-voltar" data-acao="voltar">Voltar</button></div>`,
-    };
-  }
-  const r = a.rascunho ?? {};
-  return {
-    cor: '#f4b446', olho: 'C-3PO · berço de encomendas', titulo: `Nova nave<small>vaga ${v} do pátio do Plane</small>`,
-    fala: 'Quer encomendar uma nave nova, mestre? Diga o nome e os módulos planejados. Cada módulo vira uma peça, e a nave fica no pátio até um droid começar a trabalhar nela.',
-    corpo: `<form class="hg-encomenda" id="hg-form-encomenda" novalidate>
-        <label for="hg-enc-nome">Nome do projeto</label>
-        <input id="hg-enc-nome" name="nome" maxlength="40" autocomplete="off" placeholder="ex.: Bot de Receitas" value="${esc(r.nome ?? '')}">
-        <label for="hg-enc-sigla">Sigla no Plane <span>(opcional; gero do nome)</span></label>
-        <input id="hg-enc-sigla" name="sigla" maxlength="6" autocomplete="off" placeholder="ex.: RECEI" value="${esc(r.sigla ?? '')}">
-        <label for="hg-enc-mod">Módulos planejados <span>(um por linha)</span></label>
-        <textarea id="hg-enc-mod" name="modulos" rows="4" placeholder="Coleta&#10;Busca&#10;Interface">${esc(r.modulosTexto ?? '')}</textarea>
-        <p class="hg-erro" id="hg-enc-erro" hidden></p>
-        <button type="submit" class="hg-decidir">Revisar encomenda</button>
-      </form>`,
-  };
 }
 

@@ -187,7 +187,6 @@ body.hg-ativo main { max-width: none; padding: 10px 14px 12px; }
 .hg-encomenda input:focus, .hg-encomenda textarea:focus { outline: none; border-color: var(--hg-ouro); box-shadow: 0 0 0 1px var(--hg-ouro); }
 .hg-encomenda .hg-decidir { margin-top: 8px; }
 .hg-erro { margin: 2px 0 0; font-size: 13px; color: var(--hg-falha); }
-.hg-pedido { margin: 0; white-space: pre-wrap; font: 400 12px/1.5 var(--hg-f-mono); background: var(--hg-casco-2); border: 1px solid var(--hg-linha); padding: 8px 10px; user-select: all; }
 
 .hg-ajuda-dlg { width: min(780px, calc(100vw - 32px)); max-height: calc(100vh - 48px); background: var(--hg-casco); color: var(--hg-texto); border: 1px solid var(--hg-ouro); padding: 18px 20px; box-shadow: 0 0 40px -10px var(--hg-ouro); }
 .hg-ajuda-dlg::backdrop { background: rgba(4, 3, 2, .7); }

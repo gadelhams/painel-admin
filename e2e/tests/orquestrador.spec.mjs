@@ -99,6 +99,7 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoFrotaMs = 0, catalog
       // Hangar (28/10/2026) é a entrada: a raiz lê naves e droids ao abrir.
       if (url.pathname === '/api/hangar') return responder({ naves: [], acervo: [] });
       if (url.pathname === '/api/hangar/sessoes') return responder({ em: VERSAO, ias: [], sessoes: [] });
+      if (url.pathname === '/api/hangar/encomendas') return responder({ legivel: true, pendentes: [] });
       if (url.pathname === '/api/tts') return responder({ disponivel: false, motivo: 'fixture' });
       if (url.pathname === '/api/sessao') return responder({ estado: 'sem-sessao' });
       if (url.pathname === '/api/contas/apps') return responder({ apps: [] });

@@ -32,8 +32,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - **Fase 3 do C-3PO** (31/10): lê ssh e git, só propõe rodar a suíte; o dono
   confirma no cartão (SSO + duas ações; diário em `c3po/acoes.jsonl`).
   Falta a mesa de decisão ([plano](plano-mesa-de-decisao.md)).
-- **Hangar**: encomenda de nave é só texto de pedido (falta pedido por SSO);
-  Grok sem CLI.
+- **Hangar**: encomenda de nave registrada por SSO (31/10); o orquestrador
+  atende à mão ([operacao.md](operacao.md)); Grok sem CLI.
 
 ## Portão e repositório
 

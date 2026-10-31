@@ -1,4 +1,4 @@
-// Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+// Catálogo das ferramentas do C-3PO: nove de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 //
 // Fase 3 (31/10/2026): consulta_ssh e git_projeto leem; propor_acao registra uma
 // proposta e nada mais — preparar, confirmar e executar são do dono, pela UI, com SSO.
@@ -18,6 +18,7 @@ import { criarServicoChaves } from '../chaves.js';
 import { criarAlinhamento } from '../alinhamento.js';
 import { EnvelopeColetor } from './envelope-coletor.js';
 import { DocProjeto } from './doc-projeto.js';
+import { lerEncomendas } from '../encomendas.js';
 
 const orquestracaoBase = criarServicoOrquestracao();
 const triagemBase = criarTriagemDev();
@@ -105,6 +106,13 @@ export const ferramentas = createSdkMcpServer({
         leitura: z.enum(Object.keys(LEITURAS_GIT)).describe('status, diff_stat ou log.'),
       },
       entrada => envelope.consultar('git_projeto', () => lerGitDoProjeto(entrada)),
+      { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'encomendas',
+      'Encomendas de nave nova feitas no berço do Hangar e ainda não atendidas pelo orquestrador: nome, sigla pedida (ou nula), módulos e quando foi pedida. Quem atende é o orquestrador (sessão Claude Code), que cria o projeto no Plane e a entrada no catálogo; o painel só registra. Só leitura.',
+      {},
+      () => envelope.consultar('encomendas', () => lerEncomendas()),
       { annotations: { readOnlyHint: true } },
     ),
     tool(

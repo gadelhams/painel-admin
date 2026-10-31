@@ -1,10 +1,11 @@
-// Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao) e a frota (/api/orquestracao/frota) e as aplica ao estado da cena sem perder a animação. Só GET.
+// Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao), a frota (/api/orquestracao/frota) e as encomendas pendentes (/api/hangar/encomendas) e as aplica ao estado da cena sem perder a animação. Só GET.
 
 import {
   H, FABRICAS, ARQ, LADOS, SETORES, MAX_CHAO, nave, corDoIndice, vagaPos, ancorar, emitir,
 } from './estado.js';
 import { formaDe } from './formas.js';
 import { falar } from './narrador.js';
+import { carregarEncomendas } from './encomenda.js';
 
 async function json(url) {
   const r = await fetch(url, { cache: 'no-store' });
@@ -88,6 +89,7 @@ export async function carregarHangar() {
     r.naves.forEach(aplicarNave);
     if (!H.acervo.length) montarAcervo(r.acervo);
     carregarFrota();
+    carregarEncomendas();
     if (H.erroHangar) falar('O Plane voltou a responder, mestre. As naves estão em dia.');
     H.erroHangar = null;
   } catch (e) {

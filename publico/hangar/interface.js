@@ -5,7 +5,8 @@ import {
 } from './estado.js';
 import { $, calmo, esc, pct, plural, nomeCurto } from './util.js';
 import { C, moverCamera, projetar } from './cena.js';
-import { cartaoDe, conteudo, pedidoDeNave } from './conteudo.js';
+import { cartaoDe, conteudo } from './conteudo.js';
+import { encomendasPendentes, ligarEncomenda, situacaoEncomenda } from './encomenda.js';
 import { estadoDroid } from './simulacao.js';
 import { diarioAdd } from './narrador.js';
 import { contextoDoPopup, limparConversa, perguntar } from './conversa.js';
@@ -129,7 +130,8 @@ function montarDroids() {
 }
 
 function montarProjetos() {
-  const chave = `${H.naves.map((n) => `${n.id}:${n.estado === 'estacionada' ? 'p' : 'd'}`).join()}|${H.foco}`;
+  const pedidas = encomendasPendentes();
+  const chave = `${H.naves.map((n) => `${n.id}:${n.estado === 'estacionada' ? 'p' : 'd'}`).join()}|${H.foco}|${pedidas.map((e) => e.id).join()}`;
   if (chave === chaveProjetos) return;
   chaveProjetos = chave;
   const botao = (n, estac) => `<button type="button" class="hg-proj hg-preench${estac ? ' estac' : ''}${n.congelado ? ' congelado' : ''}${H.foco === n.id ? ' sel' : ''}" data-proj="${esc(n.id)}" style="--cor:${n.cor}">
@@ -137,7 +139,8 @@ function montarProjetos() {
   const ativos = H.naves.filter((n) => n.estado !== 'estacionada'); const parados = H.naves.filter((n) => n.estado === 'estacionada');
   $('hg-projetos').innerHTML = `<h3>Nas docas · ${ativos.length} de ${BAIAS.length}</h3><div class="hg-lista-proj">${ativos.map((n) => botao(n, false)).join('') || '<p class="hg-vazio">Nenhuma.</p>'}</div>
     <h3>No pátio do Plane · ${parados.length}</h3><div class="hg-lista-proj">${parados.map((n) => botao(n, true)).join('')}
-    <button type="button" class="hg-proj nova" data-berco>+ encomendar nave nova</button></div>`;
+    <button type="button" class="hg-proj nova" data-berco>+ encomendar nave nova</button>
+    ${pedidas.map((e) => `<p class="hg-vazio" data-encomenda>${esc(e.nome)} · ${esc(situacaoEncomenda(e))}</p>`).join('')}</div>`;
 }
 
 export function atualizarPaineis(dt = 0) {
@@ -218,30 +221,8 @@ export function iniciarInterface() {
   });
 
   const corpo = $('hg-holo-corpo');
-  corpo.addEventListener('submit', (e) => {
-    if (e.target.id !== 'hg-form-encomenda') return;
-    e.preventDefault();
-    const f = e.target; const nome = f.nome.value.trim(); const modulosTexto = f.modulos.value;
-    const modulos = modulosTexto.split('\n').map((s) => s.trim()).filter(Boolean);
-    let sigla = f.sigla.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const erro = !nome ? 'Falta o nome do projeto.' : !modulos.length ? 'Escreva pelo menos um módulo, um por linha.' : '';
-    if (erro) { $('hg-enc-erro').textContent = erro; $('hg-enc-erro').hidden = false; return; }
-    if (!sigla) sigla = nome.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 5) || 'NOVA';
-    abrir({ tipo: 'berco', dados: { nome, sigla, modulos }, rascunho: { nome, sigla: f.sigla.value, modulosTexto } });
-  });
-  corpo.addEventListener('click', async (e) => {
-    const acao = e.target.closest('[data-acao]');
-    if (acao && H.popup?.alvo.tipo === 'berco') {
-      const a = H.popup.alvo;
-      if (acao.dataset.acao === 'voltar') { abrir(a.pedido ? { ...a, pedido: false } : { tipo: 'berco', rascunho: a.rascunho }, true); return; }
-      if (acao.dataset.acao === 'confirmar') { abrir({ ...a, pedido: true }); return; }
-      if (acao.dataset.acao === 'copiar') {
-        try { await navigator.clipboard.writeText(pedidoDeNave(a.dados)); $('hg-copiado').hidden = false; } catch {
-          const sel = getSelection(); const r = document.createRange(); r.selectNodeContents($('hg-pedido')); sel.removeAllRanges(); sel.addRange(r);
-        }
-        return;
-      }
-    }
+  ligarEncomenda(corpo, abrir);
+  corpo.addEventListener('click', (e) => {
     const l = e.target.closest('[data-alvo]');
     if (l) clicar(JSON.parse(l.dataset.alvo));
   });

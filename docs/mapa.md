@@ -14,6 +14,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `coletores.js` — Porta única dos coletores. Rotas e ferramentas do C-3PO importam daqui.
 - `contas.js` — Porta da aba Contas. A tabela, o ssh e a fronteira HTTP moram em contas/.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
+- `encomendas.js` — Porta das encomendas de nave, só o lado de leitura. O registro e as duas ações moram em encomendas/ e só a montagem os liga.
 - `guarda.js` — O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão SSO do dono desde 29/10/2026 para Contas, antes para o resto.
 - `montagem.js` — Monta o painel inteiro (serviços, RoteadorPainel e o handler `(req, res)`) a partir do ambiente e das portas externas recebidas; não escuta porta, não lê `.env` e não liga laço nenhum até `iniciar()`.
 - `motor.js` — Conversa do C-3PO. As ferramentas e a voz moram em motor/; aqui só o fluxo de eventos.
@@ -109,6 +110,13 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `hangar.spec.mjs`
 - `orquestrador.spec.mjs`
 
+## encomendas/
+
+- `api-encomendas.js` — Duas ações da encomenda de nave: preparar valida o pedido e devolve o resumo; confirmar, com a mesma sessão SSO do dono, grava a linha `pedida`. Não cria projeto.
+- `leitura-encomendas.js` — Lê `encomendas.jsonl` e devolve as encomendas pendentes (pedida sem atendida depois), sem `usuarioId`; não grava nada.
+- `pedido-encomenda.js` — Valida o pedido de nave nova (nome, sigla opcional, módulos) e devolve a forma normalizada; não lê arquivo nem grava nada.
+- `registro-encomendas.js` — Registra uma encomenda de nave como linha `pedida` em `encomendas.jsonl`, serializada no processo; não cria projeto no Plane nem mexe no catálogo.
+
 ## http/
 
 - `arquivo-publico.js` — Serve um arquivo de publico/ sem sair da pasta.
@@ -123,6 +131,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-chaves.js` — Inventário e troca de chaves. A recusa genérica vem depois das rotas específicas.
 - `rotas-contas.js` — Repassa o Cadastro Único. Escrita só com sessão SSO; o corpo só é lido depois dela, e só quando a rota está na tabela fechada.
 - `rotas-decisoes.js` — Decisões paradas do backlog.
+- `rotas-encomendas.js` — Encomendas de nave do Hangar: a leitura das pendentes é aberta; registrar é preparar e confirmar, pelas duas ações com SSO. Não cria projeto.
 - `rotas-hangar.js` — Naves e droids do Hangar. Só GET; o guard do roteador já rodou antes.
 - `rotas-orq-canal.js` — Comentários do card. Não registra handoff.
 - `rotas-orq-consumo.js` — Cotas de assinatura. Gasto de API não entra aqui.
@@ -151,7 +160,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `acao-proposta.js` — A ferramenta propor_acao e a leitura do seu resultado no fluxo da conversa. Só propõe: não prepara, não confirma, não executa.
 - `doc-projeto.js` — Lê ou lista um .md dentro da pasta do projeto. Não registra a ferramenta.
 - `envelope-coletor.js` — Embrulha a falha de um coletor interno. Não escolhe a ferramenta.
-- `ferramentas.js` — Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+- `ferramentas.js` — Catálogo das ferramentas do C-3PO: nove de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 - `leitura-pesada.js` — Leituras que varrem o Plane inteiro (fila, triagem, decisões: 15–35 s cada) para as ferramentas do C-3PO.
 - `persona.js` — Voz do C-3PO. Não é portão: a permissão mora em tools: [] e na lista de ferramentas.
 
@@ -319,7 +328,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `cena.js` — Cena 3D do Hangar (Three.js r128 vendorizado + bloom): monta as estruturas, reconstrói o que os dados mudam e desenha cada quadro. Não decide nada.
 - `conteudo.js` — O que o C-3PO diz e mostra no popup de cada estrutura do Hangar. Só monta HTML (com escape); não abre nem posiciona o popup.
 - `conversa.js` — Conversa com o C-3PO dentro do popup do Hangar: a pergunta vai a /api/conversa com o contexto do objeto clicado e a resposta chega em SSE.
-- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao) e a frota (/api/orquestracao/frota) e as aplica ao estado da cena sem perder a animação. Só GET.
+- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao), a frota (/api/orquestracao/frota) e as encomendas pendentes (/api/hangar/encomendas) e as aplica ao estado da cena sem perder a animação. Só GET.
+- `encomenda.js` — Berço de encomendas: monta o popup, lê as pendentes (GET aberto) e registra o pedido por SSO + duas ações (preparar mostra o resumo, confirmar grava). Não cria projeto nem fala com o Plane.
 - `estado.js` — Mapa do estaleiro (posições fixas) e o estado vivo compartilhado entre os módulos do Hangar. Não busca dados nem desenha.
 - `formas.js` — Formas das peças da nave (polígonos vistos de cima, nariz para +x) e a escolha da forma de cada módulo. Não desenha.
 - `hangar.js` — Entrada do Hangar: liga dados, simulação, cena e interface, e pausa tudo quando a aba sai de vista. O roteador chama window.hangar.entrar/sair.
@@ -374,6 +384,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `decisoes-c3po.test.js`
 - `despacho-controlado.test.js`
 - `diario-resumo.test.js`
+- `encomendas.test.js` — Encomenda de nave como pedido registrado (PAINEL-50): validação, colisão de sigla, SSO + duas ações pelo painel MONTADO (HTTP real, porta efêmera) e o diário só de acréscimo.
 - `executor-cli.test.js` — Executor real com CLIs falsas: flags exatas, ambiente limpo, isolamento por worktree, timeout que mata o processo, e os três desfechos.
 - `fluxo-sse.test.js`
 - `fronteira-http.test.js` — Fronteira HTTP do painel MONTADO (PAINEL-17): o handler de produção de montagem.js atrás de um http.Server de verdade numa porta efêmera, atacado por requisição real.

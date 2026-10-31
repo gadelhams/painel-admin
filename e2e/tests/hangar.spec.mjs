@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 // Hangar (28/10/2026): a entrada do painel. Com a API simulada, prova que a
-// raiz abre o Hangar, que droids e naves vêm só de GET, que a encomenda vira
-// texto de pedido (nenhuma escrita) e que sair da aba para o poll de 5 s.
+// raiz abre o Hangar, que droids e naves vêm só de GET, que a encomenda é
+// registrada por preparar + confirmar (PAINEL-50) e que sair da aba para o poll de 5 s.
 
 const CARTA = '00000000-0000-4000-8000-000000000003';
 const nave = (pasta, extra = {}) => ({
@@ -38,8 +38,9 @@ const sessoes = (extra = []) => ({
     acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }, ...extra],
 });
 
-async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [] } = {}) {
+async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [], semSso = false } = {}) {
   const chamadas = [];
+  const encomendas = [];
   const errosPagina = [];
   const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
   page.on('pageerror', (e) => errosPagina.push(e.message));
@@ -73,6 +74,20 @@ async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra =
       const ultimo = chamadas.filter((c) => c.caminho === '/api/orquestracao/nativo/preparar').at(-1).corpo;
       Object.assign(nativo, ultimo.horas ? { liberada: true, ate: new Date(Date.now() + ultimo.horas * 3_600_000).toISOString() } : { liberada: false, ate: null });
       return json({ nome: 'alfa', ...nativo });
+    }
+    // Encomendas simuladas: o preparar devolve o resumo (com o texto como veio), o confirmar acrescenta a pendente.
+    if (url.pathname === '/api/hangar/encomendas') return json({ legivel: true, pendentes: encomendas, atendidas: 0, ignoradas: 0, truncadasNoMeio: 0, truncadaNoFim: false });
+    if (url.pathname === '/api/hangar/encomendas/preparar') {
+      const corpo = chamadas.at(-1).corpo = req.postDataJSON();
+      if (semSso) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ erro: 'entre no Cadastro Único para confirmar esta ação' }) });
+      return json({ confirmacaoId: 'e1', expiraEm: new Date(Date.now() + 120_000).toISOString(), ...corpo, aviso: 'Confirmar só registra o pedido no painel.' });
+    }
+    if (url.pathname === '/api/hangar/encomendas/confirmar') {
+      chamadas.at(-1).corpo = req.postDataJSON();
+      const { nome, sigla, modulos } = chamadas.filter((c) => c.caminho === '/api/hangar/encomendas/preparar').at(-1).corpo;
+      const e = { id: '00000000-0000-4000-8000-0000000000e1', quando: '2026-10-31T12:00:00.000Z', nome, sigla, modulos, estado: 'pedida' };
+      encomendas.push(e);
+      return json(e);
     }
     // C-3PO simulado: nunca o LLM real em teste. Responde em SSE e devolve a sessão.
     if (url.pathname === '/api/conversa' && req.method() === 'POST') {
@@ -132,22 +147,51 @@ test('popup do C-3PO: título do Plane escapado e a decisão de produto explicad
   expect(audit.errosPagina).toEqual([]);
 });
 
-test('encomenda vira pedido em texto, sem escrita; abrir no painel leva ao projeto', async ({ page }) => {
+test('encomenda: preparar mostra o resumo escapado, confirmar registra e a vaga mostra "pedida"; abrir no painel leva ao projeto', async ({ page }) => {
   const audit = await fixtures(page);
   await page.goto('/');
   await page.locator('[data-berco]').click();
   await page.locator('#hg-form-encomenda button[type=submit]').click();
   await expect(page.locator('#hg-enc-erro')).toHaveText('Falta o nome do projeto.');
-  await page.fill('#hg-enc-nome', 'Bot de Receitas');
-  await page.fill('#hg-enc-mod', 'Coleta\nBusca');
-  await page.locator('#hg-form-encomenda button[type=submit]').click();
-  await page.locator('[data-acao=confirmar]').click();
-  await expect(page.locator('#hg-pedido')).toContainText('Módulos no Plane, nesta ordem: 1) Coleta; 2) Busca');
   expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
+  await page.fill('#hg-enc-nome', 'Bot de <b>Receitas</b>');
+  await page.fill('#hg-enc-sigla', 'recei');
+  await page.fill('#hg-enc-mod', 'Coleta\n\nBusca');
+  await page.locator('#hg-form-encomenda button[type=submit]').click();
+  // Preparar: o resumo vem do servidor; nada gravado ainda.
+  await expect(page.locator('#hg-holo-titulo')).toContainText('Bot de <b>Receitas</b>');
+  await expect(page.locator('#hg-holo-titulo b', { hasText: 'Receitas' })).toHaveCount(0);
+  await expect(page.locator('#hg-holo-titulo')).toContainText('sigla RECEI');
+  await expect(page.locator('#hg-holo-corpo')).toContainText('Coleta');
+  await expect(page.locator('#hg-enc-aviso')).toHaveText('Confirmar só registra o pedido no painel.');
+  const preparo = audit.chamadas.filter((c) => c.metodo === 'POST');
+  expect(preparo.map((c) => [c.caminho, c.corpo])).toEqual([['/api/hangar/encomendas/preparar', { nome: 'Bot de <b>Receitas</b>', sigla: 'RECEI', modulos: ['Coleta', 'Busca'] }]]);
+  // Confirmar: registra e a vaga passa a mostrar a pendente.
+  await page.locator('[data-acao=confirmar]').click();
+  await expect(page.locator('#hg-enc-registrada')).toHaveText('pedida em 31/10/2026, aguardando o orquestrador');
+  expect(audit.chamadas.filter((c) => c.metodo === 'POST').map((c) => [c.caminho, c.corpo]).at(-1)).toEqual(['/api/hangar/encomendas/confirmar', { confirmacaoId: 'e1' }]);
+  await expect(page.locator('#hg-projetos [data-encomenda]')).toHaveText('Bot de <b>Receitas</b> · pedida em 31/10/2026, aguardando o orquestrador');
+  await page.locator('[data-acao=voltar]').click();
+  await expect(page.locator('#hg-enc-pendentes')).toContainText('pedida em 31/10/2026, aguardando o orquestrador');
+  await expect(page.locator('#hg-enc-pendentes b', { hasText: 'Receitas' })).toHaveCount(1);
+  await expect(page.locator('#hg-enc-pendentes b b')).toHaveCount(0);
   await page.locator('#hg-projetos [data-proj="alfa"]').click();
   await page.locator('#hg-holo-corpo a', { hasText: 'abrir no painel' }).click();
   await expect(page).toHaveURL(/#\/projeto\/alfa$/);
   await expect(page.locator('#aba-projetos')).toBeVisible();
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('encomenda sem sessão do Cadastro Único: o preparar recusa, o aviso aparece e nada é confirmado', async ({ page }) => {
+  const audit = await fixtures(page, { semSso: true });
+  await page.goto('/');
+  await page.locator('[data-berco]').click();
+  await page.fill('#hg-enc-nome', 'Bot');
+  await page.fill('#hg-enc-mod', 'Coleta');
+  await page.locator('#hg-form-encomenda button[type=submit]').click();
+  await expect(page.locator('#hg-enc-erro')).toHaveText('entre no Cadastro Único para confirmar esta ação Entre em https://astargne.com/login e volte a esta aba.');
+  await expect(page.locator('#hg-form-encomenda')).toBeVisible();
+  expect(audit.chamadas.filter((c) => c.caminho === '/api/hangar/encomendas/confirmar')).toEqual([]);
   expect(audit.errosPagina).toEqual([]);
 });
 
