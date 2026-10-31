@@ -552,7 +552,7 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
 - **Dados.** `GET /api/hangar` (`coletores/hangar.js` sobre `lerBacklog`,
   cache de 60 s do Plane): por projeto, peças = módulos com abertas/em
   andamento/feitas (canceladas fora), próximas fases (cartas abertas na ordem
-  do Plane), decisões e o mapa UUID da carta → peça. Decisão = carta aberta
+  do Plane), decisões, o mapa UUID da carta → peça e o reverso `SIGLA-N` → UUID. Decisão = carta aberta
   que espera o dono: label `PRODUTO` vai para a **estação de planejamento**,
   `ASTARGNE` (ou a legada `DONO`) vira **peça no chão** do módulo; bloqueio por
   outra carta, `TAREFA DONO`, `EMPÍRICA` e `SEM ESCOPO` ficam fora (`../../PADROES-BACKLOG.md`), e nave congelada não tem peça no chão. Mais o
@@ -567,12 +567,21 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   inteira é varrida por mtime. A cauda (`transcript-cauda.js`) começa em
   384 KB e dobra até ter 60 linhas úteis (teto 32 MB); linha acima de 256 KB
   é saída com screenshot em base64 e é pulada sem decodificar. Projeto = último caminho tocado
-  que cai num projeto do catálogo, senão o `cwd`; MCP `plane` dá a carta
-  pelo `issue_id`. Sub-sessão "guardian" do Codex e qualquer coisa em
+  que cai num projeto do catálogo, senão o `cwd`, senão o projeto da carta.
+  **Carta da sessão** (PAINEL-57) = a última vista, guardada por sessão
+  mesmo depois de sair da cauda, de quatro fontes: MCP `plane` (`issue_id`);
+  e, só no texto do comando (Bash do Claude, `cmd` do `exec` do Codex; nunca
+  prompt, resposta ou corpo de patch), a ponte REST do projeto
+  (`plane-testcase.mjs read 94`: número + sigla do dono do script, do caminho
+  do comando ou do `cwd`), a URL `/issues/<uuid>/` do Plane e `SIGLA-N` com
+  sigla da lista branca do catálogo (`sigla` em `projetos.js`; `UTF-8` e
+  `SHA-256` não são carta). Carta por `SIGLA-N` vira UUID no front pelo índice
+  reverso `identificadores` da nave (`coletores/hangar.js`). Sub-sessão "guardian" do Codex e qualquer coisa em
   `Exitlag/` ficam fora.
 - **Privacidade (regra 5).** O painel abre pelo tailnet e o transcript pode
   ter segredo colado: do transcript só saem nome de ferramenta, caminho
-  relativo ao projeto, nome do programa (sem argumento) e UUID de carta —
+  relativo ao projeto, nome do programa (sem argumento) e a carta (UUID ou
+  `SIGLA-N`) —
   nunca prompt, resposta ou argumento (`acoes-sessao.js`; prova em
   `test/hangar.test.js` com um segredo no prompt e no comando). Título do
   Plane passa por `esc()` antes de virar HTML.

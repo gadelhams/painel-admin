@@ -1,4 +1,4 @@
-# painel-admin — estado real (29/10/2026)
+# painel-admin — estado real (31/10/2026)
 
 Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 `historico/`; mecanismos em `arquitetura.md`.
@@ -12,8 +12,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - Backlog lido do **Plane** (`127.0.0.1:8095`, Guest "painel", só leitura):
   13 projetos no Plane, 15 no catálogo.
 - **Hangar** (28/10) é a entrada: naves = projetos (peça = módulo do Plane),
-  droids = sessões Claude/Codex vivas (`/proc` + transcripts, só ferramenta e
-  arquivo), C-3PO narrando e respondendo no popup, e a Steam liberada por nave (29/10) —
+  droids = sessões Claude/Codex vivas (`/proc` + transcripts, só ferramenta,
+  arquivo e carta: MCP, ponte REST, `SIGLA-N` ou URL no comando), C-3PO no popup, Steam liberada por nave —
   [arquitetura.md](arquitetura.md) § Hangar.
 - Abas: Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs.
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com

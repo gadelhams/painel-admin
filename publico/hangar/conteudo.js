@@ -27,7 +27,10 @@ function blocoDecisao(x, produto) {
     <span class="hg-linha-chips">${x.tags.map((t) => chip('var(--hg-alerta)', esc(t))).join('')}${linkFora(x.url, 'abrir no Plane')}</span></div>`;
 }
 
-const cartaoDe = (n, uuid) => (n && uuid && n.cartoes[uuid]) || null;
+// Carta citada por SIGLA-N que o índice reverso não achou (Plane fora, carta de
+// outra nave) ainda aparece pelo identificador, em vez de "cartão" sem nome.
+export const cartaoDe = (n, chave) => (n && chave && n.cartoes[chave])
+  || (/^[A-Z][A-Z0-9]*-\d+$/.test(chave ?? '') ? [-1, chave, 'fora do backlog lido'] : null);
 
 // A frota em leitura: a troca mora na sub-aba Frota da Orquestração, nunca aqui.
 function blocoFrota() {
@@ -92,7 +95,7 @@ export function conteudo(a) {
       fala: d.encerrar ? `O ${d.rotulo} encerrou a sessão e está voltando à fábrica do ${f.nome}.`
         : `${d.s.estado === 'aguardando' && !d.passo
           ? `O ${d.rotulo} terminou o turno e espera a sua resposta na conversa do ${f.nome} (terminal ou editor), mestre. Enquanto você não escrever, ele não faz nada.`
-          : `O ${d.rotulo} está ${oQueFaz(d)}, mestre.`}${carta ? ` O último cartão que tocou foi ${carta[1]}: ${carta[2]}.` : ' Não sei em qual cartão do Plane: a sessão ainda não tocou nenhum pelo MCP.'}`,
+          : `O ${d.rotulo} está ${oQueFaz(d)}, mestre.`}${carta ? ` O último cartão que tocou foi ${carta[1]}: ${carta[2]}.` : ' Não sei em qual cartão do Plane: a sessão ainda não tocou nenhum pelo MCP, pela ponte REST do projeto nem por SIGLA-N ou URL de carta num comando.'}`,
       corpo: `<dl class="hg-campos"><dt>IA</dt><dd>${f.nome}</dd><dt>Estado</dt><dd data-estado-droid="${esc(d.id)}"></dd>
         <dt>Projeto</dt><dd>${n ? linkNave(n) : esc(ondeDroid(d))}</dd>
         <dt>Cartão</dt><dd>${carta ? `${esc(carta[1])} · ${esc(carta[2])}` : '—'}</dd>

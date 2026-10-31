@@ -59,7 +59,7 @@ export async function recentes(dir, desde, profundidade = 1) {
 
 function criarAtribuidor({ raiz, projetos }) {
   const dirs = projetos
-    .map((p) => ({ pasta: p.pasta, plane: p.plane ?? null, dir: path.join(raiz, p.area, p.pasta) }))
+    .map((p) => ({ pasta: p.pasta, plane: p.plane ?? null, sigla: p.sigla ?? null, dir: path.join(raiz, p.area, p.pasta) }))
     .sort((a, b) => b.dir.length - a.dir.length);
   const exitlag = path.join(raiz, 'Exitlag');
   const dentro = (c, d) => c === d || c.startsWith(d + path.sep);
@@ -70,6 +70,10 @@ function criarAtribuidor({ raiz, projetos }) {
     },
     projetoDoPlane(id) {
       return dirs.find((d) => d.plane && d.plane === id) ?? null;
+    },
+    projetoDaSigla(carta) {
+      const sigla = typeof carta === 'string' ? carta.replace(/-\d+$/, '') : null;
+      return dirs.find((d) => d.sigla && d.sigla === sigla) ?? null;
     },
     // Exitlag não se mistura com o pessoal em sentido nenhum: nem droid, nem caminho.
     ehExitlag: (c) => typeof c === 'string' && dentro(path.normalize(c), exitlag),
@@ -90,7 +94,8 @@ function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
   // O mtime não basta: a CLI regrava metadados (título, modo) sem timestamp em sessão parada há horas.
   if (agora - Date.parse(bruta.ultimoEm) > JANELA_MS) return null;
 
-  // Precedência: arquivo de projeto tocado > cwd > carta do Plane. Chamada ao
+  // Precedência: arquivo de projeto tocado > cwd > carta do Plane (projeto do
+  // UUID, depois a sigla do SIGLA-N). Chamada ao
   // MCP sem issue_id (label, módulo) não diz onde a sessão trabalha: criar a
   // mesma label em doze projetos não muda o droid de nave.
   const ultimo = (pegar) => {
@@ -100,9 +105,20 @@ function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
     }
     return null;
   };
+  // Carta da ação: UUID (MCP, URL do Plane) ou SIGLA-N (citada no comando).
+  // A ponte REST só recebe o número: a sigla é a do dono do script, do caminho
+  // do comando ou, por fim, do cwd da sessão.
+  const cartaDe = (a) => {
+    if (atribuidor.ehExitlag(a.caminho)) return null;
+    if (a.itemPlane || a.carta) return a.itemPlane ?? a.carta;
+    if (!a.ponte) return null;
+    const dono = atribuidor.projetoDe(a.ponte.script) ?? atribuidor.projetoDe(a.caminho) ?? atribuidor.projetoDe(bruta.cwd);
+    return dono?.sigla ? `${dono.sigla}-${a.ponte.numero}` : null;
+  };
   const projeto = ultimo((a) => atribuidor.projetoDe(a.caminho))
     ?? atribuidor.projetoDe(bruta.cwd)
-    ?? ultimo((a) => (a.itemPlane ? atribuidor.projetoDoPlane(a.projetoPlane) : null));
+    ?? ultimo((a) => (a.itemPlane ? atribuidor.projetoDoPlane(a.projetoPlane) : null))
+    ?? ultimo((a) => atribuidor.projetoDaSigla(cartaDe(a)));
   const lugar = projeto?.pasta ?? (atribuidor.naRaiz(bruta.cwd) ? 'central' : null);
 
   const corte = agora - JANELA_MS;
@@ -120,10 +136,11 @@ function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
       else if (!dono && atribuidor.naRaiz(a.caminho)) saida.arquivo = path.relative(raiz, a.caminho);
     }
     if (a.programa) saida.programa = a.programa;
-    if (a.itemPlane) saida.itemPlane = a.itemPlane;
+    const carta = cartaDe(a);
+    if (carta) saida.itemPlane = carta;
     acoes.push(saida);
   }
-  const cartao = [...bruta.acoes].reverse().find((a) => a.itemPlane)?.itemPlane ?? null;
+  const cartao = ultimo(cartaDe);
 
   return {
     id,
@@ -148,6 +165,21 @@ async function lerComMemo(chave, { mtimeMs, size }, ler) {
   return valor;
 }
 
+// Última carta vista por sessão: a cauda é curta (o Codex enche de screenshot)
+// e a carta tocada há uma hora sai dela, mas a sessão continua nela até tocar outra.
+const cartaVista = new Map();
+const MAX_CARTAS_VISTAS = 256;
+
+function lembrarCarta(chave, sessao) {
+  if (!sessao.cartao) {
+    sessao.cartao = cartaVista.get(chave) ?? null;
+    return;
+  }
+  cartaVista.delete(chave);
+  cartaVista.set(chave, sessao.cartao);
+  if (cartaVista.size > MAX_CARTAS_VISTAS) cartaVista.delete(cartaVista.keys().next().value);
+}
+
 export async function lerSessoes({
   raizProc = '/proc',
   raizClaude = path.join(os.homedir(), '.claude', 'projects'),
@@ -161,13 +193,15 @@ export async function lerSessoes({
   const desde = agora - JANELA_MS;
   const atribuidor = criarAtribuidor({ raiz, projetos });
   const contexto = { agora, raiz, atribuidor, acervo };
+  // Lista branca do SIGLA-N citado em comando: as siglas do mesmo catálogo que atribui os projetos.
+  const siglas = new Set(projetos.map((p) => p.sigla).filter(Boolean));
   const sessoes = [];
 
   if (vivas.has('claude')) {
     for (const f of await recentes(raizClaude, desde, 2)) {
-      const bruta = await lerComMemo(f.arquivo, f, async () => sessaoClaude(await lerCauda(f.arquivo)));
+      const bruta = await lerComMemo(f.arquivo, f, async () => sessaoClaude(await lerCauda(f.arquivo), { siglas }));
       const s = projetar(bruta, { ...contexto, ia: 'claude', id: path.basename(f.arquivo, '.jsonl') });
-      if (s) sessoes.push(s);
+      if (s) { lembrarCarta(f.arquivo, s); sessoes.push(s); }
     }
   }
   if (vivas.has('codex')) {
@@ -178,11 +212,11 @@ export async function lerSessoes({
       const bruta = await lerComMemo(f.arquivo, f, async () => {
         // Primeira linha = session_meta; diz se é sub-sessão (o "guardian" que revisa comandos).
         const meta = await lerCabeca(f.arquivo).catch(() => null);
-        return sessaoCodex([meta, ...await lerCauda(f.arquivo)].filter(Boolean), { raiz });
+        return sessaoCodex([meta, ...await lerCauda(f.arquivo)].filter(Boolean), { raiz, siglas });
       });
       const id = path.basename(f.arquivo, '.jsonl').match(/[0-9a-f-]{36}$/)?.[0] ?? path.basename(f.arquivo, '.jsonl');
       const s = projetar(bruta, { ...contexto, ia: 'codex', id });
-      if (s) sessoes.push(s);
+      if (s) { lembrarCarta(f.arquivo, s); sessoes.push(s); }
     }
   }
 

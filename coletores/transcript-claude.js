@@ -1,10 +1,10 @@
 // Uma sessão do Claude Code a partir da cauda do transcript: última atividade, cwd, fim de turno e ações. Não lê prompt nem resposta.
 
-import { acaoDaFerramenta } from './acoes-sessao.js';
+import { acaoDaFerramenta, SIGLAS } from './acoes-sessao.js';
 
 const PAPEIS = new Set(['user', 'assistant']);
 
-export function sessaoClaude(objetos) {
+export function sessaoClaude(objetos, { siglas = SIGLAS } = {}) {
   let ultimoEm = null;
   let cwd = null;
   let fimDeTurno = false;
@@ -18,7 +18,7 @@ export function sessaoClaude(objetos) {
     if (o.type === 'assistant') {
       const usos = conteudo.filter((b) => b?.type === 'tool_use');
       for (const uso of usos) {
-        const acao = acaoDaFerramenta(uso.name, uso.input, o.timestamp);
+        const acao = acaoDaFerramenta(uso.name, uso.input, o.timestamp, siglas);
         if (acao) acoes.push(acao);
       }
       const parada = o.message?.stop_reason;

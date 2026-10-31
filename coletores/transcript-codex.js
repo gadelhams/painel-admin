@@ -1,13 +1,15 @@
 // Uma sessão do Codex a partir da cauda do rollout: última atividade, cwd, fim de turno e ações. Não lê prompt nem resposta.
 
-import { programaDoComando } from './acoes-sessao.js';
+import { cartaDoComando, programaDoComando, SIGLAS } from './acoes-sessao.js';
 
 // O Codex Desktop trabalha em ~/Documents/Codex/<tarefa> e chega aos projetos
 // por caminho absoluto dentro do `exec` (JavaScript). Da chamada só se extrai:
-// o arquivo de um apply_patch, caminhos sob a raiz (para achar o projeto) e o
-// primeiro programa do `cmd`. O resto do texto é descartado aqui.
+// o arquivo de um apply_patch, caminhos sob a raiz (para achar o projeto), o
+// primeiro programa do `cmd` e a carta citada nos `cmd` (ponte, URL ou
+// SIGLA-N; nunca no corpo do patch). O resto do texto é descartado aqui.
 const RE_PATCH = /\*\*\* (?:Update|Add|Delete) File: ([^\s\\"'`]+)/g;
 const RE_CMD = /\bcmd\s*:\s*"((?:[^"\\]|\\.){0,400})"/;
+const RE_CMDS = /\bcmd\s*:\s*(?:"((?:[^"\\]|\\.){0,2000})"|`((?:[^`\\]|\\.){0,2000})`)/g;
 const CHAMADAS = new Set(['custom_tool_call', 'function_call']);
 
 function caminhosSobRaiz(texto, raiz) {
@@ -23,17 +25,25 @@ function caminhosSobRaiz(texto, raiz) {
   return achados;
 }
 
-function acoesDaChamada(texto, em, raiz) {
+function cartaDosCmds(texto, siglas) {
+  // O `cmd` é literal de JavaScript: `\n` escapado volta a ser quebra (o heredoc depende dela).
+  const cmds = [...texto.matchAll(RE_CMDS)].map((m) => (m[1] ?? m[2]).replace(/\\n/g, '\n').replace(/\\(["`])/g, '$1'));
+  return cmds.length ? cartaDoComando(cmds.join('\n'), siglas) : null;
+}
+
+function acoesDaChamada(texto, em, raiz, siglas) {
   const editados = [...texto.matchAll(RE_PATCH)].map((m) => m[1]).filter((c) => c.startsWith('/'));
   if (editados.length) return editados.slice(0, 4).map((caminho) => ({ em, tipo: 'editar', ferramenta: 'apply_patch', caminho }));
   const cmd = texto.match(RE_CMD)?.[1];
   const programa = cmd ? programaDoComando(cmd.replace(/\\"/g, '"')) : null;
   const [caminho = null] = caminhosSobRaiz(texto, raiz).reverse();
-  if (!programa && !caminho) return [];
-  return [{ em, tipo: 'comando', ferramenta: 'exec', programa, caminho }];
+  const carta = cartaDosCmds(texto, siglas);
+  if (!programa && !caminho && !carta) return [];
+  // Falar com o Plane (ponte ou URL) é mexer na carta; citar SIGLA-N num commit não muda o tipo.
+  return [{ em, tipo: carta && !carta.carta ? 'cartao' : 'comando', ferramenta: 'exec', programa, caminho, ...carta }];
 }
 
-export function sessaoCodex(objetos, { raiz }) {
+export function sessaoCodex(objetos, { raiz, siglas = SIGLAS }) {
   let ultimoEm = null;
   let cwd = null;
   let fimDeTurno = false;
@@ -53,7 +63,7 @@ export function sessaoCodex(objetos, { raiz }) {
     if (o.type === 'event_msg' && p.type === 'task_started') fimDeTurno = false;
     if (o.type === 'response_item' && CHAMADAS.has(p.type)) {
       const texto = String(p.input ?? p.arguments ?? '');
-      acoes.push(...acoesDaChamada(texto, o.timestamp, raiz));
+      acoes.push(...acoesDaChamada(texto, o.timestamp, raiz, siglas));
     }
   }
   return { ultimoEm, cwd, fimDeTurno, subagente, acoes };

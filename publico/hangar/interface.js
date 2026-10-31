@@ -5,7 +5,7 @@ import {
 } from './estado.js';
 import { $, calmo, esc, pct, plural, nomeCurto } from './util.js';
 import { C, moverCamera, projetar } from './cena.js';
-import { conteudo, pedidoDeNave } from './conteudo.js';
+import { cartaoDe, conteudo, pedidoDeNave } from './conteudo.js';
 import { estadoDroid } from './simulacao.js';
 import { diarioAdd } from './narrador.js';
 import { contextoDoPopup, limparConversa, perguntar } from './conversa.js';
@@ -145,7 +145,7 @@ export function atualizarPaineis(dt = 0) {
   for (const b of $('hg-droids').querySelectorAll('[data-droid]')) {
     const d = droid(b.dataset.droid);
     if (!d) continue;
-    const est = estadoDroid(d); const n = d.nave; const carta = n && d.s.cartao && n.cartoes[d.s.cartao];
+    const est = estadoDroid(d); const n = d.nave; const carta = cartaoDe(n, d.s.cartao);
     const e = b.querySelector('.hg-estado'); e.style.setProperty('--c', est.c); e.textContent = est.r;
     b.querySelector('.hg-droid-doca').textContent = n ? `${n.nome} · ${situacao(n)}` : d.s.projeto === 'central' ? 'trabalho transversal · ~/Work' : 'fora do ~/Work';
     b.querySelector('.hg-droid-carta').innerHTML = carta ? `<b>${esc(carta[1])}</b>${esc(carta[2])}` : '';
