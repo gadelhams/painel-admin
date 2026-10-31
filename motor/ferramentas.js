@@ -1,7 +1,8 @@
-// Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+// Catálogo das ferramentas do C-3PO: nove de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 //
 // Fase 3 (31/10/2026): consulta_ssh e git_projeto leem; propor_acao registra uma
 // proposta e nada mais — preparar, confirmar e executar são do dono, pela UI, com SSO.
+// F3 da frota (31/10/2026): diario_zelador lê o diário do droid zelador, nada mais.
 
 import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
@@ -12,6 +13,7 @@ import { PropostaAcao } from './acao-proposta.js';
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarTriagemDev } from '../orquestrador/triagem.js';
 import { consultarOrquestracaoC3po } from '../orquestrador/consulta-c3po.js';
+import { consultarDiarioZelador } from '../orquestrador/consulta-zelador.js';
 import { decisoesParaC3po } from '../decisoes-c3po.js';
 import { LeituraPesada } from './leitura-pesada.js';
 import { criarServicoChaves } from '../chaves.js';
@@ -105,6 +107,13 @@ export const ferramentas = createSdkMcpServer({
         leitura: z.enum(Object.keys(LEITURAS_GIT)).describe('status, diff_stat ou log.'),
       },
       entrada => envelope.consultar('git_projeto', () => lerGitDoProjeto(entrada)),
+      { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'diario_zelador',
+      'Diário do droid zelador do Hangar (últimos três dias): jobs por projeto (início, fim, pulos com motivo), os vereditos por carta (MANTER, ATUALIZAR, FECHAR, CANCELAR, IA_DECIDE, DONO), o que foi aplicado, recusado ou abortado e o bloqueio que sobrou (decisão, tarefa do dono, espera puxar, espera integração). Use quando perguntarem o que o zelador fez ou por que uma carta mudou. Só leitura.',
+      { projeto: z.string().optional().describe('Pasta exata ou sigla de um projeto (ex.: "PAINEL") para restringir.') },
+      entrada => envelope.consultar('diario_zelador', () => consultarDiarioZelador({ projeto: entrada?.projeto ?? null })),
       { annotations: { readOnlyHint: true } },
     ),
     tool(

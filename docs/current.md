@@ -18,13 +18,13 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
   identidade técnica (CKBL, PLAYER) por SSO + duas ações —
   [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
-- Executor **ligado** (29/10): cada despacho por SSO + duas ações. Vigília:
-  todas desligadas.
+- Executor **ligado** (29/10): cada despacho por SSO + duas ações. Play por
+  nave: todos desligados; agenda só com `ORQ_AGENDADOR` na unit (falta pôr).
 
 ## O que falta
 
-- **Frota**: F2 feita (modelos numa frota só, por SSO; catálogo com 13
-  modelos das duas CLIs; sem frota gravada nada despacha); falta F3 ([plano](plano-frota-do-hangar.md)).
+- **Frota**: F2 e F3 feitas (frota por SSO; play por nave e zelador de
+  limpeza, sem chave provisionada); falta a F4, puxar ([plano](plano-frota-do-hangar.md)).
 - **Piloto real** (PAINEL-34) **passou em 31/10**: PLAYER-38 despachada pelo
   dono, Codex codificou, Claude validou (APROVADO), integrada no PLAYER.
   Falta ver no CLI real a mensagem de limite.

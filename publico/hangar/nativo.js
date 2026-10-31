@@ -1,5 +1,5 @@
 // Interruptor "Steam livre" no popup da nave que tem jogo nativo. Marcar ou desmarcar só prepara;
-// a gravação é a segunda ação, com a sessão do Cadastro Único, como a vigília.
+// a gravação é a segunda ação, com a sessão do Cadastro Único, como o play da nave.
 //
 // O bloco é marcação fixa acima de #hg-holo-corpo, que conteudo.js remonta como HTML a cada
 // abertura (e que no CKBL rola por 17 módulos): aqui só muda o estado, e os ouvintes são ligados uma vez.

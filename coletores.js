@@ -17,3 +17,4 @@ export { decisoesDoBacklog } from './coletores/decisoes.js';
 export { catalogoRelacoes } from './coletores/catalogo.js';
 export { lerHangar } from './coletores/hangar.js';
 export { lerSessoes } from './coletores/sessoes.js';
+export { ocupacaoPorSessoes } from './coletores/sessoes-estritas.js';

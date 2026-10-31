@@ -41,7 +41,7 @@ em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
 
 **Montar ≠ escutar** (PAINEL-17, 31/10/2026). `servidor.js` só carrega o `.env`, lê `PORTA`
 (padrão 7777), chama `montarPainel` com as dependências reais, liga os laços (`iniciar()`:
-reconciliação de leases, vigília, alinhamento) e escuta em `127.0.0.1`. `montagem.js` é a raiz de
+reconciliação de leases, migração do play, trava do agendador, vigília e zelador, alinhamento) e escuta em `127.0.0.1`. `montagem.js` é a raiz de
 composição: constrói serviços, autorizadores, `RoteadorPainel` e devolve o handler `(req, res)`;
 toda porta externa entra por `externos` (`executarSsh`, `leituraSsh`, `sso`, `fetchPlane`,
 `consultarPlane`, `conversar`, `transcrever`, `fetchVoz`, `spawnCli`, `coletores`, `agora`,
@@ -49,7 +49,7 @@ toda porta externa entra por `externos` (`executarSsh`, `leituraSsh`, `sso`, `fe
 produção. Os testes montam o mesmo painel com falsos (`test/painel-falso.js`):
 `test/fronteira-http.test.js` sobe um `http.Server` de porta efêmera e faz requisição real
 (guarda de Host e origem, sessão, estático), e a fronteira de `/api/contas/*` em
-`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, jogo nativo, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE) e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, diário, play, zelador, jogo nativo e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE) e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -62,8 +62,8 @@ aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
 `relacoes.js` — hoje fora da nav, ver abaixo), `POST /api/conversa` (SSE,
 motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 (aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
-`prontidao`, `canal?carta&projeto`, `frota`, `consumo`, `legado`, `nativo`; POST
-`simular`, `{frota,handoff,gates,despacho,vigilia,nativo}/{preparar,confirmar}`,
+`prontidao`, `canal?carta&projeto`, `frota`, `consumo`, `diario`, `play`, `zelador`, `nativo`; POST
+`simular`, `{frota,handoff,gates,despacho,play,nativo}/{preparar,confirmar}`,
 `voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `POST /api/acoes/{preparar,confirmar}` (ação proposta pelo C-3PO, § motor.js; `rotas-acoes.js`); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
 varre toda rota (literais de `http/` e de `montagem.js`) pelo painel montado com POST, PUT, PATCH e DELETE pela borda, sem sessão — 401 ou 405 no próprio handler,
@@ -103,7 +103,7 @@ módulo por responsabilidade: `politica.js` (reexporta `contrato-politica.js`,
 flags de CLI), `canal-plane.js` (a forma do comentário em `interacao-canal.js`)/`consulta-perfil.js` (o `PERFIL-IA/v1` antigo, só exibido como ignorado; leitura em `protocolo-perfil.js`)/`handoff-plane.js` (texto em `protocolo-handoff.js`, escrita em `escritor-handoff-plane.js`)/`gate-plane.js` (texto em `protocolo-gate.js`, escrita em `escritor-gate-plane.js`)
 (protocolos versionados no card: leitura paginada, `HANDOFF/v2` (v1 legível),
 `GATE/v1`, escritores restritos a um projeto), `sso.js` (reexporta `erro-acesso.js`, `sessao-cookie.js`, `origem-privilegiada.js`, `verificador-cadastro.js` e `autorizador.js`)/`confirmacoes.js`/`api-*.js`
-(sessão do Cadastro Único por ssh — e, desde 31/10/2026, `sessao-painel.js` + `GET /api/sessao` para o selo do cabeçalho, que diz se a sessão deste navegador é do dono, de outra conta ou nenhuma, guardado 60 s por cookie, sem autorizar nada; sair é na home de astargne.com, entrar volta por `?next=` —, desafio de confirmação, rotas; desde 28/10/2026 o esqueleto das duas ações é um só, `desafio-duas-acoes.js` + `api-duas-acoes.js`, e frota, gate, handoff, despacho, vigília e a troca de chaves só declaram o que validam e o que gravam), `triagem.js` (classificação em `classificar-prontidao-dev.js`, varredura em `varredura-triagem.js`)
+(sessão do Cadastro Único por ssh — e, desde 31/10/2026, `sessao-painel.js` + `GET /api/sessao` para o selo do cabeçalho, que diz se a sessão deste navegador é do dono, de outra conta ou nenhuma, guardado 60 s por cookie, sem autorizar nada; sair é na home de astargne.com, entrar volta por `?next=` —, desafio de confirmação, rotas; desde 28/10/2026 o esqueleto das duas ações é um só, `desafio-duas-acoes.js` + `api-duas-acoes.js`, e frota, gate, handoff, despacho, play e a troca de chaves só declaram o que validam e o que gravam), `triagem.js` (classificação em `classificar-prontidao-dev.js`, varredura em `varredura-triagem.js`)
 e `consulta-c3po.js` (pendências DEV e a ferramenta do motor), `voz-xai.js` (transcrição),
 `voz-eleven.js` (`ProxyElevenLabs`, a síntese; a chave não sai do processo),
 `consumo.js` (a do Claude em `fonte-consumo-claude.js`: o arquivo que `~/.claude/statusline-astargne.mjs` grava com o `rate_limits` da statusLine, documentada, e o `cachedUsageUtilization` que o próprio Claude Code, inclusive a extensão do VS Code, guarda em `~/.claude.json` — cache interno, lido com forma estrita e nada de conta; por janela vale a leitura mais nova; a fonte do Codex em `fonte-consumo-codex.js`: `rate_limits` do evento mais recente das sessões; leitura com mais de 15 min vira "última leitura", e some quando a janela zera), **`executor-cli.js`** (o executor real; ambiente em `ambiente-cli.js`,
@@ -114,14 +114,74 @@ CLIs descartáveis — `claude -p` / `codex exec` — num worktree `orq/<carta>-
 fora da árvore principal, comando de aceite do contrato sem shell, ambiente por
 lista branca, timeout que mata o grupo, logs em `~/.local/state/painel-admin/orquestracao/saidas/<tentativa>/`;
 moldes dos papéis em `briefings/`; só é construído com `ORQ_EXECUCAO_HABILITADA=true`)
-**`vigilia.js`** + **`api-vigilia.js`**
-(varredura automática por projeto: o controle em `vigilia-controle.js`, a passada em `vigilia-varredura.js`, o passo de uma carta em `passo-vigilia.js`, o diário em `vigilia-diario.js` e `vigilia.js` só compõe; a cada dois minutos escolhe a primeira carta
-elegível do projeto ligado, muda Todo → In Progress, chama `iniciarDespacho`
+**`vigilia.js`**
+(varredura automática dos projetos com play ligado: a passada em `vigilia-varredura.js`, o passo de uma carta em `passo-vigilia.js`, o diário em `vigilia-diario.js` e `vigilia.js` só compõe; a cada dois minutos escolhe a primeira carta
+elegível do projeto, muda Todo → In Progress, chama `iniciarDespacho`
 com a frota (nunca grava `PERFIL-IA`) e, em `concluido`, troca `READY TO
 DEV` por `READY TO TEST` com recibo ou leva `READY TO TEST` a Done; freios por
-contrato, estado e diário em `vigilia/<projeto>.json|.jsonl`; ligar/desligar
-por SSO em duas ações) e **`estado-plane.js`** (PATCH de estado do card pelo
+contrato, estado e diário em `vigilia/<projeto>.jsonl`; ligar e desligar é o
+play da nave, abaixo) e **`estado-plane.js`** (PATCH de estado do card pelo
 grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
+
+**Play e zelador** (F3 da frota, 31/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md) § F3 feita).
+- **Play por nave** (`play.js`, `api-play.js`, `http/rotas-orq-play.js`): `play.json` no estado da
+  orquestração, `{ [projetoPlaneId]: { desde, usuarioId, suspenso? } }`; presença = ligado. Gravado
+  por tmp + rename sob a trava global (o desligar não cruza uma reserva); ilegível ou de forma
+  estranha = todos desligados, e a tela diz "play ilegível"; "suspenso por divergência" fica gravado,
+  é distinto de desligado e só sai religando. Elegível: catálogo com Plane, não congelado, nem ANYA
+  nem CKBL. `GET /api/orquestracao/play` é aberto e não devolve `usuarioId` (fica no
+  `play-historico.jsonl`, só acréscimo); `POST …/play/{preparar,confirmar}` por SSO + duas ações, e o
+  preparar do desligar diz o que está em curso. A vigília lê o play no lugar do toggle antigo,
+  relido a cada projeto e de novo dentro de `conferirSobTrava` na reserva (J66). A migração do toggle
+  (`play.migrar`, arquivo-marca `play-migracao.json`, sob a trava, antes de qualquer agendamento)
+  renomeia cada `vigilia/<id>.json` para `.migrado-<data>`, anota e não liga nada; o
+  `vigilia/<id>.jsonl` fica, porque é a fonte do teto diário.
+- **Agendador** (`agendador-instancia.js`): vigília e zelador só agendam com `ORQ_AGENDADOR=true` (só
+  na unit, `operacao.md`) e com o pid deste processo em `agendador.json`, conferido a cada volta;
+  pid vivo de outro recusa, pid morto ou arquivo ilegível é tomado sob a trava (J52).
+- **Job do zelador** (`zelador.js` compõe; `zelador-agendador.js`, `zelador-job.js`,
+  `zelador-aplicacao.js`): a cada `ZELADOR_INTERVALO_MIN`, o projeto com play que teve a vez há mais
+  tempo (pelo diário), se a frota do zelador está ok, sem pausa de versão do bloco zelador nem do
+  provedor, abaixo do teto diário (`ZELADOR_TETO_DIA`, contado do diário; job parado por CLI ou limite
+  não conta), com consumo do provedor abaixo de 85% e leitura com menos de 6 h (`consumo.js`; sem
+  leitura, não roda), sem sessão viva tocando o projeto nas últimas 2 h (`coletores/sessoes-estritas.js`,
+  erro = ocupado) e com os leases tomados (`zelador-lease.js`: global e por projeto, `jobId`, TTL
+  20 min renovado a cada 5, fencing sob a trava antes de cada escrita, ilegível = ocupado). No
+  arranque, job sem fim vira `JOB_INTERROMPIDO` e o lease dele é solto.
+- **Dentro do job**: confere a chave e o ator antes de gastar CLI; reconcilia o PENDENTE do
+  projeto; monta o retrato (`zelador-retrato.js`: cartas, comentários, atividades e relações pela
+  Guest, sem cache, pelo caminho do projeto; `zelador-git.js` com `GIT_OPTIONAL_LOCKS=0`); roda a CLI
+  do bloco zelador da frota (`zelador-cli.js`: diretório vazio novo, `--tools ""` sob `--restricted`
+  ou sandbox só-leitura, sem MCP nem sessão, retrato pela stdin, JSON estrito) fora da trava;
+  valida cada veredito (`zelador-veredito.js`: forma fechada, evidência conferida — commit ancestral
+  do ramo principal, `caminho:linha` com realpath dentro do repo e rastreado, carta existente —, prosa
+  sem segredo, sem HTML e sem `GATE/`, `HANDOFF/`, `ZELADOR/`, `DECISAO/`, `[ORQ/`, trecho sem
+  marcador `(DONO`/`(ASTARGNE` nem linha de dependência). O que ele não toca (`zelador-politica.js`):
+  carta fechada, não-folha, com gate, que bloqueia carta com gate, com lease, tentativa ou comentário
+  `[ORQ/v1` nas últimas 24 h, com atividade ou comentário de outro ator nas últimas 2 h, ou com
+  leitura ilegível. Antes de escrever, tudo de novo ao vivo: a digital (estado, etiquetas, nome,
+  descrição, comentários que não são do zelador), o "não desfazer ato humano" (nunca devolve um campo
+  ao valor de onde um não-zelador o tirou, nunca tira etiqueta que não foi ele que pôs; atividade sem
+  ator legível = humano) e a prontidão READY TO DEV de todas as cartas abertas e das que esperam por
+  esta (nenhuma outra pode mudar; a própria só ganha motivo).
+- **Escrita** (`escritor-zelador-plane.js`, a identidade "Zelador (Hangar)"): chave lida de
+  `~/.config/plane/zelador.token` (600, dono) uma vez por operação, nunca do `.env`; ator conferido em
+  `/users/me` contra o UUID fixo; chave igual à Guest ou a outra identidade recusa; escopo (play ∩
+  catálogo) conferido em cada escrita. Ordem: diário PENDENTE no índice fora da rotação → comentário
+  `[ZELADOR/v1 veredito=… chave=…]` com `external_source: zelador-hangar-v1` e `external_id` = hash
+  da mudança estruturada + digital de antes (409 só vale com o comentário existente do zelador e igual)
+  → a mudança da lista fechada (Done/Cancelled; trecho único ou parágrafo anexado; etiquetas de trava
+  por nome único no projeto, `PRODUTO` só com `ASTARGNE`, nunca tirada) sob a trava curta, sem lease
+  nem tentativa de despacho na carta e com a digital reconferida → verificação só dos campos escritos
+  → recibo `[ZELADOR/v1 recibo=APLICADO|ABORTADO|DIVERGENTE]` → RESOLVIDO. Divergência suspende o play
+  do projeto depois do recibo.
+- **Diário** (`zelador-diario.js`): `zelador/zelador-AAAA-MM-DD.jsonl` por dia (UTC), `anexarJsonl`,
+  só campos estruturados; `zelador/pendentes.jsonl` não roda. O fim do job (`zelador-fim.js`) mede do
+  Plane atual: feita (zero abertas), espera puxar (F4), tarefa do dono, decisão, espera outra carta e
+  espera integração (ramos `orq/*` fora do principal); "só o dono" acende o destaque no Hangar.
+  `GET /api/orquestracao/zelador` (job em curso, diário dos três últimos dias, fim por projeto); o
+  diário da frota (`diario-frota.js`) e a ferramenta `diario_zelador` do C-3PO (`consulta-zelador.js`)
+  leem o mesmo arquivo.
 
 **Frota** (F2, 29/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md)).
 Uma configuração só, no lugar do perfil por carta: `frota-catalogo.js` (catálogo
@@ -175,7 +235,7 @@ Regras (com a correção pós-varredura de 29/10/2026, janelas J-A a J-L):
   stderr traz a transcrição; `--json` não foi verificado no CLI real). O formato
   exato das mensagens será conferido no piloto PAINEL-34. `cli` (binário
   ausente, modelo/flag recusado, autenticação) pausa a versão da frota até outra
-  ser confirmada; `limite` pausa o provedor para todos os projetos; `carta`
+  ser confirmada, só no bloco que falhou (`versao` do executor ou `versaoZelador`, J61, F3); `limite` pausa o provedor para todos os projetos; `carta`
   (timeout, truncamento, limite de turnos, saída ≠ 0 genérica — e a dúvida)
   conta tentativa e não pausa nada. `cli` e `limite` não contam tentativa da
   carta nem o teto diário. Reserva que cai antes do executor (ex.: o PATCH de
@@ -346,7 +406,7 @@ mesmas funções — o motor nunca faz HTTP para o próprio processo.
 
 ### motor.js
 
-Porta da conversa. O catálogo das nove ferramentas (oito de leitura e `propor_acao`) mora em
+Porta da conversa. O catálogo das dez ferramentas (nove de leitura, entre elas `diario_zelador` desde a F3, e `propor_acao`) mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
 aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
@@ -521,7 +581,7 @@ de 60 s passando pela mesma view não dispara ssh nenhum.
 
 #### orquestrador.js (publico/) e orquestracao.css
 
-A aba está partida em `publico/orquestracao/`: núcleo (estado e HTTP), demanda (elegibilidade na carta, pré-checagem em `demanda-prontidao.js`, portão em `demanda-portao.js`, histórico em `demanda-historico.js`), fila (filtro em `fila-filtro.js`, lista em `fila-lista.js`, triagem em `fila-triagem.js`), despacho, gate, conversa (canal em `conversa-canal.js`, handoff em `conversa-handoff.js`), frota (seletores em `modelos-seletores.js`, confirmação em `frota-confirmacao.js`), vigília (desenho em `vigilia-desenho.js`, confirmação em `vigilia-confirmacao.js`), legado, consumo e voz da carta. `orquestrador.js` só liga os tópicos. Leitura/simulação do Plane: painel de projetos candidatos, consulta
+A aba está partida em `publico/orquestracao/`: núcleo (estado e HTTP), demanda (elegibilidade na carta, pré-checagem em `demanda-prontidao.js`, portão em `demanda-portao.js`, histórico em `demanda-historico.js`), fila (filtro em `fila-filtro.js`, lista em `fila-lista.js`, triagem em `fila-triagem.js`), despacho, gate, conversa (canal em `conversa-canal.js`, handoff em `conversa-handoff.js`), frota (seletores em `modelos-seletores.js`, confirmação em `frota-confirmacao.js`), legado, consumo e voz da carta. `orquestrador.js` só liga os tópicos. Leitura/simulação do Plane: painel de projetos candidatos, consulta
 C-3PO sob demanda, impedimentos reais, fila filtrável e touchpoints. Recebe
 HTML de referência visual Protocolo (11/10/2026), com a camada Protocolo,
 sem escuta contínua ou ações do mock. Abre o console sem enviar mensagem ou
@@ -532,10 +592,10 @@ Demanda, **Resumo da carta** (bloco Estado da descrição, último handoff e gat
 e link para o Plane; `orquestrador/resumo-carta.js`, sem LLM), **Frota** (estado, versão e os quatro
 papéis; editor dos blocos executor e zelador com `modelos-seletores.js`; preparar/confirmar em
 `frota-confirmacao.js`; nada por carta — a carta só mostra "perfil antigo ignorado"), Consumo, **Diário
-da frota** (projeção só-leitura de `touchpoints.jsonl` e dos diários da vigília por
+da frota** (projeção só-leitura de `touchpoints.jsonl`, dos diários da vigília e do zelador por
 `orquestrador/diario-frota.js`, só campos estruturados; linha truncada no fim é ignorada e
-avisada, corrupção no meio falha fechada naquela fonte — `leitor-jsonl.js`) e **Vigília** —
-estes dois lidos só ao abrir o tópico. Leituras pesadas abortam a
+avisada, corrupção no meio falha fechada naquela fonte — `leitor-jsonl.js`), lido só ao abrir o
+tópico. A sub-aba Vigília saiu na F3: ligar um projeto é o play da nave, no Hangar. Leituras pesadas abortam a
 anterior (`AbortController` por tópico); resultado de gate/despacho confirmado
 sobrevive ao re-render (`estado.ultimoResultado`). Ver
 [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
@@ -577,8 +637,8 @@ Tela de entrada desde 28/10/2026 (plano em `~/.claude/plans/lovely-dancing-hamst
 estilo holo-3D escolhido pelo dono no mock v7). Mapa fixo: docas no centro (4,
 só naves em trabalho), fábricas de droids ao norte (Claude, Codex, Grok),
 Oficina central a leste (acervo compartilhado), pátio do Plane a oeste (uma vaga
-por projeto do catálogo). **Só leitura**: nenhuma rota de escrita; a
-encomenda de nave nova só monta o texto de um pedido para o orquestrador.
+por projeto do catálogo). **Só leitura**, menos o "Steam livre" e o play (SSO + duas
+ações, abaixo); a encomenda de nave nova só monta o texto de um pedido para o orquestrador.
 
 - **Dados.** `GET /api/hangar` (`coletores/hangar.js` sobre `lerBacklog`,
   cache de 60 s do Plane): por projeto, peças = módulos com abertas/em
@@ -629,11 +689,20 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   desliga os voos. Paleta: sempre escura, no cobre-âmbar do tema escuro da
   camada Protocolo (tokens `--hg-*` em `tokens.css`; as cores da cena em
   `cena.js` e `estado.js`, que precisam acompanhar à mão). `estado.js` define
-  `COR_PAPEL` (orquestração, codificação, validação, zelador) para os droids
-  da frota da F3/F4; sessão humana não tem papel e mantém a cor da fábrica.
+  `COR_PAPEL` (orquestração, codificação, validação, zelador) e `corDroid`: o droid
+  zelador (F3) usa a do papel; sessão humana não tem papel e mantém a cor da fábrica.
 - **Frota em leitura.** A fábrica (cena ou lista lateral) abre o popup com a
   frota atual (`GET /api/orquestracao/frota`, lida junto com `/api/hangar`);
   trocar é só na sub-aba Frota.
+- **Play por nave e o droid zelador** (`play.js`, F3, 31/10/2026). O popup da vaga e da doca de
+  toda nave com Plane tem o play: marcar só prepara, gravar é a segunda ação, por SSO, nas duas
+  direções (o mesmo bloco do "Steam livre"); suspenso por divergência aparece com o motivo e
+  religar é a saída. Embaixo, o que o último job do zelador deixou; quando só sobram decisão e
+  tarefa do dono, o bloqueio fica em destaque no popup e como chip "bloqueio: só o dono" no painel
+  lateral, com as cartas. O droid zelador nasce do job (`GET /api/orquestracao/zelador`, lido com o
+  poll de 5 s das sessões): sai da fábrica do provedor, vai à vaga do projeto no pátio (não reboca
+  a nave para a doca) e volta quando o job termina; pinta pela cor `COR_PAPEL.zelador` e o popup dele
+  mostra a fase e o diário do job.
 - **Conversa no popup** (`conversa.js`, 29/10/2026). Todo popup tem a caixa
   "Pergunte ao C-3PO sobre isto": a pergunta vai a `POST /api/conversa` com o
   olho e o título do popup na frente, como texto (o C-3PO não vê a cena), e a
@@ -728,7 +797,7 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   propuser "copiar o token pro `.env` local pra simplificar", a resposta é
   não — é a arquitetura da fatia, não um detalhe.
 - **O motor lê e só propõe** (fase 3, 31/10/2026; até então "só-leitura até a
-  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das nove
+  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das dez
   ferramentas MCP — limitação **estrutural**, não promessa de comportamento. A
   única que não é leitura, `propor_acao`, registra uma proposta e devolve o id
   dela, nunca um id de confirmação; preparar, confirmar e executar são do dono,
@@ -764,7 +833,11 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
 - **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` da identidade
   Guest de leitura e, se habilitado, `PLANE_ORQ_WRITE_KEY` de serviço distinta;
   coberto pelo `.gitignore`). A escrita de gate e handoff exige projeto único, SSO do
-  Cadastro Único e confirmação separada; não amplia as ferramentas do C-3PO.
+  Cadastro Único e confirmação separada; não amplia as ferramentas do C-3PO. **Exceção
+  delimitada (F3, 31/10/2026): o escritor do zelador** vale para vários projetos, mas só os que
+  têm o play ligado pelo dono (SSO + duas ações) e só a lista fechada da zeladoria; a chave dele
+  mora em `~/.config/plane/zelador.token` (600, dono conferidos a cada operação), nunca em
+  `process.env`, e o ator é conferido contra o UUID fixo da identidade "Zelador (Hangar)".
   Nenhuma chave aparece no navegador, código, log, commit ou resposta HTTP.
 
 ## Origem
@@ -794,7 +867,7 @@ vivo tinha; provas e evidências ficaram em
 - **Autenticação do motor**: o login do Claude Code já existente na máquina;
   funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
 - **Só-leitura estrutural** (`motor.js`; desde 31/10/2026 "lê e só propõe", § motor.js): `tools: []` + servidor MCP em
-  processo com só as ferramentas do catálogo (nove desde 31/10/2026) + `allowedTools` nelas +
+  processo com só as ferramentas do catálogo (dez desde a F3 da frota, 31/10/2026) + `allowedTools` nelas +
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.

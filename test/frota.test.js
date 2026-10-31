@@ -213,7 +213,7 @@ test('J-H: pausas de forma inválida contam como ilegíveis; confirmar uma frota
       assert.equal((await pausas.ler()).legivel, false, ruim);
     }
     await confirmacoes.confirmar((await preparar(conteudoFrota())).confirmacaoId, IDENTIDADE);
-    assert.deepEqual(await pausas.ler(), { legivel: true, provedores: {}, versao: null }, 'a confirmação é a saída explícita');
+    assert.deepEqual(await pausas.ler(), { legivel: true, provedores: {}, versao: null, versaoZelador: null }, 'a confirmação é a saída explícita');
     const h1 = lerJsonl(await fs.readFile(path.join(diretorio, 'frota-historico.jsonl'), 'utf8')).linhas.at(-1);
     assert.equal(h1.pausas, 'pausas ilegíveis regravadas vazias');
     const v1 = await new ArquivoFrota({ diretorio }).ler();

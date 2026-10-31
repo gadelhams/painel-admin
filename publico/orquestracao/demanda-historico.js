@@ -8,7 +8,7 @@ class DemandaHistorico {
 
   static linha(e) {
     const quando = e.quando ? new Date(e.quando).toLocaleString('pt-BR') : '?';
-    const detalhe = [e.resultado, e.de && e.para ? `${e.de} → ${e.para}` : null, e.motivo].filter(Boolean).join(' · ');
+    const detalhe = [e.veredito, e.resultado, e.de && e.para ? `${e.de} → ${e.para}` : null, e.motivo].filter(Boolean).join(' · ');
     return `${quando} · ${e.origem} · ${e.carta ?? (e.cartaId ? e.cartaId.slice(0, 8) : '—')} · ${e.tipo}${detalhe ? ` · ${detalhe}` : ''}`;
   }
 
@@ -33,7 +33,7 @@ class DemandaHistorico {
       lista.replaceChildren();
       for (const aviso of dados.avisos ?? []) lista.append(this.n.criar('p', `⚠ ${aviso}`, 'orq-ajuda'));
       for (const e of dados.eventos) lista.append(this.n.criar('p', DemandaHistorico.linha(e)));
-      if (!dados.eventos.length) lista.append(this.n.criar('p', carta ? 'Nenhum evento da frota nesta carta.' : 'Nenhum evento da frota ainda: nenhum despacho nem vigília rodou nesta máquina.'));
+      if (!dados.eventos.length) lista.append(this.n.criar('p', carta ? 'Nenhum evento da frota nesta carta.' : 'Nenhum evento da frota ainda: nenhum despacho, vigília nem zelador rodou nesta máquina.'));
     } catch (erro) { if (!this.n.abortado(erro)) lista.replaceChildren(this.n.criar('p', `Diário indisponível: ${erro.message}`)); }
   }
 }

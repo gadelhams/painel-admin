@@ -6,6 +6,8 @@
 // Nenhum dos dois gasta tentativa da carta nem do teto diário. A ordem (correção J-A) é
 // conferir, reservar e só então escrever no Plane: frota e pausas são relidas sob a
 // trava na reserva, e a mudança Todo → In Progress acontece com o lease já tomado.
+// Desde a F3 (31/10/2026) o play também é relido ali dentro (J66): desligado entre a escolha
+// da carta e a reserva, nada é reservado nem escrito.
 
 import { randomUUID } from 'node:crypto';
 import { configuracaoVigilia } from './politica.js';
@@ -27,25 +29,27 @@ export function tentativasDaCarta(historico = []) {
 // voltaria a cada fim de pausa, para sempre. Duas no dia tiram a carta da varredura até a
 // janela passar (R1 do piloto PAINEL-34): a segunda já não é coincidência.
 export const MAX_PARADAS_DA_FROTA = 2;
+const semReserva = mensagem => Object.assign(new Error(mensagem), { semReserva: true });
 export function paradasDaFrota(historico = [], agoraMs) {
   return historico.filter(e => e.tipo === 'RESULTADO_EXECUTOR' && CAUSAS_DA_FROTA.has(e.causa?.tipo)
     && agoraMs - Date.parse(e.quando) < 24 * 60 * 60_000).length;
 }
 
 export class PassoVigilia {
-  constructor({ servico, registrarLog, livro, memoria, controle }) {
+  constructor({ servico, play, registrarLog, livro, memoria }) {
     this.servico = servico;
+    this.play = play;
     this.registrarLog = registrarLog;
     this.livro = livro;
     this.memoria = memoria;
-    this.controle = controle;
   }
 
   async reler(cartaId) {
     return (await this.servico.fila()).itens.find(x => x.id === cartaId) ?? null;
   }
 
-  async projeto(p, local) {
+  // `registro` é a linha do play do projeto: quem ligou responde pela tentativa.
+  async projeto(p, registro) {
     const id = p.plane;
     const nota = campos => { this.memoria.set(id, { ...this.memoria.get(id), ultimaVarredura: this.livro.iso(), ...campos }); return { projetoId: id, ...this.memoria.get(id) }; };
     const { contrato, erros } = await this.servico.contrato(id);
@@ -78,8 +82,12 @@ export class PassoVigilia {
     let resultado;
     try {
       resultado = await this.servico.iniciarDespacho({ cartaId: carta.id, comandoId: cfg.comando, versaoCarta: carta.atualizadoEm,
-        frotaVersao: congelada.versao, frotaHash: congelada.hash, chaveIdempotencia: randomUUID(), usuarioId: String(local.ligadaPor ?? 'vigilia'),
-        conferirSobTrava: async (c) => { const motivo = pausas.impedimento(await pausas.ler(), c); if (motivo) throw new Error(`${motivo}; nada foi reservado`); },
+        frotaVersao: congelada.versao, frotaHash: congelada.hash, chaveIdempotencia: randomUUID(), usuarioId: String(registro?.usuarioId ?? 'vigilia'),
+        conferirSobTrava: async (c) => {
+          if (!(await this.play.ligado(id))) throw semReserva('play desligado antes da reserva; nada foi reservado');
+          const motivo = pausas.impedimento(await pausas.ler(), c);
+          if (motivo) throw semReserva(`${motivo}; nada foi reservado`);
+        },
         aposReservar: async () => {
           if (!(gate === 'READY TO DEV' && carta.estadoGrupo === 'unstarted')) return null;
           const r = await this.servico.mudarEstado(carta.id, id, 'started', carta.atualizadoEm);
@@ -87,6 +95,7 @@ export class PassoVigilia {
           return { versaoCarta: r.versaoCarta };
         } });
     } catch (erro) {
+      if (erro.semReserva) return nota({ motivoOciosa: erro.message });
       if (!erro.semInicio) throw erro;
       // Reservou e caiu antes do executor: fica no diário com causa infra e o motivo, sem gastar tentativa da carta.
       await this.livro.anotar(id, { tipo: 'TENTATIVA', cartaId: carta.id, carta: carta.identificador, tentativaId: erro.semInicio.tentativaId,

@@ -418,6 +418,8 @@ sem deploy, sem CLI paga.
 
 ## Vigília (24/10/2026)
 
+*Desde a F3 da frota (31/10/2026) o ligar e desligar por projeto é o play da nave no Hangar; o toggle, `api-vigilia.js` e o tópico "Vigília" saíram ([plano-frota-do-hangar.md](plano-frota-do-hangar.md) § F3 feita). O texto abaixo é o registro de 24/10.*
+
 Definição do dono, depois do fecho: o Painel não fica ocioso — um projeto
 ligado é varrido a cada dois minutos e a próxima carta elegível é despachada
 sem clique na carta. Implementada em `orquestrador/vigilia.js` sobre o mesmo

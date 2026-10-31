@@ -15,16 +15,18 @@ const AREAS_COM_PORTA = ['alinhamento', 'chaves', 'coletores', 'contas', 'motor'
 // orquestrador/ não tem porta única: estes são os módulos que outra área pode importar.
 // As primitivas de execução (processo sem shell, ambiente por lista branca) e o contrato local
 // são portas desde a fase 3 do C-3PO (31/10/2026): acoes/ e a leitura de git as reusam em vez de duplicar.
+// consulta-zelador.js (F3 da frota) é a leitura do diário do zelador que o C-3PO consome.
 const PORTAS_ORQUESTRADOR = new Set(['sso.js', 'fila.js', 'triagem.js', 'consulta-c3po.js',
   'api-duas-acoes.js', 'desafio-duas-acoes.js', 'leitor-jsonl.js', 'uuid.js',
-  'processo-cli.js', 'ambiente-cli.js', 'contrato-local.js', 'politica.js']);
+  'processo-cli.js', 'ambiente-cli.js', 'contrato-local.js', 'politica.js', 'consulta-zelador.js']);
 // Quem compõe (montagem.js) liga as peças internas de cada área — regra 7, "quem compõe não implementa".
 const COMPOSICAO = 'montagem.js';
 // O motor do C-3PO é só leitura até a fase 3 (invariante 4): nem o fecho dos seus imports alcança
 // escritor do Plane ou o executor. Exceções do fecho na lista abaixo, com o caminho e o porquê.
 const PROIBIDOS_AO_MOTOR = ['orquestrador/escritor-handoff-plane.js', 'orquestrador/escritor-gate-plane.js',
   'orquestrador/estado-plane.js', 'orquestrador/executor-cli.js', 'orquestrador/api-despacho.js', 'orquestrador/api-gate.js',
-  'orquestrador/api-handoff.js', 'orquestrador/api-frota.js'];
+  'orquestrador/api-handoff.js', 'orquestrador/api-frota.js', 'orquestrador/escritor-zelador-plane.js', 'orquestrador/zelador-cli.js',
+  'orquestrador/zelador-aplicacao.js', 'orquestrador/api-play.js'];
 const EXCECOES_MOTOR = new Map([
   ['orquestrador/escritor-handoff-plane.js', 'motor/ferramentas.js → fila.js → servico-orquestracao.js → canal-carta.js → handoff-plane.js, porta que reexporta o protocolo (leitura do canal) junto com a fábrica do escritor; o motor só lê, e o escritor só nasce com chave injetada pela montagem'],
   ['orquestrador/escritor-gate-plane.js', 'o mesmo caminho até canal-carta.js → gate-plane.js, mesma porta mista de protocolo e escritor; mesma razão'],

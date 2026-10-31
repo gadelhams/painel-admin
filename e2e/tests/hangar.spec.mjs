@@ -22,7 +22,7 @@ const hangar = {
       cartoes: { [CARTA]: [0, 'ALFA-3', 'Qual fonte usar?'] },
       identificadores: { 'ALFA-3': CARTA },
     }),
-    nave('beta', { sigla: null, estado: 'sem_backlog', fonte: null, url: null, pct: 0, cartas: { abertas: 0, andamento: 0, feitas: 0 } }),
+    nave('beta', { sigla: null, planePrj: null, estado: 'sem_backlog', fonte: null, url: null, pct: 0, cartas: { abertas: 0, andamento: 0, feitas: 0 } }),
   ],
   acervo: [{ id: 'padroes', titulo: 'Padrões', itens: ['PADROES-BACKLOG.md'] }, { id: 'orientacoes', titulo: 'Orientações', itens: [] }, { id: 'skills', titulo: 'Skills', itens: ['fecho-de-entrega'] }, { id: 'licoes', titulo: 'Lições vivas', itens: [] }],
 };
@@ -38,10 +38,11 @@ const sessoes = (extra = []) => ({
     acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }, ...extra],
 });
 
-async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [] } = {}) {
+async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [], zelador = { atual: null, porProjeto: {}, diario: [] } } = {}) {
   const chamadas = [];
   const errosPagina = [];
   const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
+  const play = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', sigla: 'ALFA', situacao: 'desligado', desde: null, suspenso: null, emCurso: null, despacho: null };
   page.on('pageerror', (e) => errosPagina.push(e.message));
   await page.route('**/*', async (route) => {
     const req = route.request(); const url = new URL(req.url());
@@ -74,6 +75,20 @@ async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra =
       Object.assign(nativo, ultimo.horas ? { liberada: true, ate: new Date(Date.now() + ultimo.horas * 3_600_000).toISOString() } : { liberada: false, ate: null });
       return json({ nome: 'alfa', ...nativo });
     }
+    // Play por nave simulado (F3): preparar devolve o desafio; confirmar grava e o GET passa a mostrar.
+    if (url.pathname === '/api/orquestracao/play') return json({ legivel: true, agora: agora(), projetos: [play], observacao: '' });
+    if (url.pathname === '/api/orquestracao/play/preparar') {
+      const corpo = chamadas.at(-1).corpo = req.postDataJSON();
+      return json({ confirmacaoId: 'p1', expiraEm: new Date(Date.now() + 120_000).toISOString(), nome: 'alfa', ligar: corpo.ligar, situacao: play.situacao,
+        jaEstava: false, emCurso: null, aviso: corpo.ligar ? 'Confirmar liga o play: o zelador passa a limpar as cartas.' : 'Confirmar desliga o play agora.' });
+    }
+    if (url.pathname === '/api/orquestracao/play/confirmar') {
+      chamadas.at(-1).corpo = req.postDataJSON();
+      const ultimo = chamadas.filter((c) => c.caminho === '/api/orquestracao/play/preparar').at(-1).corpo;
+      Object.assign(play, { situacao: ultimo.ligar ? 'ligado' : 'desligado', desde: ultimo.ligar ? agora() : null });
+      return json({ nome: 'alfa', projeto: 'P', situacao: play.situacao, desde: play.desde });
+    }
+    if (url.pathname === '/api/orquestracao/zelador') return json(zelador);
     // C-3PO simulado: nunca o LLM real em teste. Responde em SSE e devolve a sessão.
     if (url.pathname === '/api/conversa' && req.method() === 'POST') {
       chamadas.at(-1).corpo = req.postDataJSON();
@@ -234,6 +249,44 @@ test('nave com jogo nativo: o interruptor Steam livre prepara e confirma em duas
   ]);
   await page.locator('#hg-projetos [data-proj="beta"]').click();
   await expect(page.locator('#hg-nativo')).toBeHidden();
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('play da nave (F3): marcar só prepara, confirmar liga por SSO; o droid zelador nasce do job com a cor do papel; o bloqueio só do dono fica em destaque', async ({ page }) => {
+  const fim = { quando: agora(), feita: false, abertas: 2, emAndamento: 0, soDono: true,
+    categorias: { esperaPuxar: [], tarefaDono: ['ALFA-5'], decisao: ['ALFA-3', 'ALFA-4'], esperaOutraCarta: [], esperaIntegracao: [] } };
+  const audit = await fixtures(page, { zelador: { atual: { jobId: 'job-zel-1', projetoId: 'P', pasta: 'alfa', sigla: 'ALFA', provedor: 'claude', fase: 'cli', desde: agora() },
+    porProjeto: { P: fim }, diario: [{ tipo: 'JOB_INICIO', jobId: 'job-zel-1', projetoId: 'P', quando: agora() }] } });
+  await page.goto('/');
+  // O droid zelador aparece na lista com a cor do papel, não a da fábrica.
+  const zel = page.locator('#hg-droids [data-droid="zelador:job-zel-1"]');
+  await expect(zel).toContainText('Z1');
+  await expect(zel).toContainText('Claude · zelador');
+  await expect(zel).toHaveAttribute('style', /--cor:#e3a86b/);
+  await expect(page.locator('#hg-projetos [data-proj="alfa"]')).toContainText('bloqueio: só o dono');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-play')).toBeVisible();
+  await expect(page.locator('#hg-play-estado')).toHaveText(/^Desligado: nenhum droid da frota/);
+  await expect(page.locator('#hg-play-bloqueio')).toContainText('Bloqueada: só decisões e tarefas do dono seguram esta nave.');
+  await expect(page.locator('#hg-play-bloqueio')).toContainText('Decisão: ALFA-3, ALFA-4');
+  await expect(page.locator('#hg-play-bloqueio')).toContainText('Tarefa do dono: ALFA-5');
+  await page.locator('#hg-play-caixa').check();
+  await expect(page.locator('#hg-play-confirmar')).toHaveText('Confirmar: ligar o play');
+  await expect(page.locator('#hg-play-aviso')).toContainText('o zelador passa a limpar as cartas');
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET').map((c) => c.caminho)).toEqual(['/api/orquestracao/play/preparar']);
+  await page.locator('#hg-play-confirmar').click();
+  await expect(page.locator('#hg-play-estado')).toHaveText(/^Ligado: o zelador limpa as cartas/);
+  await page.locator('#hg-play-caixa').uncheck();
+  await expect(page.locator('#hg-play-confirmar')).toHaveText('Confirmar: desligar agora');
+  await page.locator('#hg-play-cancelar').click();
+  await expect(page.locator('#hg-play-confirma')).toBeHidden();
+  const escritas = audit.chamadas.filter((c) => c.metodo !== 'GET');
+  expect(escritas.map((c) => [c.caminho, c.corpo])).toEqual([
+    ['/api/orquestracao/play/preparar', { projeto: 'P', ligar: true }], ['/api/orquestracao/play/confirmar', { confirmacaoId: 'p1' }],
+    ['/api/orquestracao/play/preparar', { projeto: 'P', ligar: false }],
+  ]);
+  await page.locator('#hg-projetos [data-proj="beta"]').click();
+  await expect(page.locator('#hg-play')).toBeHidden();
   expect(audit.errosPagina).toEqual([]);
 });
 

@@ -1,7 +1,7 @@
 // Rótulos HTML sobre a cena (docas, vagas, droids, bancadas, Oficina), projetados do 3D para a tela a cada quadro. Não monta o popup.
 
 import {
-  H, BAIAS, FABRICAS, PATIO, ARQ, COR_TIPO, setor, fabrica, vagaPos, pose, ouvir,
+  H, BAIAS, FABRICAS, PATIO, ARQ, COR_TIPO, setor, fabrica, corDroid, vagaPos, pose, ouvir,
 } from './estado.js';
 import { esc, pct, plural } from './util.js';
 import { C, projetar } from './cena.js';
@@ -37,14 +37,14 @@ export function iniciarRotulos(container, clicar) {
   el.berco = rotulo('hg-r-berco', '#f4b446', '+ nova nave', { tipo: 'berco' });
   for (const b of BAIAS) el.livre[b.i] = rotulo('hg-r-livre', '#ac9b81', `doca ${b.i + 1} · livre`, { tipo: 'baia', i: b.i });
   for (const f of FABRICAS) el.fab.set(f.id, rotulo('hg-r-fab', f.cor, `Fábrica ${f.nome}<small></small>`, { tipo: 'fabrica', id: f.id }));
-  for (const d of H.droids) el.droid.set(d.id, rotulo('hg-r-droid', fabrica(d.ia).cor, esc(d.rotulo), { tipo: 'droid', id: d.id }));
+  for (const d of H.droids) el.droid.set(d.id, rotulo('hg-r-droid', corDroid(d), esc(d.rotulo), { tipo: 'droid', id: d.id }));
   el.oficina = rotulo('hg-r-zona', '#c9a9e8', 'Oficina central <small></small>', { tipo: 'oficina' });
   el.patio = rotulo('hg-r-zona', '#e3a86b', 'Pátio do Plane <small></small>', { tipo: 'patio' });
   for (const x of H.acervo) el.acervo.set(x.id, rotulo('hg-r-acervo', setor(x.setor).cor, esc(x.nome.replace(/^~\/\.claude\//, '~/')), { tipo: 'acervo', id: x.id }));
   ouvir('naveMontada', rotulosNave);
   ouvir('itemNovo', rotuloItem);
   ouvir('itemSaiu', (n, b) => { const k = `${n.id}|${b.chave}`; el.item.get(k)?.remove(); el.item.delete(k); });
-  ouvir('droidNovo', (d) => el.droid.set(d.id, rotulo('hg-r-droid', fabrica(d.ia).cor, esc(d.rotulo), { tipo: 'droid', id: d.id })));
+  ouvir('droidNovo', (d) => el.droid.set(d.id, rotulo('hg-r-droid', corDroid(d), esc(d.rotulo), { tipo: 'droid', id: d.id })));
   ouvir('droidSaiu', (d) => { el.droid.get(d.id)?.remove(); el.droid.delete(d.id); });
 }
 

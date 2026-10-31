@@ -1,8 +1,11 @@
-// Diário da vigília: config e eventos em disco. Não escolhe carta nem despacha.
+// Diário da vigília: eventos em disco por projeto (`vigilia/<id>.jsonl`). Não escolhe carta nem despacha.
+//
+// Desde a F3 (31/10/2026) o "ligado" do projeto mora no play (play.js); o toggle antigo
+// `vigilia/<id>.json` foi migrado e não é mais lido. Este diário continua: é a fonte do
+// teto diário (`tentativas24h`) e do diário da frota.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { anexarJsonl, lerJsonl } from './leitor-jsonl.js';
 import { CAUSAS_DA_FROTA } from './frota-pausas.js';
 
@@ -18,24 +21,8 @@ export class DiarioVigilia {
     return new Date(this.agora()).toISOString();
   }
 
-  config(id) {
-    return path.join(this.pasta, `${id}.json`);
-  }
-
   eventos(id) {
     return path.join(this.pasta, `${id}.jsonl`);
-  }
-
-  async ler(id) {
-    try { return JSON.parse(await fs.readFile(this.config(id), 'utf8')); }
-    catch (e) { if (e.code === 'ENOENT') return { ligada: false }; throw e; }
-  }
-
-  async gravar(id, cfg) {
-    await fs.mkdir(this.pasta, { recursive: true });
-    const temporario = `${this.config(id)}.${randomUUID()}.tmp`;
-    await fs.writeFile(temporario, JSON.stringify(cfg), { flag: 'wx' });
-    await fs.rename(temporario, this.config(id));
   }
 
   async anotar(id, evento) {

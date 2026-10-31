@@ -2,7 +2,7 @@
 
 import {
   H, BAIAS, FABRICAS, PATIO, ARQ, SETORES, LADOS, COR_TIPO,
-  fabrica, setor, nave, naDoca, travada, pose, vagaPos, ouvir,
+  fabrica, corDroid, setor, nave, naDoca, travada, pose, vagaPos, ouvir,
 } from './estado.js';
 import { aleatorio, calmo, suave } from './util.js';
 import { formaDe } from './formas.js';
@@ -252,9 +252,9 @@ function montarProjeto(n) {
 }
 
 function montarDroid(d) {
-  const f = fabrica(d.ia); const g = new T3.Group();
+  const g = new T3.Group();
   const corpo = new T3.Mesh(new T3.CylinderGeometry(0.6, 0.6, 1, 18), new T3.MeshStandardMaterial({ color: 0xefe4d0, metalness: 0.6, roughness: 0.3 }));
-  const domo = new T3.Mesh(new T3.SphereGeometry(0.6, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), emissivo(f.cor, 0.9, 0x222222)); domo.position.y = 0.5;
+  const domo = new T3.Mesh(new T3.SphereGeometry(0.6, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), emissivo(corDroid(d), 0.9, 0x222222)); domo.position.y = 0.5;
   const olho = new T3.Mesh(new T3.SphereGeometry(0.17, 8, 6), new T3.MeshBasicMaterial({ color: 0x7fd6be })); olho.position.set(0.5, 0.62, 0);
   const carga = new T3.Mesh(new T3.BoxGeometry(0.8, 0.8, 0.8), emissivo(0xff9b54, 1.1, 0x2a1a05)); carga.position.y = -1;
   const feixe = new T3.Mesh(new T3.ConeGeometry(3.2, 7, 24, 1, true), new T3.MeshBasicMaterial({ color: 0x7fd6be, transparent: true, opacity: 0.16, side: T3.DoubleSide, depthWrite: false }));

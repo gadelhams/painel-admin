@@ -16,6 +16,8 @@ export const fabrica = (id) => FABRICAS.find((f) => f.id === id);
 export const COR_PAPEL = Object.freeze({ orquestracao: '#ffd89a', codificacao_testes: '#ff9b54', validacao: '#7fd6be', zelador: '#e3a86b' });
 export const NOME_PAPEL = Object.freeze({ orquestracao: 'orquestração', codificacao_testes: 'codificação', validacao: 'validação', zelador: 'zelador' });
 export const plataforma = (f) => ({ x: f.x, y: 1.2, z: f.z + 11 });
+// Droid da frota (hoje só o zelador, F3) pinta pela cor do papel; sessão humana, pela fábrica.
+export const corDroid = (d) => (d.s?.papel && COR_PAPEL[d.s.papel]) || fabrica(d.ia).cor;
 
 export const PATIO = { x: -70, z: 0, w: 36, d: 96 };
 export const ESCALA_VAGA = 0.35;
@@ -53,6 +55,8 @@ export const H = {
   erroHangar: null,
   sessoesEm: null,
   frota: null,
+  zelador: null,
+  play: null,
 };
 export const nave = (id) => H.naves.find((n) => n.id === id);
 export const droid = (id) => H.droids.find((d) => d.id === id);

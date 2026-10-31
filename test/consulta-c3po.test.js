@@ -88,14 +88,14 @@ test('pré-checagem de carta separa gate de despacho e exige identificador', asy
   await assert.rejects(() => consultarOrquestracaoC3po(base, { modo: 'prontidao' }), /identificador obrigatório/);
 });
 
-test('integração: oito ferramentas MCP de leitura, uma só de propor (fase 3), e nada enviado ao abrir', async () => {
+test('integração: nove ferramentas MCP de leitura (diario_zelador desde a F3), uma só de propor, e nada enviado ao abrir', async () => {
   const motor = await fs.readFile(new URL('../motor.js', import.meta.url), 'utf8');
   const ferramentas = await fs.readFile(new URL('../motor/ferramentas.js', import.meta.url), 'utf8');
   const app = await fs.readFile(new URL('../publico/console-c3po.js', import.meta.url), 'utf8');
   const ui = await fs.readFile(new URL('../publico/orquestracao/demanda-carta.js', import.meta.url), 'utf8');
   assert.match(motor, /tools: \[\]/);
-  assert.equal((ferramentas.match(/readOnlyHint: true/g) ?? []).length, 8);
-  assert.equal((ferramentas.match(/^    tool\(/gm) ?? []).length, 9, 'a nona é propor_acao, sem readOnlyHint');
+  assert.equal((ferramentas.match(/readOnlyHint: true/g) ?? []).length, 9);
+  assert.equal((ferramentas.match(/^    tool\(/gm) ?? []).length, 10, 'a décima é propor_acao, sem readOnlyHint');
   assert.match(ferramentas, /consultarOrquestracaoC3po/);
   assert.match(ui, /Discutir pendências com C-3PO/);
   assert.match(ui, /abrirConsoleOrquestracao\?\.\(c\.identificador\)/);

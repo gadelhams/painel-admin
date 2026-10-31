@@ -59,11 +59,20 @@ no settings do usuário). O gatilho
 | `XAI_API_KEY` | transcrição de voz (xAI); sem ela a rota responde 503 |
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
 | `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ligada em 24/10/2026** depois de REPROVADO (1ª) e APROVADO (2ª) do `validador-deploy`; remover a linha desliga a troca no servidor (o inventário continua) |
-| `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada, a **vigília** de um projeto (tópico da aba, SSO + confirmação) passa a despachar sozinha dentro dos freios do contrato |
+| `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada, a **vigília** de um projeto com o **play da nave** ligado (Hangar, SSO + confirmação) passa a despachar sozinha dentro dos freios do contrato |
+| `ORQ_AGENDADOR` | `true` deixa ESTA instância agendar a vigília e o zelador (trava em `agendador.json`, pid conferido a cada volta). **Só na unit systemd, nunca no `.env`**: o smoke na 7787 lê o mesmo `.env` e o mesmo estado, e dois agendadores despachariam duas vezes. Linha a acrescentar em `~/.config/systemd/user/painel-admin.service`, seção `[Service]`: `Environment=ORQ_AGENDADOR=true` (depois `systemctl --user daemon-reload` e `restart`) |
+| `ZELADOR_INTERVALO_MIN` / `ZELADOR_TETO_DIA` | intervalo entre jobs do zelador (5–1440, padrão 30) e teto de jobs em 24 h (1–100, padrão 12); valor fora da faixa cai no padrão |
 
 Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
 (`leases/`, `touchpoints.jsonl`, `saidas/<tentativa>/`, `worktrees/`,
-`vigilia/<projeto>.json|.jsonl` — toggle e diário da vigília); os
+`vigilia/<projeto>.jsonl` — diário da vigília, fonte do teto diário; o toggle antigo
+`vigilia/<projeto>.json` foi renomeado para `.migrado-<data>` na F3 —, `play.json` (play por
+nave), `play-historico.jsonl` (quem ligou, só acréscimo), `play-migracao.json` (marca da
+migração), `agendador.json` (pid da instância que agenda) e `zelador/` — `zelador-AAAA-MM-DD.jsonl`
+(diário por dia), `pendentes.jsonl` (índice fora da rotação), `lease-global.json` e
+`lease-<projeto>.json`). Lease do zelador ilegível trava o zelador até ser apagado à mão. A chave
+do zelador fica em `~/.config/plane/zelador.token` (600; nunca no `.env`); sem ela o job para antes
+da CLI com `SEM_IDENTIDADE` no diário. Os
 worktrees de tentativas ficam para revisão humana — `git -C <projeto> worktree
 remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 

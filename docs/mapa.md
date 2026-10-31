@@ -78,6 +78,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `modeladores.js` — Lista os markdowns de um diretório já autorizado. Não lê o conteúdo.
 - `parser-backlog.js` — Lê o markdown de backlog. Não consulta o Plane.
 - `portas-locais.js` — Escuta TCP em 127.0.0.1. Não lê git.
+- `sessoes-estritas.js` — Leitor ESTRITO de sessões para o zelador: diz se alguma sessão de IA tocou um projeto nas últimas 2 h; erro de leitura = ocupado. Nunca devolve prompt, resposta nem argumento.
 - `sessoes.js` — Sessões de IA vivas na máquina (os droids do Hangar): /proc + cauda dos transcripts. Só leitura; nunca devolve prompt, resposta nem argumento.
 - `sonda-https.js` — Um GET HTTPS com teto de tempo. Não escolhe qual serviço sondar.
 - `sondas.js` — Quais endereços de produção sondar. O GET mora em sonda-https.js.
@@ -133,9 +134,10 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-orq-gate.js` — Preparar e confirmar a marca de gate.
 - `rotas-orq-handoff.js` — Preparar e confirmar o handoff. Não lista o canal.
 - `rotas-orq-nativo.js` — Estado e alternância da liberação do jogo nativo. A leitura é aberta: é ela que o pré-flight nativo consulta.
+- `rotas-orq-play.js` — Estado e alternância do play por nave. A leitura é aberta e não diz quem ligou.
 - `rotas-orq-triagem.js` — Triagem das folhas sem gate. Não altera etiqueta.
-- `rotas-orq-vigilia.js` — Estado e alternância da vigília.
 - `rotas-orq-voz.js` — Presença da chave e a transcrição. A síntese mora em rotas-voz.js.
+- `rotas-orq-zelador.js` — Estado do zelador do Hangar: job em curso, o diário estruturado e o fim do último job por projeto. Só leitura.
 - `rotas-orquestracao.js` — Escolhe a família de /api/orquestracao. A recusa genérica vem depois das rotas específicas.
 - `rotas-painel.js` — Escolhe a família da rota. Cada família mora no arquivo ao lado.
 - `rotas-producao.js` — Sondas HTTPS da produção.
@@ -151,20 +153,21 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `acao-proposta.js` — A ferramenta propor_acao e a leitura do seu resultado no fluxo da conversa. Só propõe: não prepara, não confirma, não executa.
 - `doc-projeto.js` — Lê ou lista um .md dentro da pasta do projeto. Não registra a ferramenta.
 - `envelope-coletor.js` — Embrulha a falha de um coletor interno. Não escolhe a ferramenta.
-- `ferramentas.js` — Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+- `ferramentas.js` — Catálogo das ferramentas do C-3PO: nove de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 - `leitura-pesada.js` — Leituras que varrem o Plane inteiro (fila, triagem, decisões: 15–35 s cada) para as ferramentas do C-3PO.
 - `persona.js` — Voz do C-3PO. Não é portão: a permissão mora em tools: [] e na lista de ferramentas.
 
 ## orquestrador/
 
+- `agendador-instancia.js` — Trava de instância do agendador (vigília e zelador): só o processo com ORQ_AGENDADOR=true e o pid gravado em disco agenda. Não varre nem despacha.
 - `ambiente-cli.js` — Ambiente dos filhos da CLI: lista branca, sem chave do painel.
 - `api-despacho.js` — Duas ações do despacho: preparar valida e guarda o desafio com a versão da frota; confirmar inicia a tentativa real. A sessão que preparou é a que confirma; sem fallback de modelo.
 - `api-duas-acoes.js` — Fronteira HTTP das duas ações: sessão antes do corpo, campos fechados, falha upstream sem eco. Não guarda desafio.
 - `api-frota.js` — Duas ações da frota: preparar valida contra o catálogo e guarda a versão-base; confirmar grava se a frota não mudou. A sessão que preparou é a que confirma.
 - `api-gate.js` — Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta. A sessão que preparou é a que confirma; a marca não inicia execução.
 - `api-handoff.js` — Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário. A sessão que preparou é a que confirma; texto não autoriza execução.
-- `api-nativo.js` — Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira da vigília.
-- `api-vigilia.js` — Duas ações da vigília: preparar valida a alternância de um projeto; confirmar liga ou desliga. A mesma fronteira das cartas, por projeto.
+- `api-nativo.js` — Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira do play.
+- `api-play.js` — Duas ações do play por nave: preparar valida projeto e direção; confirmar liga ou desliga, sob a trava. A mesma fronteira do "Steam livre".
 - `argumentos-cli.js` — Argumentos fixos de cada CLI. O lançamento mora em papel-cli.js.
 - `arquivo-lease.js` — Um arquivo de lease por carta. Não escreve o diário.
 - `autorizador.js` — Autoriza uma ação privilegiada: origem, cookie, sessão e dono. Sem cache.
@@ -176,6 +179,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `classificar-prontidao-dev.js` — Classifica impedimentos verificáveis de uma carta sem gate.
 - `consulta-c3po.js` — Projeção limitada e só-leitura da fila/triagem para a conversa do C-3PO.
 - `consulta-perfil.js` — O perfil antigo da carta, só para exibir "perfil antigo ignorado (era X; roda a frota vN)". Não entra no despacho.
+- `consulta-zelador.js` — Leitura do diário do zelador para o C-3PO: os três últimos dias, só campos estruturados, filtráveis por projeto. Porta só-leitura: não alcança escritor nem CLI.
 - `consumo.js` — Apenas cota incluída na ASSINATURA. Nunca converter gasto/crédito de API em percentual do plano, nem aceitar uma amostra antiga como consumo atual.
 - `contrato-local.js` — Contrato local `.orquestrador.json` de um projeto do catálogo.
 - `contrato-politica.js` — Gramática do contrato opt-in: o que o projeto permite executar.
@@ -183,11 +187,12 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `dependencias-worktree.js` — Instalação do worktree quando há lock e faltam os módulos. Sem scripts de pacote.
 - `desafio-duas-acoes.js` — Esqueleto das duas ações privilegiadas: preparar guarda um desafio, confirmar o executa uma vez. Não sabe o que valida nem o que grava.
 - `despacho-servico.js` — Junta a checagem e a tentativa real. A prévia sem lease mora em simulacao-despacho.js.
-- `diario-frota.js` — Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho e diários da vigília).
+- `diario-frota.js` — Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho, diários da vigília e, desde a F3, os três últimos dias do diário do zelador).
 - `diario-touchpoints.js` — Diário JSONL dos touchpoints. Não cria nem apaga lease.
 - `erro-acesso.js` — Erro das ações privilegiadas. Não decide quem entra.
 - `escritor-gate-plane.js` — Grava a etiqueta depois do comentário. O texto GATE/v1 mora em protocolo-gate.js.
 - `escritor-handoff-plane.js` — Grava o comentário de handoff. O texto HANDOFF/v1 mora em protocolo-handoff.js.
+- `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
 - `estado-carta.js` — Troca o grupo de estado de uma carta. Não escolhe modelo nem registra perfil.
 - `estado-plane.js` — Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e In Progress → Done quando a tentativa de teste é aprovada.
 - `estado.js` — Recupera lease e diário depois de uma queda. Cada formato mora no módulo ao lado.
@@ -214,6 +219,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `origem-privilegiada.js` — Recusa POST privilegiado que não venha da própria borda. Não olha o cookie.
 - `papel-cli.js` — Lança um papel de IA. Os argumentos moram em argumentos-cli.js; o retrato, em retrato-cli.js.
 - `passo-vigilia.js` — Um projeto ligado: escolhe a carta, despacha com a frota e avança o gate.
+- `play.js` — Play por nave: o dono libera a frota para um projeto (zeladoria hoje, despacho pela vigília); presença em play.json = ligado. Não varre nem despacha.
 - `politica.js` — Porta da política da orquestração. Contrato, vigília e prontidão moram nos módulos ao lado.
 - `preavaliacao-gate.js` — Pré-checagem só-leitura do gate. A marcação mora em registro-gate.js.
 - `processo-cli.js` — Um processo filho: sem shell, grupo morto no tempo, saída capada e log em disco.
@@ -240,13 +246,24 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `uuid.js` — Forma de um UUID v4 do Plane ou do próprio painel. Não valida se o id existe.
 - `varredura-triagem.js` — Lê as folhas sem gate e devolve a triagem. Não grava etiqueta.
 - `verificador-cadastro.js` — Pergunta ao Cadastro Único se o token ainda vale. O cookie só viaja no stdin.
-- `vigilia-controle.js` — Liga e desliga a vigília de um projeto e monta o estado dela. Não escolhe carta nem despacha; a pausa da frota mora em frota-pausas.js.
-- `vigilia-diario.js` — Diário da vigília: config e eventos em disco. Não escolhe carta nem despacha.
+- `vigilia-diario.js` — Diário da vigília: eventos em disco por projeto (`vigilia/<id>.jsonl`). Não escolhe carta nem despacha.
 - `vigilia-politica.js` — Freios da vigília declarados no contrato. Não varre nem despacha.
-- `vigilia-varredura.js` — Percorre os projetos ligados. O passo de uma carta mora em passo-vigilia.js.
-- `vigilia.js` — Vigília: com um projeto ligado, varre a fila e despacha a carta elegível.
+- `vigilia-varredura.js` — Percorre os projetos com play ligado. O passo de uma carta mora em passo-vigilia.js.
+- `vigilia.js` — Vigília: com o play do projeto ligado, varre a fila e despacha a carta elegível.
 - `voz-eleven.js` — Proxy da ElevenLabs. A chave fica no processo; o navegador manda texto e recebe áudio.
 - `voz-xai.js` — Áudio temporário, sem persistência e sem token no browser. A transcrição é texto para consulta/proposta; nunca converte fala em escrita ou despacho.
+- `zelador-agendador.js` — Agendador do zelador: a cada N minutos escolhe o projeto com play que espera há mais tempo, confere frota, pausas, teto, consumo e ocupação, toma os leases e roda UM job. Não decide veredito.
+- `zelador-aplicacao.js` — A sequência de escrita de UM veredito do zelador e a reconciliação do que ficou pela metade: PENDENTE → intenção → mudança sob a trava → verificação → recibo → APLICADO. Não chama a CLI.
+- `zelador-cli.js` — A CLI do zelador: a tupla do bloco zelador da frota, num diretório vazio novo, sem ferramentas nem persistência de sessão, com o retrato pela stdin e a resposta em JSON. Não valida veredito.
+- `zelador-diario.js` — Diário do zelador: um arquivo de acréscimo por dia (`zelador/zelador-AAAA-MM-DD.jsonl`) e o índice de pendentes fora da rotação. Só campos estruturados; não escreve no Plane.
+- `zelador-fim.js` — Fim do job do zelador: o que sobrou no projeto, do Plane atual e sem cache, por uma tabela fechada de quem destrava cada etiqueta. Não escreve.
+- `zelador-git.js` — Git só-leitura do zelador: o retrato do repositório e a conferência das evidências (commit no ramo principal, arquivo rastreado). Sem shell, sem trava do git.
+- `zelador-job.js` — Um job do zelador num projeto: reconcilia o PENDENTE dele, monta o retrato, roda a CLI fora da trava, valida e aplica veredito por veredito, e fecha com o "nada fazível". O lease e a vez moram no agendador.
+- `zelador-lease.js` — Leases do zelador em disco: um global (um job por vez no Hangar) e um por projeto, com jobId e prazo. Toda operação sob a trava global; não chama CLI nem Plane.
+- `zelador-politica.js` — Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode mudar (J58). Funções puras: não lê disco nem Plane.
+- `zelador-retrato.js` — Retrato só-leitura de um projeto para o zelador: cartas, comentários, atividades e relações pela chave Guest (sem cache, pelo caminho do projeto) e o git. Não escreve nada.
+- `zelador-veredito.js` — Do JSON da CLI do zelador à mudança estruturada: forma fechada, evidências conferidas pelo painel, prosa filtrada e o HTML montado aqui. Não escreve no Plane.
+- `zelador.js` — Composição do zelador do Hangar: diário, leases, git, retrato, CLI, escritor e agendador ligados num objeto. Não implementa regra nenhuma.
 
 ## plane/
 
@@ -319,13 +336,14 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `cena.js` — Cena 3D do Hangar (Three.js r128 vendorizado + bloom): monta as estruturas, reconstrói o que os dados mudam e desenha cada quadro. Não decide nada.
 - `conteudo.js` — O que o C-3PO diz e mostra no popup de cada estrutura do Hangar. Só monta HTML (com escape); não abre nem posiciona o popup.
 - `conversa.js` — Conversa com o C-3PO dentro do popup do Hangar: a pergunta vai a /api/conversa com o contexto do objeto clicado e a resposta chega em SSE.
-- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao) e a frota (/api/orquestracao/frota) e as aplica ao estado da cena sem perder a animação. Só GET.
+- `dados.js` — Busca naves (/api/hangar), droids (/api/hangar/sessoes e o job do zelador), sondas (/api/producao), a frota e o play e os aplica ao estado da cena sem perder a animação. Só GET.
 - `estado.js` — Mapa do estaleiro (posições fixas) e o estado vivo compartilhado entre os módulos do Hangar. Não busca dados nem desenha.
 - `formas.js` — Formas das peças da nave (polígonos vistos de cima, nariz para +x) e a escolha da forma de cada módulo. Não desenha.
 - `hangar.js` — Entrada do Hangar: liga dados, simulação, cena e interface, e pausa tudo quando a aba sai de vista. O roteador chama window.hangar.entrar/sair.
 - `interface.js` — Popup do C-3PO ancorado na cena, painéis laterais (droids, projetos, Oficina) e os botões do Hangar. Não mexe em dados do servidor.
 - `narrador.js` — Narrador do Hangar: fila de falas prontas do C-3PO, balão digitado e diário. Não chama LLM; conversa de verdade é em /c3po/.
-- `nativo.js` — Interruptor "Steam livre" no popup da nave que tem jogo nativo. Marcar ou desmarcar só prepara; a gravação é a segunda ação, com a sessão do Cadastro Único, como a vigília.
+- `nativo.js` — Interruptor "Steam livre" no popup da nave que tem jogo nativo. Marcar ou desmarcar só prepara; a gravação é a segunda ação, com a sessão do Cadastro Único, como o play da nave.
+- `play.js` — Botão play no popup da nave: liga ou desliga a frota naquele projeto (zelador e vigília). Marcar ou desmarcar só prepara; gravar é a segunda ação, com a sessão do Cadastro Único, como o "Steam livre".
 - `rotulos.js` — Rótulos HTML sobre a cena (docas, vagas, droids, bancadas, Oficina), projetados do 3D para a tela a cada quadro. Não monta o popup.
 - `simulacao.js` — Movimento do Hangar: sessões reais viram droids, cada ação nova vira uma ida (bancada, nave ou Oficina), naves vão e voltam das docas. Não busca nem desenha.
 - `util.js` — Utilidades do Hangar: curvas de movimento, sorteio com semente, escape de HTML e atalhos de DOM. Sem estado.
@@ -350,9 +368,6 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `gate.js` — Preparar e confirmar a etiqueta de gate. Não inicia execução.
 - `modelos-seletores.js` — Desenha os seletores provedor → modelo → esforço de cada papel. Não valida nem grava a frota.
 - `nucleo.js` — Estado e HTTP da aba Orquestração. Não desenha tela e não decide portão.
-- `vigilia-confirmacao.js` — Segunda ação da vigília. O desenho do estado mora em vigilia-desenho.js.
-- `vigilia-desenho.js` — Desenho de um projeto da vigília. A confirmação mora em vigilia-confirmacao.js.
-- `vigilia.js` — Estado da vigília por projeto. O desenho mora em vigilia-desenho.js; a segunda ação, em vigilia-confirmacao.js.
 - `voz-carta.js` — Gravação da carta: só propõe texto. Não grava no Plane e não executa.
 
 ## scripts/
@@ -402,9 +417,12 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `sessao-voz.test.js`
 - `sonda-sso.test.js`
 - `triagem-dev.test.js`
-- `vigilia.test.js` — Vigília com Plane, escritores e executor falsos: freios, avanço de gate/estado e a fronteira de ligar/desligar.
+- `vigilia.test.js` — Vigília com Plane, escritores e executor falsos: freios, avanço de gate/estado e, desde a F3, o play por nave no lugar do toggle (J11–J14, J66).
 - `voz-eleven.test.js`
 - `voz-xai.test.js`
+- `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.
+- `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.
+- `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.
 
 ## test/fixtures/canal-legado/
 
@@ -420,3 +438,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 ## test/fixtures/frota/
 
 - `frota.js` — Frota de teste gravada pelo mesmo caminho da troca real (ArquivoFrota.gravar), nunca escrita à mão.
+
+## test/fixtures/zelador/
+
+- `cenario.js` — Cenário do zelador montado pelas portas reais: estado, frota, play, leases, diário e escritor de verdade; Plane, CLI, sessões e consumo falsos; git de verdade num repositório temporário.
+- `plane-falso.js` — Plane falso para o zelador: leitura Guest (`consultar`) e o fetch do escritor (chave, /users/me, comentários com external_id e 409, PATCH com atividade). Nada de rede.

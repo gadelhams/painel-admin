@@ -1,7 +1,7 @@
 // Popup do C-3PO ancorado na cena, painéis laterais (droids, projetos, Oficina) e os botões do Hangar. Não mexe em dados do servidor.
 
 import {
-  H, BAIAS, FABRICAS, PATIO, ARQ, fabrica, setor, nave, droid, acervoItem, naDoca, situacao, centroPeca, vagaPos, pose,
+  H, BAIAS, FABRICAS, PATIO, ARQ, COR_PAPEL, fabrica, corDroid, setor, nave, droid, acervoItem, naDoca, situacao, centroPeca, vagaPos, pose,
 } from './estado.js';
 import { $, calmo, esc, pct, plural, nomeCurto } from './util.js';
 import { C, moverCamera, projetar } from './cena.js';
@@ -10,6 +10,7 @@ import { estadoDroid } from './simulacao.js';
 import { diarioAdd } from './narrador.js';
 import { contextoDoPopup, limparConversa, perguntar } from './conversa.js';
 import { esconderNativo, ligarNativo, mostrarNativo } from './nativo.js';
+import { esconderPlay, ligarPlay, mostrarPlay } from './play.js';
 
 let popFala = '';
 let popDig = 0;
@@ -77,7 +78,11 @@ export function clicar(a) {
 export function abrir(a, silencioso = false) {
   if (DA_DOCA.includes(a.tipo) && !naDoca(nave(a.nave))) a = { tipo: 'vaga', nave: a.nave };
   // A reabertura silenciosa só refresca dados; a conversa em curso fica.
-  if (!silencioso) { limparConversa(); mostrarNativo(a.tipo === 'vaga' || a.tipo === 'doca' ? nave(a.nave) : null); }
+  if (!silencioso) {
+    limparConversa();
+    const daNave = a.tipo === 'vaga' || a.tipo === 'doca' ? nave(a.nave) : null;
+    mostrarNativo(daNave); mostrarPlay(daNave);
+  }
   H.popup = { alvo: a };
   const h = $('hg-holo'); const c = conteudo(a);
   h.style.setProperty('--cor', c.cor);
@@ -93,6 +98,7 @@ export function abrir(a, silencioso = false) {
 export function fecharPopup() {
   limparConversa();
   esconderNativo();
+  esconderPlay();
   H.popup = null; $('hg-holo').hidden = true; $('hg-mira').hidden = true; $('hg-narrador').hidden = false;
 }
 
@@ -122,18 +128,18 @@ function montarDroids() {
   const chave = H.droids.map((d) => d.id).join();
   if (chave === chaveDroids) return;
   chaveDroids = chave;
-  $('hg-droids').innerHTML = H.droids.length ? H.droids.map((d) => `<button type="button" class="hg-droid" data-droid="${esc(d.id)}" style="--cor:${fabrica(d.ia).cor}">
-    <span class="hg-droid-topo"><span class="hg-tag">${esc(d.rotulo)}</span><span class="hg-ia">${fabrica(d.ia).nome}</span><span class="hg-chip hg-estado"></span></span>
+  $('hg-droids').innerHTML = H.droids.length ? H.droids.map((d) => `<button type="button" class="hg-droid" data-droid="${esc(d.id)}" style="--cor:${corDroid(d)}">
+    <span class="hg-droid-topo"><span class="hg-tag">${esc(d.rotulo)}</span><span class="hg-ia">${fabrica(d.ia).nome}${d.s.papel === 'zelador' ? ' · zelador' : ''}</span><span class="hg-chip hg-estado"></span></span>
     <span class="hg-droid-doca"></span><span class="hg-droid-carta"></span><span class="hg-droid-agora"></span></button>`).join('')
     : '<p class="hg-vazio">Nenhuma sessão de IA viva nesta máquina nos últimos 15 minutos.</p>';
 }
 
 function montarProjetos() {
-  const chave = `${H.naves.map((n) => `${n.id}:${n.estado === 'estacionada' ? 'p' : 'd'}`).join()}|${H.foco}`;
+  const chave = `${H.naves.map((n) => `${n.id}:${n.estado === 'estacionada' ? 'p' : 'd'}`).join()}|${H.foco}|${Boolean(H.zelador)}`;
   if (chave === chaveProjetos) return;
   chaveProjetos = chave;
   const botao = (n, estac) => `<button type="button" class="hg-proj hg-preench${estac ? ' estac' : ''}${n.congelado ? ' congelado' : ''}${H.foco === n.id ? ' sel' : ''}" data-proj="${esc(n.id)}" style="--cor:${n.cor}">
-    <span class="hg-proj-nome">${esc(n.nome)}</span><span class="hg-proj-pct" data-pct></span>${estac ? '' : '<span class="hg-proj-sinais" data-sinais></span>'}</button>`;
+    <span class="hg-proj-nome">${esc(n.nome)}</span><span class="hg-proj-pct" data-pct></span><span class="hg-proj-sinais" data-sinais></span></button>`;
   const ativos = H.naves.filter((n) => n.estado !== 'estacionada'); const parados = H.naves.filter((n) => n.estado === 'estacionada');
   $('hg-projetos').innerHTML = `<h3>Nas docas · ${ativos.length} de ${BAIAS.length}</h3><div class="hg-lista-proj">${ativos.map((n) => botao(n, false)).join('') || '<p class="hg-vazio">Nenhuma.</p>'}</div>
     <h3>No pátio do Plane · ${parados.length}</h3><div class="hg-lista-proj">${parados.map((n) => botao(n, true)).join('')}
@@ -167,8 +173,13 @@ export function atualizarPaineis(dt = 0) {
     const alvo = b.querySelector('[data-sinais]');
     if (alvo) {
       const k = n.chao.length + n.chaoExtra + n.produto.length; const aqui = H.droids.filter((d) => d.nave === n && !d.encerrar).length;
-      const s = [`<span class="hg-chip" style="--c:var(--hg-realce)">${esc(situacao(n))}</span>`, `<span class="hg-chip" style="--c:var(--hg-ok)">${aqui} ${plural(aqui, 'droid', 'droids')}</span>`];
-      if (k) s.push(`<span class="hg-chip" style="--c:var(--hg-alerta)">${k} ${plural(k, 'decisão', 'decisões')}</span>`);
+      // O destaque do bloqueio (F3): sem nada que a frota possa fazer, só o dono destrava.
+      const fim = H.zelador?.porProjeto?.[n.planePrj];
+      const s = n.estado === 'estacionada' ? [] : [`<span class="hg-chip" style="--c:var(--hg-realce)">${esc(situacao(n))}</span>`, `<span class="hg-chip" style="--c:var(--hg-ok)">${aqui} ${plural(aqui, 'droid', 'droids')}</span>`];
+      if (n.play === 'ligado') s.push(`<span class="hg-chip" style="--c:${COR_PAPEL.zelador}">play</span>`);
+      if (n.play === 'suspenso') s.push('<span class="hg-chip" style="--c:var(--hg-falha)">play suspenso</span>');
+      if (fim?.soDono) s.push('<span class="hg-chip hg-chip-bloqueio" style="--c:var(--hg-alerta)">bloqueio: só o dono</span>');
+      if (n.estado !== 'estacionada' && k) s.push(`<span class="hg-chip" style="--c:var(--hg-alerta)">${k} ${plural(k, 'decisão', 'decisões')}</span>`);
       if (n.sonda) s.push(`<span class="hg-chip" style="--c:${n.sonda === 'falha' ? 'var(--hg-falha)' : 'var(--hg-ok)'}">sonda ${n.sonda === 'falha' ? 'falhou' : 'ok'}</span>`);
       const html = s.join(''); if (alvo.innerHTML !== html) alvo.innerHTML = html;
     }
@@ -209,6 +220,7 @@ export function iniciarInterface() {
   $('hg-fechar-ajuda').addEventListener('click', () => $('hg-ajuda').close());
 
   ligarNativo();
+  ligarPlay();
   $('hg-conversa').addEventListener('submit', (e) => {
     e.preventDefault();
     const campo = $('hg-conversa-pergunta'); const pergunta = campo.value;
