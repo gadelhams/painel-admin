@@ -72,6 +72,27 @@ ferramentas só de leitura, sem SSO por decisão do dono (29/10/2026); `/api/tts
 escritas da aba Contas exigem SSO desde 29/10/2026; handler só-leitura responde HEAD e o 405 leva `Allow`)
 e estáticos de `publico/` (dashboard na raiz, chat em `/c3po/`).
 
+### Portões do código (sem linter)
+
+**Decisão (31/10/2026, PAINEL-55): o painel não tem linter; o portão é `npm test`** — suíte
+`node --test`, `check-docs` e `mapa-modulos.mjs --check`. Regra estrutural vira teste ou script
+com autoteste, não configuração de ferramenta:
+
+- `scripts/mapa-modulos.mjs` reprova módulo sem cabeçalho e mapa desatualizado; o mapa leva a
+  **primeira linha inteira** do cabeçalho (se ela não fecha frase, segue até o primeiro ponto).
+  Módulo acima de 300 linhas só **avisa**; a exceção se declara numa linha do cabeçalho:
+  `// exceção de tamanho: <por quê>; partir quando <condição>.` (sem "partir quando" não vale).
+  Autoteste com fixture temporária: `test/mapa-modulos.test.js`.
+- `test/fronteiras-modulos.test.js` lê os `import` e recusa: de fora de `alinhamento/`,
+  `chaves/`, `coletores/`, `contas/`, `motor/` e `plane/`, importar outra coisa que a porta
+  `<área>.js`; de fora de `orquestrador/`, importar módulo fora das portas dele (`sso`, `fila`,
+  `triagem`, `consulta-c3po`, `api-duas-acoes`, `desafio-duas-acoes`, `leitor-jsonl`, `uuid`);
+  `http/` montado por outro que não `montagem.js`; `servidor.js` importar outra coisa que a
+  montagem; `publico/` e servidor se importarem; o fecho do motor alcançar escritor do Plane,
+  `estado-plane`, `executor-cli` ou `api-*` de escrita. `montagem.js` é isenta da regra de porta
+  (quem compõe liga as peças). As violações de 31/10 ficaram como exceções nomeadas no teste,
+  com o porquê; exceção resolvida reprova até sair da lista.
+
 ### orquestrador/
 
 O Orquestrador de Projetos (padrão em `../../ORQUESTRADOR-PROJETOS.md`), um
