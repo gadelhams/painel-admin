@@ -8,3 +8,4 @@ node_modules/
 # artefatos do Playwright (e2e)
 test-results/
 playwright-report/
+.claude/
