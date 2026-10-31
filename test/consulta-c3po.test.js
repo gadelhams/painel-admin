@@ -52,6 +52,18 @@ test('J-L4: o C-3PO vê a frota que rodaria, e do contrato só o interruptor', a
   assert.deepEqual(resultado.frota, { estado: 'ok', versao: 4, hash: 'h', motivo: null });
 });
 
+test('"por que a frota não puxou": a fila diz como a frota puxa hoje e o resumo de cada projeto', async () => {
+  const base = contexto();
+  const fila = base.orquestracao.fila;
+  base.orquestracao.fila = async () => ({ ...await fila(), modo: 'despacho-controlado',
+    projetos: [{ id: '87dd03dc-ff75-4b86-b265-44740e0f112e', nome: 'EmuladorWeb', candidatas: 2, elegiveis: 0, impedimento: null, cartas: 21 }] });
+  const r = await consultarOrquestracaoC3po(base);
+  assert.match(r.comoAFrotaPuxa, /ainda não puxa cartas sozinha/);
+  // O serviço do C-3PO nasce sem executor: o modo do painel não sai (o `modo` aqui é o da consulta).
+  assert.equal(r.modo, 'fila');
+  assert.deepEqual(r.projetos, [{ nome: 'EmuladorWeb', pasta: 'EmuladorWeb', candidatas: 2, elegiveis: 0, impedimento: null }]);
+});
+
 test('triagem DEV filtra categorias sem transformar ausência de gate em elegibilidade', async () => {
   const base = contexto();
   const resultado = await consultarOrquestracaoC3po(base,

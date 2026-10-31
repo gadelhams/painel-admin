@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resumirDecisoes } from '../decisoes-c3po.js';
+import { resumirDecisoes, decisoesParaC3po } from '../decisoes-c3po.js';
 
 const decisoes = [
   { identificador: 'CAD-1', projeto: 'CadastroUnico', texto: 'Publicar a Fase 2', tag: 'BLOQUEADA', detalhe: 'espera o "vai" do dono', estado: 'aberto' },
@@ -34,4 +34,12 @@ test('resumo para o C-3PO: separa dono, cadeias do dono, terceiros, rotação re
   const so = resumirDecisoes({ decisoes, projetos, chaves, foco: 'CadastroUnico' });
   assert.equal(so.totais.bloqueada_por_terceiro, 0);
   assert.equal(so.totais.bloqueada_pelo_dono, 1);
+});
+
+test('ferramenta decisoes: lê o corpo { decisoes } do coletor; projetos e chaves falhando não derrubam', async () => {
+  const decisoes = [{ estado: 'aberto', projeto: 'EmuladorWeb', identificador: 'EMU-1', texto: 'Escolher a curadoria', tag: 'ASTARGNE' }];
+  const r = await decisoesParaC3po({ lerDecisoes: async () => ({ decisoes }), lerProjetos: async () => { throw new Error('x'); },
+    lerChaves: async () => { throw new Error('y'); }, foco: 'EmuladorWeb' });
+  assert.match(JSON.stringify(r), /EMU-1/);
+  await assert.rejects(decisoesParaC3po({ lerDecisoes: async () => decisoes, lerProjetos: async () => [], lerChaves: async () => ({}) }), /sem lista/);
 });

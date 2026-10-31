@@ -9,17 +9,30 @@ const TTL_MS = 60_000;
 let cache = { em: 0, dados: null };
 let renovando = null;
 
+// Fila, triagem, decisões e o Hangar disparam dezenas de GETs de uma vez (projeto ×
+// módulo × itens, comentários por carta). Em rajada o Plane enfileira e alguma chamada
+// passa do prazo ("aborted due to timeout", 31/10/2026). Todo cliente deste processo
+// divide estas vagas, e o prazo de cada chamada só começa a contar quando ela sai da espera.
+export const MAX_ABERTAS = 6;
+let abertas = 0;
+const espera = [];
+const vaga = () => (abertas < MAX_ABERTAS ? (abertas++, Promise.resolve()) : new Promise((r) => espera.push(r)));
+const soltar = () => { const proxima = espera.shift(); if (proxima) proxima(); else abertas--; };
+
 export function criarClientePlane({ chave, fetchImpl = fetch, timeoutMs = 15_000 }) {
   return async function consultar(caminho) {
-    const resposta = await fetchImpl(`${API}${caminho}`, {
-      headers: { 'X-API-Key': chave },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const corpo = await resposta.json().catch(() => null);
-    if (!resposta.ok || !corpo) {
-      throw new Error(`Plane recusou a consulta (HTTP ${resposta.status})`);
-    }
-    return corpo;
+    await vaga();
+    try {
+      const resposta = await fetchImpl(`${API}${caminho}`, {
+        headers: { 'X-API-Key': chave },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const corpo = await resposta.json().catch(() => null);
+      if (!resposta.ok || !corpo) {
+        throw new Error(`Plane recusou a consulta (HTTP ${resposta.status})`);
+      }
+      return corpo;
+    } finally { soltar(); }
   };
 }
 

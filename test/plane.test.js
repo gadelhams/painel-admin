@@ -221,3 +221,21 @@ test('label TAREFA DONO vira tag própria com o motivo; o "(TAREFA DONO" não vi
   const r = montarFeatures(workspace([issue(1, { labels: { nodes: [{ name: 'TAREFA DONO' }] }, description: 'x (TAREFA DONO: playtest no celular)' })]), 'P1');
   assert.deepEqual(r.features[0].itens[0].tags, [{ tag: 'TAREFA DONO', detalhe: 'playtest no celular' }]);
 });
+
+test('rajada: no máximo 6 GETs abertos por processo, o prazo só conta fora da espera e erro solta a vaga', async () => {
+  let abertas = 0; let pico = 0; let n = 0;
+  const fetchImpl = async (url, { signal }) => {
+    assert.equal(signal.aborted, false, 'o prazo não pode ter corrido na espera');
+    abertas++; pico = Math.max(pico, abertas);
+    await new Promise(r => setTimeout(r, 15));
+    abertas--;
+    if (++n % 7 === 0) return { ok: false, status: 502, json: async () => null };
+    return { ok: true, status: 200, json: async () => ({ results: [] }) };
+  };
+  // Prazo de 40 ms: com 30 chamadas de 15 ms e só 6 vagas, quem espera passaria do prazo se ele contasse na fila.
+  const consultar = criarClientePlane({ chave: 'k', fetchImpl, timeoutMs: 40 });
+  const r = await Promise.allSettled(Array.from({ length: 30 }, (_, i) => consultar(`/x/${i}`)));
+  assert.equal(pico, 6);
+  assert.equal(r.filter(x => x.status === 'rejected').length, 4, 'só os 502 falham');
+  assert.equal((await Promise.allSettled([consultar('/depois')]))[0].status, 'fulfilled', 'as vagas voltaram');
+});

@@ -331,7 +331,17 @@ allowlist estrita — mecânica em `coletores.js`) e `fila_orquestracao`
 mantém a mesma ferramenta MCP e oferece três modos só-leitura: fila com gate,
 triagem DEV das abertas sem gate e pré-checagem DEV/TEST de um card. A resposta
 é limitada a 30 cartas por consulta; para escopo/aceite, o motor deve ler os
-documentos modeladores, não transformar categoria em decisão de produto.
+documentos modeladores, não transformar categoria em decisão de produto. O modo
+fila também traz o resumo por projeto (candidatas, elegíveis, impedimento) e
+`comoAFrotaPuxa`, o texto fixo de `consulta-c3po.js` que responde "por que a
+frota não puxou" (muda junto com o código do play e do puxar).
+
+Fila, triagem e decisões varrem o Plane inteiro (15–35 s cada). Nas ferramentas
+do C-3PO elas passam por `motor/leitura-pesada.js`: uma de cada vez, leitura em
+curso compartilhada, resultado válido por 2 min, falha não guardada. Em todo o
+processo, `plane/cliente.js` limita a 6 os GETs abertos ao Plane e só conta o
+prazo de 15 s depois da espera (31/10/2026: em rajada, chamadas passavam do
+prazo e o C-3PO respondia "aborted due to timeout").
 
 
 Ferramenta `decisoes` (24/10/2026, pedido do dono): `decisoes-c3po.js` dá ao

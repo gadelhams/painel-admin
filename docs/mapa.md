@@ -138,6 +138,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `doc-projeto.js` — Lê ou lista um .md dentro da pasta do projeto.
 - `envelope-coletor.js` — Embrulha a falha de um coletor interno.
 - `ferramentas.js` — Catálogo das seis ferramentas só de leitura.
+- `leitura-pesada.js` — Leituras que varrem o Plane inteiro (fila, triagem, decisões: 15–35 s cada) para as ferramentas do C-3PO.
 - `persona.js` — Voz do C-3PO.
 
 ## orquestrador/
@@ -361,6 +362,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `handoff-plane.test.js`
 - `hangar.test.js` — Hangar: sessões vivas (/proc e transcripts falsos em pasta temporária) e naves sobre backlog falso.
 - `identidades-projeto.test.js`
+- `leitura-pesada.test.js` — Leituras pesadas do C-3PO: uma de cada vez, a mesma em curso é compartilhada, vale 2 min e falha não fica guardada.
 - `liberacao-nativa.test.js` — Liberação do jogo nativo (PAINEL-59): prazo que vence sozinho, só projetos com jogo nativo no catálogo, arquivo estranho conta como desligado e a troca só por duas ações.
 - `motor-ambiente.test.js` — Prova que o processo do modelo do C-3PO não recebe segredo do .env nem config do disco (PAINEL-52).
 - `orquestrador-core-v2.test.js`

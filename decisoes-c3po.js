@@ -42,3 +42,13 @@ export function resumirDecisoes({ decisoes, projetos = [], chaves = { pendentes:
     grupos: Object.fromEntries(Object.entries(grupos).map(([k, v]) => [k, Array.isArray(v) ? corta(v) : v])),
   };
 }
+
+// Composição da ferramenta `decisoes`: o coletor devolve `{ decisoes: [...] }` (o mesmo corpo de
+// /api/decisoes); projetos e chaves faltando não derrubam a resposta.
+export async function decisoesParaC3po({ lerDecisoes, lerProjetos, lerChaves, foco = null }) {
+  const { decisoes } = await lerDecisoes();
+  if (!Array.isArray(decisoes)) throw new Error('coletor de decisões sem lista');
+  return resumirDecisoes({ decisoes, foco,
+    projetos: await lerProjetos().then(r => r.projetos ?? r).catch(() => []),
+    chaves: await lerChaves().catch(() => ({ pendentes: [], rotacoesFeitas: [] })) });
+}

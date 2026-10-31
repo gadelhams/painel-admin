@@ -6,14 +6,20 @@ import { estadoProjetos, estadoProducao, decisoesDoBacklog } from '../coletores.
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarTriagemDev } from '../orquestrador/triagem.js';
 import { consultarOrquestracaoC3po } from '../orquestrador/consulta-c3po.js';
-import { resumirDecisoes } from '../decisoes-c3po.js';
+import { decisoesParaC3po } from '../decisoes-c3po.js';
+import { LeituraPesada } from './leitura-pesada.js';
 import { criarServicoChaves } from '../chaves.js';
 import { criarAlinhamento } from '../alinhamento.js';
 import { EnvelopeColetor } from './envelope-coletor.js';
 import { DocProjeto } from './doc-projeto.js';
 
-const orquestracao = criarServicoOrquestracao();
-const triagemDev = criarTriagemDev();
+const orquestracaoBase = criarServicoOrquestracao();
+const triagemBase = criarTriagemDev();
+const plane = new LeituraPesada();
+// Fila e triagem passam pela leitura serializada; a pré-avaliação de uma carta é pontual e vai direto.
+const orquestracao = { fila: () => plane.ler('fila', () => orquestracaoBase.fila()),
+  preavaliar: (...a) => orquestracaoBase.preavaliar(...a) };
+const triagemDev = () => plane.ler('triagem', () => triagemBase());
 const chaves = criarServicoChaves();
 const alinhamento = criarAlinhamento();
 const envelope = new EnvelopeColetor();
@@ -65,9 +71,8 @@ export const ferramentas = createSdkMcpServer({
       {
         foco: z.string().optional().describe('Pasta exata de um projeto (ex.: "CadastroUnico") ou um card (ex.: "CAD-1") para restringir.'),
       },
-      entrada => envelope.consultar('decisoes', async () => resumirDecisoes({
-        decisoes: await decisoesDoBacklog(), projetos: await estadoProjetos().then(r => r.projetos ?? r).catch(() => []),
-        chaves: await chaves.inventario().catch(() => ({ pendentes: [], rotacoesFeitas: [] })), foco: entrada?.foco ?? null })),
+      entrada => envelope.consultar('decisoes', () => decisoesParaC3po({ lerDecisoes: () => plane.ler('decisoes', decisoesDoBacklog),
+        lerProjetos: estadoProjetos, lerChaves: () => chaves.inventario(), foco: entrada?.foco ?? null })),
       { annotations: { readOnlyHint: true } },
     ),
     tool(
