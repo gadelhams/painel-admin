@@ -51,6 +51,8 @@ import { criarDiarioAcoes } from './acoes/diario-acoes.js';
 import { criarExecutorAcoes } from './acoes/executor-acoes.js';
 import { criarApiAcoes, criarConfirmacoesAcoes } from './acoes/api-acoes.js';
 import { RoteadorPainel } from './http/roteador.js';
+import { criarRegistroEncomendas } from './encomendas/registro-encomendas.js';
+import { criarApiEncomendas, criarConfirmacoesEncomendas } from './encomendas/api-encomendas.js';
 
 const PUBLICO = path.join(import.meta.dirname, 'publico');
 const DIRETORIO_ESTADO = path.join(os.homedir(), '.local', 'state', 'painel-admin');
@@ -148,6 +150,10 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   const apiAcoes = confirmar(criarApiAcoes, criarConfirmacoesAcoes, { propostas, executor: criarExecutorAcoes({ ambiente }),
     diario: criarDiarioAcoes({ diretorio: path.join(diretorioEstado, 'c3po') }) });
 
+  // Encomenda de nave (PAINEL-50): o painel registra o pedido por SSO + duas ações em
+  // <estado>/encomendas.jsonl; quem cria o projeto no Plane é o orquestrador.
+  const encomendas = criarRegistroEncomendas({ diretorio: diretorioEstado, agora });
+
   const resposta = new RespostaHttp({ publico, maxCorpo: MAX_CORPO });
   const roteador = new RoteadorPainel({
     porta,
@@ -160,6 +166,8 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       // Escritas da aba Contas: o mesmo autorizador SSO das ações privilegiadas (N5).
       autorizarContas: autorizarPrivilegiado,
       sessao: sessaoPainel,
+      encomendas,
+      apiEncomendas: confirmar(criarApiEncomendas, criarConfirmacoesEncomendas, { registro: encomendas, agora }),
       ssh: leituraSsh ?? new LeituraSsh({ chave: CHAVE_SSH }),
     }),
     orquestracao: new RotasOrquestracao({

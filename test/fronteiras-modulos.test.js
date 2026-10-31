@@ -11,7 +11,7 @@ const RAIZ = path.join(import.meta.dirname, '..');
 const IGNORAR = new Set(['node_modules', 'vendor', 'docs', 'test', 'e2e', 'test-results', 'playwright-report', '.git', '.claude']);
 
 // Área = pasta X/ com a porta X.js na raiz, que só reexporta: quem é de fora importa a porta.
-const AREAS_COM_PORTA = ['alinhamento', 'chaves', 'coletores', 'contas', 'motor', 'plane'];
+const AREAS_COM_PORTA = ['alinhamento', 'chaves', 'coletores', 'contas', 'encomendas', 'motor', 'plane'];
 // orquestrador/ não tem porta única: estes são os módulos que outra área pode importar.
 // As primitivas de execução (processo sem shell, ambiente por lista branca) e o contrato local
 // são portas desde a fase 3 do C-3PO (31/10/2026): acoes/ e a leitura de git as reusam em vez de duplicar.
@@ -24,7 +24,9 @@ const COMPOSICAO = 'montagem.js';
 // escritor do Plane ou o executor. Exceções do fecho na lista abaixo, com o caminho e o porquê.
 const PROIBIDOS_AO_MOTOR = ['orquestrador/escritor-handoff-plane.js', 'orquestrador/escritor-gate-plane.js',
   'orquestrador/estado-plane.js', 'orquestrador/executor-cli.js', 'orquestrador/api-despacho.js', 'orquestrador/api-gate.js',
-  'orquestrador/api-handoff.js', 'orquestrador/api-frota.js'];
+  'orquestrador/api-handoff.js', 'orquestrador/api-frota.js',
+  // A porta encomendas.js reexporta só a leitura (PAINEL-50): quem grava fica fora do alcance do motor.
+  'encomendas/registro-encomendas.js', 'encomendas/api-encomendas.js'];
 const EXCECOES_MOTOR = new Map([
   ['orquestrador/escritor-handoff-plane.js', 'motor/ferramentas.js → fila.js → servico-orquestracao.js → canal-carta.js → handoff-plane.js, porta que reexporta o protocolo (leitura do canal) junto com a fábrica do escritor; o motor só lê, e o escritor só nasce com chave injetada pela montagem'],
   ['orquestrador/escritor-gate-plane.js', 'o mesmo caminho até canal-carta.js → gate-plane.js, mesma porta mista de protocolo e escritor; mesma razão'],
@@ -122,6 +124,7 @@ test('o motor do C-3PO não alcança escritor do Plane nem o executor, nem por t
   assert.ok(entradas.length > 3);
   const alcance = alcancaveis(arestas, entradas);
   assert.ok(alcance.has('orquestrador/fila.js'), 'o fecho precisa atravessar a porta da fila');
+  assert.ok(alcance.has('encomendas/leitura-encomendas.js'), 'o fecho precisa atravessar a porta das encomendas');
   assert.deepEqual(PROIBIDOS_AO_MOTOR.filter(p => alcance.has(p) && !EXCECOES_MOTOR.has(p)), []);
   for (const p of EXCECOES_MOTOR.keys()) assert.ok(alcance.has(p), `${p}: o motor não o alcança mais; tire de EXCECOES_MOTOR`);
 });
@@ -134,6 +137,7 @@ test('cada regra morde: aresta fabricada que pula porta é recusada', () => {
     { de: 'coletores/x.js', para: 'http/resposta.js' },
     { de: 'servidor.js', para: 'http/roteador.js' },
     { de: 'orquestrador/x.js', para: 'montagem.js' },
+    { de: 'motor/x.js', para: 'encomendas/leitura-encomendas.js' },
   ];
   for (const caso of casos) assert.ok(violacoes([caso]).length >= 1, `${caso.de} -> ${caso.para} passou`);
   assert.deepEqual(violacoes([{ de: 'montagem.js', para: 'orquestrador/api-frota.js' }, { de: 'http/rotas-contas.js', para: 'contas.js' },

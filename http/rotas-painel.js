@@ -6,13 +6,14 @@ import { RotasSsh } from './rotas-ssh.js';
 import { RotasBacklog } from './rotas-backlog.js';
 import { RotasDecisoes } from './rotas-decisoes.js';
 import { RotasHangar } from './rotas-hangar.js';
+import { RotasEncomendas } from './rotas-encomendas.js';
 import { RotasRelacoes } from './rotas-relacoes.js';
 import { RotasContas } from './rotas-contas.js';
 import { RedirecionamentoC3po } from './redirecionamento-c3po.js';
 import { RotasSessao } from './rotas-sessao.js';
 
 export class RotasPainel {
-  constructor({ resposta, coletores, contas, ssh, autorizarContas, sessao }) {
+  constructor({ resposta, coletores, contas, ssh, autorizarContas, sessao, encomendas, apiEncomendas }) {
     this.grupos = [
       new RotasProjetos({ resposta, coletores }),
       new RotasProducao({ resposta, coletores }),
@@ -20,6 +21,7 @@ export class RotasPainel {
       new RotasBacklog({ resposta, coletores }),
       new RotasDecisoes({ resposta, coletores }),
       new RotasHangar({ resposta, coletores }),
+      new RotasEncomendas({ resposta, encomendas, apiEncomendas }),
       new RotasRelacoes({ resposta, coletores }),
       new RotasContas({ resposta, contas, autorizar: autorizarContas }),
       new RotasSessao({ resposta, sessao }),

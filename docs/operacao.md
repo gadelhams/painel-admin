@@ -72,6 +72,33 @@ Ações do C-3PO (fase 3, 31/10/2026): diário de acréscimo em
 preparo, confirmação, resultado), com quem, comando, código de saída, duração e
 resumo filtrado. Só cresce; apagar é decisão do dono.
 
+## Encomendas de nave: como o orquestrador atende (PAINEL-50, 31/10/2026)
+
+O berço do Hangar **registra** o pedido (SSO do dono + duas ações) e não cria nada: o
+painel é Guest no Plane. Quem atende é o orquestrador (sessão Claude Code).
+
+- **Onde:** `~/.local/state/painel-admin/encomendas.jsonl`, só de acréscimo. Linha do
+  painel: `{"id","quando","usuarioId","nome","sigla","modulos","estado":"pedida"}`
+  (`sigla` pode ser `null`: o orquestrador escolhe).
+- **Ler:** `curl -s 127.0.0.1:7777/api/hangar/encomendas` (as pendentes, sem `usuarioId`;
+  `legivel: false` = linha ruim no meio, que o orquestrador conserta antes de tudo) ou a
+  ferramenta `encomendas` do C-3PO.
+- **Criar no Plane** pelo MCP `plane`: projeto com a sigla (sem colidir com a tabela de
+  `../../PADROES-BACKLOG.md`) e um módulo por linha, na ordem; agentes como Member, o
+  painel como Guest.
+- **Catálogo:** a entrada em `projetos.js` junto com `../CLAUDE.md`, `../../PORTAS.md` e
+  a tabela de siglas (invariante 12), na mesma entrega.
+- **Marcar `atendida`** com uma linha nova, nunca editando a antiga (o painel não
+  reescreve linhas; `anexarJsonl` separa uma cauda interrompida). Da raiz do painel:
+
+```sh
+node --input-type=module -e "import { anexarJsonl } from './orquestrador/leitor-jsonl.js'; const [, arquivo, id, projeto] = process.argv; await anexarJsonl(arquivo, { id, quando: new Date().toISOString(), estado: 'atendida', projeto });" ~/.local/state/painel-admin/encomendas.jsonl <id da encomenda> <uuid do projeto no Plane>
+```
+
+Estado que não seja `pedida` ou `atendida` não fecha nada e aparece contado em
+`ignoradas`. Não há cancelamento pela tela (lacuna); até haver, a desistência se fecha
+como `atendida` com o motivo num campo `nota`.
+
 ## Microfone do C-3PO: dois motores (25/10/2026)
 
 - **Navegador** (Web Speech API): Chrome e Edge mandam o áudio ao serviço

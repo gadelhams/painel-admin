@@ -55,7 +55,7 @@ produção. Os testes montam o mesmo painel com falsos (`test/painel-falso.js`):
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
 enviados ao remoto de UM projeto — só sob demanda, mais pesado que o
 resumo que os cards já usam; 20/08/2026), `/api/producao`,
-`/api/producao/ssh`, `/api/backlog`, `/api/hangar` e `/api/hangar/sessoes` (Hangar, § abaixo), `/api/decisoes` (decisões derivadas
+`/api/producao/ssh`, `/api/backlog`, `/api/hangar`, `/api/hangar/sessoes` e `/api/hangar/encomendas` (GET aberto; POST `{preparar,confirmar}` por SSO) (Hangar, § abaixo), `/api/decisoes` (decisões derivadas
 do backlog; idade = criação do work item no Plane, ou `git log -L` no
 markdown do repo congelado, pesada — sob demanda, nunca no polling de 60s;
 aba Decisões, 21/08/2026), `/api/relacoes` (catálogo de
@@ -84,12 +84,12 @@ com autoteste, não configuração de ferramenta:
   `// exceção de tamanho: <por quê>; partir quando <condição>.` (sem "partir quando" não vale).
   Autoteste com fixture temporária: `test/mapa-modulos.test.js`.
 - `test/fronteiras-modulos.test.js` lê os `import` e recusa: de fora de `alinhamento/`,
-  `chaves/`, `coletores/`, `contas/`, `motor/` e `plane/`, importar outra coisa que a porta
+  `chaves/`, `coletores/`, `contas/`, `encomendas/`, `motor/` e `plane/`, importar outra coisa que a porta
   `<área>.js`; de fora de `orquestrador/`, importar módulo fora das portas dele (`sso`, `fila`,
   `triagem`, `consulta-c3po`, `api-duas-acoes`, `desafio-duas-acoes`, `leitor-jsonl`, `uuid`);
   `http/` montado por outro que não `montagem.js`; `servidor.js` importar outra coisa que a
   montagem; `publico/` e servidor se importarem; o fecho do motor alcançar escritor do Plane,
-  `estado-plane`, `executor-cli` ou `api-*` de escrita. `montagem.js` é isenta da regra de porta
+  `estado-plane`, `executor-cli`, `api-*` de escrita ou o registro das encomendas. `montagem.js` é isenta da regra de porta
   (quem compõe liga as peças). As violações de 31/10 ficaram como exceções nomeadas no teste,
   com o porquê; exceção resolvida reprova até sair da lista.
 
@@ -346,7 +346,7 @@ mesmas funções — o motor nunca faz HTTP para o próprio processo.
 
 ### motor.js
 
-Porta da conversa. O catálogo das nove ferramentas (oito de leitura e `propor_acao`) mora em
+Porta da conversa. O catálogo das dez ferramentas (nove de leitura e `propor_acao`) mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
 aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
@@ -355,7 +355,7 @@ branca (`AMBIENTE_PERMITIDO`: o login em `~/.claude` e o básico; nenhum segredo
 Teste: `test/motor-ambiente.test.js`.
 
 Claude Agent SDK (`claude-sonnet-5` fixo), persona do
-C-3PO, ferramentas **só-leitura** (a lista abaixo é de 01/10/2026; desde então entraram `decisoes`, `alinhamento`, `consulta_ssh`, `git_projeto` e `propor_acao`, abaixo): `estado_projetos`,
+C-3PO, ferramentas **só-leitura** (a lista abaixo é de 01/10/2026; desde então entraram `decisoes`, `alinhamento`, `consulta_ssh`, `git_projeto`, `propor_acao` e `encomendas` (§ Hangar), abaixo): `estado_projetos`,
 `estado_producao` (coletores internos), `docs_projeto` (só `.md` da raiz,
 allowlist estrita — mecânica em `coletores.js`) e `fila_orquestracao`
 (projeção do Plane; ver [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md)). Esta última
@@ -577,8 +577,8 @@ Tela de entrada desde 28/10/2026 (plano em `~/.claude/plans/lovely-dancing-hamst
 estilo holo-3D escolhido pelo dono no mock v7). Mapa fixo: docas no centro (4,
 só naves em trabalho), fábricas de droids ao norte (Claude, Codex, Grok),
 Oficina central a leste (acervo compartilhado), pátio do Plane a oeste (uma vaga
-por projeto do catálogo). **Só leitura**: nenhuma rota de escrita; a
-encomenda de nave nova só monta o texto de um pedido para o orquestrador.
+por projeto do catálogo). **Só leitura**, com duas exceções por SSO + duas
+ações: a liberação do jogo nativo e o registro da encomenda de nave (abaixo).
 
 - **Dados.** `GET /api/hangar` (`coletores/hangar.js` sobre `lerBacklog`,
   cache de 60 s do Plane): por projeto, peças = módulos com abertas/em
@@ -655,6 +655,24 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   Quem consome hoje é o pré-flight nativo do CKBL
   (`docs/native-test-strategy-20261017.md` de lá); o executor da frota ainda
   não abre jogo (PAINEL-34).
+- **Encomenda de nave** (`encomenda.js`, PAINEL-50, 31/10/2026). O berço (a
+  próxima vaga do pátio) pede nome (1–60), sigla opcional (2–6 maiúsculas, sem
+  colidir com `sigla` do `projetos.js` nem com outra encomenda pendente) e
+  módulos (1–20 linhas, 1–80 cada, sem repetir); sem caractere de controle.
+  "Revisar" é o `POST /api/hangar/encomendas/preparar` (valida no servidor e
+  devolve o resumo, sem gravar); "Confirmar" é o `…/confirmar`, com a mesma
+  sessão do dono, que acrescenta a linha `pedida` (id, quando, usuarioId, nome,
+  sigla, módulos) em `<estado>/encomendas.jsonl` por `anexarJsonl`, serializado
+  no processo e com a sigla reconferida na gravação. `GET /api/hangar/encomendas`
+  é aberto e devolve as pendentes (`pedida` sem `atendida` do mesmo id depois)
+  sem `usuarioId`; arquivo ilegível mostra nada pendente e o preparar recusa. A
+  vaga e a lista lateral mostram "pedida em <data>, aguardando o orquestrador";
+  o C-3PO lê a mesma lista pela ferramenta `encomendas`. Módulos em
+  `encomendas/` (validação, leitura, registro, duas ações); a porta
+  `encomendas.js` reexporta só a leitura, e o fecho do motor não alcança quem
+  grava (`test/fronteiras-modulos.test.js`). O painel não cria projeto nem
+  reescreve linha: quem atende é o orquestrador (`operacao.md` § Encomendas de
+  nave). Teste: `test/encomendas.test.js`.
 
 #### vendor/mermaid.min.js
 
@@ -728,7 +746,7 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   propuser "copiar o token pro `.env` local pra simplificar", a resposta é
   não — é a arquitetura da fatia, não um detalhe.
 - **O motor lê e só propõe** (fase 3, 31/10/2026; até então "só-leitura até a
-  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das nove
+  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das dez
   ferramentas MCP — limitação **estrutural**, não promessa de comportamento. A
   única que não é leitura, `propor_acao`, registra uma proposta e devolve o id
   dela, nunca um id de confirmação; preparar, confirmar e executar são do dono,
