@@ -3,14 +3,56 @@
   "optIn": true,
   "projetoPlane": "c24e3d36-2e2a-4760-a3f3-53998297a245",
   "ambiente": "local",
-  "tiposTeste": ["unitários Node", "documentação"],
-  "criteriosAceite": ["npm test sem regressões", "cada carta mostra os motivos de elegibilidade ou bloqueio"],
-  "acoesProibidas": ["deploy", "escrita no Plane pela identidade Guest", "execução pelo C-3PO"],
+  "tiposTeste": [
+    "node --test (rotas pelo painel montado com falsos, varredura de rotas, fronteiras de import, unidade por área)",
+    "check-docs (tetos, links e rotas dos docs)",
+    "mapa-modulos --check (cabeçalho em todo módulo, mapa em dia)"
+  ],
+  "criteriosAceite": [
+    "npm test sem falhas (node --test + check-docs + mapa-modulos --check)",
+    "nenhum teste chama ssh real, Plane real, LLM real nem CLI paga",
+    "toda rota que muda estado passa pelo autorizador e a varredura test/rotas-privilegiadas.test.js continua verde",
+    "nenhum segredo em código, log, commit, resposta HTTP ou mensagem de erro",
+    "o diff fica restrito aos caminhos que a carta declara"
+  ],
+  "acoesProibidas": [
+    "reiniciar, parar ou recarregar o serviço painel-admin (systemctl --user)",
+    "ler ou alterar .env, ~/.config/plane/*.token ou ~/.local/state/painel-admin",
+    "escrever no Plane, chamar o Cadastro Único ou o servidor astargne.com (SSH, scp, rsync)",
+    "usar sudo, mexer no Caddy da borda, em units systemd ou em containers Docker",
+    "ligar ORQ_EXECUCAO_HABILITADA, ORQ_AGENDADOR ou o play de qualquer nave",
+    "push, force-push ou reescrita de histórico no git",
+    "editar fora de painel-admin/"
+  ],
   "comandos": [
-    { "id": "testes", "executavel": "npm", "argumentos": ["test"] }
+    {
+      "id": "testes",
+      "executavel": "npm",
+      "argumentos": [
+        "test"
+      ]
+    }
   ],
   "agentes": [
-    { "id": "Claude", "provedor": "claude", "modelo": "claude-opus-5", "esforco": "max", "disponivel": false },
-    { "id": "OpenAI", "provedor": "openai", "modelo": "gpt-6-astra", "esforco": "extreme high", "disponivel": false }
-  ]
+    {
+      "id": "Claude",
+      "provedor": "claude",
+      "modelo": "claude-opus-5",
+      "esforco": "max",
+      "disponivel": true
+    },
+    {
+      "id": "OpenAI",
+      "provedor": "openai",
+      "modelo": "gpt-6-astra",
+      "esforco": "extreme high",
+      "disponivel": true
+    }
+  ],
+  "vigilia": {
+    "maxTentativasPorCarta": 2,
+    "tetoPorDia": 6,
+    "pausaPorLimiteMinutos": 60,
+    "comando": "testes"
+  }
 }
