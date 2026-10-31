@@ -4,9 +4,11 @@ import fs from 'node:fs/promises';
 
 test('Protocolo cobre as sete abas sem trocar IDs nem ações', async () => {
   const html = await fs.readFile(new URL('../publico/index.html', import.meta.url), 'utf8');
-  const css = await fs.readFile(new URL('../publico/protocolo.css', import.meta.url), 'utf8');
+  // A camada Protocolo vive desde 31/10/2026 dentro dos CSS por aba (PAINEL-51): lê todos, na ordem do index.html.
+  const folhas = [...html.matchAll(/<link rel="stylesheet" href="([^"?]+)/g)].map(([, f]) => f);
+  const css = (await Promise.all(folhas.map(f => fs.readFile(new URL('../publico/' + f, import.meta.url), 'utf8')))).join('\n');
   const scripts = await Promise.all(['backlog', 'decisoes', 'contas', 'docs'].map(async nome => fs.readFile(new URL(`../publico/${nome}.js`, import.meta.url), 'utf8')));
-  assert.ok(html.indexOf('estilo.css') < html.indexOf('protocolo.css'));
+  assert.deepEqual(folhas.slice(0, 2), ['tokens.css', 'base.css']);
   for (const aba of ['projetos', 'backlog', 'decisoes', 'orquestracao', 'contas', 'chaves', 'docs']) {
     assert.match(html, new RegExp(`id="aba-${aba}"`));
     assert.match(html, new RegExp(`data-aba="${aba}"`));

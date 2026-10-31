@@ -1,0 +1,6 @@
+/* Aba Docs: links e sinais de alinhamento por projeto. */
+
+.docs-links { margin: .3rem 0 .5rem; font-size: .85rem; }
+.docs-sinais { margin: 0; padding-left: 1.1rem; }
+.docs-sinal.gravidade-alta .chip-app { border-color: var(--cor-erro, #c0392b); }
+.docs-sinal.gravidade-media .chip-app { border-color: var(--cor-aviso, #b26a00); }

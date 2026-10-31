@@ -1,0 +1,155 @@
+/* Tokens do painel: fontes vendorizadas e variáveis de tema. Único lugar de
+   @font-face e de variáveis de design; carregado antes de todo outro CSS. */
+
+/* ---------- Fontes vendorizadas (design system "Industry", handoff
+   design_handoff_painel_hud/) — self-host, mesmo princípio zero-CDN já
+   aplicado ao Mermaid (CLAUDE.md: "sem CDN, sem chamada de rede em
+   runtime"). Só o subset latin (cobre acentuação do português). ---------- */
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 400; font-display: swap; src: url('vendor/fonts/barlow-400.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 500; font-display: swap; src: url('vendor/fonts/barlow-500.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 600; font-display: swap; src: url('vendor/fonts/barlow-600.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap; src: url('vendor/fonts/barlow-condensed-600.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url('vendor/fonts/barlow-condensed-700.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('vendor/fonts/ibm-plex-mono-400.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('vendor/fonts/ibm-plex-mono-500.woff2') format('woff2'); }
+
+:root {
+  /* Base do sistema Industry — design tokens do handoff, "não invente hex
+     fora desta lista" (README). */
+  --color-bg: #f2f2f3;
+  --color-surface: #e9e9ea;
+  --color-text: #1d1f20;
+  --color-accent: #5980a6;
+  --color-neutral-100: #f5f5f8;
+  --color-neutral-200: #e7e7ea;
+  --color-neutral-300: #d4d4d7;
+  --color-neutral-400: #b7b7ba;
+  --color-neutral-500: #98989b;
+  --color-neutral-600: #7a7a7d;
+  --color-neutral-700: #5d5d60;
+  --color-neutral-800: #424244;
+  --color-neutral-900: #2b2b2d;
+  --color-accent-100: #eef6ff;
+  --color-accent-200: #d6ebff;
+  --color-accent-300: #b5d9fd;
+  --color-accent-400: #94bce3;
+  --color-accent-500: #749dc4;
+  --color-accent-600: #597ea3;
+  --color-accent-700: #416180;
+  --color-accent-800: #2c455d;
+  --color-accent-900: #1d2d3d;
+
+  --font-heading: 'Barlow Condensed', system-ui, sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+
+  --space-1: 3.4px;
+  --space-2: 6.8px;
+  --space-3: 10.2px;
+  --space-4: 13.6px;
+  --space-5: 20.4px;
+  --space-6: 27.2px;
+
+  /* Camada de tema — escuro é o padrão (sem atributo); claro entra por
+     [data-tema="light"] na raiz, escrito/lido de localStorage (app.js). */
+  --ui-bg: #16232f;
+  --ui-panel: #1d2d3d;
+  --ui-line: #2c455d;
+  --ui-hover: #2c455d;
+  --ui-hatch: #2c455d;
+  --ui-text: #f5f5f8;
+  --ui-dim: #b5d9fd;
+  --ui-faint: #749dc4;
+  --ui-hot: #94bce3;
+  --ui-onhot: #1d2d3d;
+  --ui-scrim: rgba(11, 21, 32, .92);
+
+  /* Fora do handoff: estados que telas ainda não redesenhadas usam (git
+     sujo, sonda de produção fora do ar) e o mock não cobre pra tela
+     nenhuma — mantidos à parte, nunca misturados aos --ui-*. Reavaliar
+     quando a Fase 5 (aba Projetos) redesenhar esses estados de verdade. */
+  --ok: #4ade80;
+  --alerta: #fbbf24;
+  --falha: #f87171;
+  --ideia: #c084fc;
+}
+
+:root[data-tema="light"] {
+  --ui-bg: #f2f2f3;
+  --ui-panel: #f5f5f8;
+  --ui-line: #d4d4d7;
+  --ui-hover: #e7e7ea;
+  --ui-hatch: #e7e7ea;
+  --ui-text: #1d1f20;
+  --ui-dim: #5d5d60;
+  --ui-faint: #7a7a7d;
+  --ui-hot: #416180;
+  --ui-onhot: #f5f5f8;
+  --ui-scrim: rgba(29, 45, 61, .82);
+}
+
+/* Protocolo — identidade unificada das cinco abas. Nenhum dado ou ação nasce
+   nesta camada; ela apresenta as views existentes com a mesma linguagem. */
+:root {
+  --color-bg: #0b0907;
+  --color-surface: #17130f;
+  --color-text: #f4ead6;
+  --color-accent: #f4b446;
+  --ui-bg: #0b0907;
+  --ui-panel: #17130f;
+  --ui-line: #463826;
+  --ui-hover: #282015;
+  --ui-hatch: #30271b;
+  --ui-text: #f4ead6;
+  --ui-dim: #c9bba4;
+  --ui-faint: #ac9b81;
+  --ui-hot: #f4b446;
+  --ui-onhot: #211509;
+  --ui-scrim: rgba(4, 3, 2, .9);
+  --ok: #7fd6be;
+  --alerta: #f4b446;
+  --falha: #ff795b;
+  --ideia: #c9a9e8;
+}
+:root[data-tema="light"] {
+  --ui-bg: #faf7ef;
+  --ui-panel: #fffdf8;
+  --ui-line: #d8c6a8;
+  --ui-hover: #f4ead8;
+  --ui-hatch: #eadbc3;
+  --ui-text: #2a1d10;
+  --ui-dim: #594b39;
+  --ui-faint: #705d42;
+  --ui-hot: #9c5900;
+  --ui-onhot: #fffaf0;
+  --ui-scrim: rgba(34, 23, 11, .78);
+  --ok: #166f58;
+  --alerta: #9c5900;
+  --falha: #aa341e;
+  --ideia: #694e96;
+}
+
+/* Tokens do Hangar (escopo #aba-hangar): sempre escuro, paleta cobre-âmbar;
+   o resto da regra #aba-hangar mora em hangar.css. */
+#aba-hangar {
+  --hg-vacuo: #070504;
+  --hg-casco: #17130f;
+  --hg-casco-2: #201a13;
+  --hg-linha: #463826;
+  --hg-texto: #f4ead6;
+  --hg-apagado: #ac9b81;
+  --hg-realce: #ffd89a;
+  --hg-ok: #7fd6be;
+  --hg-pensa: #c084fc;
+  --hg-alerta: #ffcc4d;
+  --hg-falha: #ff795b;
+  --hg-ouro: #f4b446;
+  --hg-cartao: #e9d8b4;
+  --hg-editar: #ff9b54;
+  --hg-testar: #7fd6be;
+  --hg-oficina: #c9a9e8;
+  --hg-patio: #e3a86b;
+  --hg-f-titulo: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --hg-f-corpo: 'Barlow', system-ui, sans-serif;
+  --hg-f-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}

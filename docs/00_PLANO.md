@@ -169,7 +169,7 @@ adivinhado):
   `body`) da página standalone colidiriam com o resto do dashboard —
   regras escopadas por ID/classe do chat foram reescritas para o tema de
   cor do dashboard (`--acento` no lugar de `--destaque`, `--alerta` pro
-  aviso de degradação, etc.), ver `estilo.css`. A página standalone
+  aviso de degradação, etc.), ver `console.css` (até 31/10/2026, `estilo.css`). A página standalone
   `/c3po/` continua existindo como está.
 - **Aba Grafo**: `relacoes.js` (novo, mesmo espírito de `projetos.js`) +
   rota `/api/relacoes` + `publico/grafo.js`, que gera texto `flowchart` do

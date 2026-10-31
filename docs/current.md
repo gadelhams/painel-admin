@@ -34,10 +34,11 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   decisão, desenhada e não construída ([plano](plano-mesa-de-decisao.md)).
   Voz: xAI se o navegador não reconhece; falar por cima corta.
 - **Hangar**: encomenda de nave é só texto de pedido (falta pedido por SSO);
-  CSS ainda monolítico (`estilo.css`); Grok sem CLI.
+  Grok sem CLI.
 
 ## Portão e repositório
 
-- `npm test`: 250 testes + `check-docs` 0 erros (31/10); Playwright 25/25.
+- `npm test`: contagem no selo (31/10); Playwright no selo.
 - Sem linter: o portão monta o painel real com falsos e confere mapa, imports e tamanho.
+  CSS: tokens, base e um por aba (31/10).
 - `main` no GitHub.

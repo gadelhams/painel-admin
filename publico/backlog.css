@@ -1,0 +1,164 @@
+/* Aba Backlog: filtros, quadro, itens e tags; grade de features (Tela 4). */
+
+/* ---------- aba Backlog ---------- */
+
+.filtro-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+/* As duas fileiras de filtro (projeto em cima, tag embaixo) ficam coladas. */
+#filtro-projetos { margin-bottom: .4rem; }
+.filtro-tags .filtro { font-size: .8rem; padding: .25rem .7rem; border-radius: 999px; }
+.filtro-tags .filtro.ativa { border-color: var(--ui-hot); color: var(--ui-hot); }
+.filtro-tags .filtro-astargne { color: var(--alerta); }
+.filtro-tags .filtro-astargne.ativa { border-color: var(--alerta); color: var(--alerta); }
+
+.backlog-projeto { margin-bottom: 2rem; }
+.backlog-projeto-cab { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .75rem; }
+.backlog-projeto-cab h3 { margin: 0; font-size: 1.05rem; }
+
+/* Colunas por feature, com rolagem horizontal — o jeito kanban de olhar. */
+.quadro { display: flex; gap: 1rem; align-items: flex-start; overflow-x: auto; padding-bottom: .75rem; }
+
+.coluna {
+  flex: 0 0 340px;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  padding: .75rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+/* Subtítulo discreto: com vários projetos no quadro, cada coluna diz de quem é. */
+.coluna-projeto { font-size: .68rem; color: var(--ui-faint); text-transform: uppercase; letter-spacing: .06em; }
+.coluna-cab { display: flex; align-items: center; gap: .5rem; padding-bottom: .35rem; border-bottom: 1px solid var(--ui-line); }
+.coluna-cab h4 { margin: 0; font-size: .95rem; flex: 1; }
+
+.placar {
+  font-size: .72rem;
+  color: var(--ui-faint);
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  padding: .05rem .5rem;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* Redesenho de 20/08/2026: nó com filhos vira <details> (card expansível,
+   sem JS de estado — o navegador cuida do abrir/fechar); nó folha é uma
+   linha simples (.item-linha.folha). "Card por story" sem depender do
+   `nivel` bater com épico/story/task — o critério é estrutural (tem
+   filho?), não o rótulo do texto. */
+.item {
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-panel) 60%, var(--ui-bg));
+  font-size: .85rem;
+  margin: .3rem 0;
+}
+.item > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: .35rem .55rem;
+  border-radius: 8px;
+}
+.item > summary::-webkit-details-marker { display: none; }
+.item > summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  color: var(--ui-faint);
+  transition: transform .1s ease;
+}
+.item[open] > summary::before { transform: rotate(90deg); }
+.item > summary:hover { background: color-mix(in srgb, var(--ui-hot) 10%, transparent); }
+.item.pronto > summary { opacity: .55; }
+.item-filhos { padding: 0 .5rem .4rem 1.4rem; display: flex; flex-direction: column; gap: .15rem; }
+
+/* Folha (sem filhos): linha simples, sem chrome de card nem seta. */
+.item-linha.folha {
+  padding: .2rem .3rem;
+  border-radius: 6px;
+}
+.item-linha.folha.pronto { opacity: .55; }
+
+.item-linha { display: flex; align-items: baseline; gap: .4rem; flex-wrap: wrap; }
+.item-texto { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.id-rastreador { font-family: var(--font-mono); font-size: .7rem; color: var(--ui-faint); text-decoration: none; flex: none; }
+.id-rastreador:hover { color: var(--ui-text); text-decoration: underline; }
+.marca { flex: none; }
+.marca.pronto { color: var(--ok); }
+.marca.aberto { color: var(--ui-faint); }
+
+.item code, .cru code { background: var(--ui-bg); border-radius: 4px; padding: 0 .25rem; font-size: .92em; }
+
+/* Esquema de cores por tag (redesenho 20/08/2026) — mesmo idioma
+   color-mix() já usado pelas etiquetas de estado (.ok/.alerta/.falha). */
+.etiqueta.tag { text-transform: none; }
+.etiqueta.tag-astargne {
+  color: var(--alerta);
+  border-color: color-mix(in srgb, var(--alerta) 55%, transparent);
+  background: color-mix(in srgb, var(--alerta) 12%, transparent);
+  font-weight: 600;
+}
+.etiqueta.tag-bloqueada {
+  color: var(--falha);
+  border-color: color-mix(in srgb, var(--falha) 55%, transparent);
+  background: color-mix(in srgb, var(--falha) 12%, transparent);
+}
+.etiqueta.tag-congelada {
+  color: var(--ui-faint);
+  border-color: color-mix(in srgb, var(--ui-faint) 45%, transparent);
+  background: color-mix(in srgb, var(--ui-faint) 10%, transparent);
+}
+.etiqueta.tag-empirica {
+  color: var(--ui-hot);
+  border-color: color-mix(in srgb, var(--ui-hot) 50%, transparent);
+  background: color-mix(in srgb, var(--ui-hot) 12%, transparent);
+}
+.etiqueta.tag-sem-escopo {
+  color: var(--ideia);
+  border-color: color-mix(in srgb, var(--ideia) 50%, transparent);
+  background: color-mix(in srgb, var(--ideia) 12%, transparent);
+}
+
+/* Linha crua: o que o parser não entendeu aparece verbatim (só o marcador
+   "- " de lista sai — sintaxe markdown não vaza), no lugar da hierarquia
+   a que a linha pertence. */
+.cru {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: .76rem;
+  color: var(--ui-faint);
+}
+.item-linha.folha.cru {
+  background: var(--ui-bg);
+  border: 1px dashed var(--ui-line);
+  padding: .4rem .6rem;
+  overflow-wrap: anywhere;
+}
+details.item.cru > summary { background: var(--ui-bg); }
+
+/* ================================================================
+   Tela 4 — aba Backlog: outline sempre expandido, duas colunas
+   ================================================================ */
+
+.backlog-cabecalho { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; margin-bottom: var(--space-6); }
+.grid-backlog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20.4px; align-items: start; }
+.feature-bloco { border: 1px solid var(--ui-line); background: var(--ui-panel); }
+.feature-cab { display: flex; align-items: baseline; gap: 10.2px; padding: 13.6px 20.4px; border-bottom: 1px solid var(--ui-line); }
+.feature-cab .feature-token { font-family: var(--font-mono); font-size: 12px; color: var(--ui-faint); }
+.feature-titulo { font-size: 19px; margin: 0; flex: 1; color: var(--ui-text); }
+.feature-cab .placar { margin-left: auto; }
+.feature-itens { padding: 13.6px 20.4px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+.nota-cru { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); border: 1px dashed var(--ui-line); padding: 10.2px 13.6px; margin-top: 20.4px; }
+
+/* Camada Protocolo (ex-protocolo.css). */
+.feature-bloco { background: var(--ui-panel); }
+.feature-bloco { border-top: 2px solid var(--ui-hot); }
+#aba-backlog { max-width: 1500px; margin: 0 auto; }
+.backlog-cabecalho { padding: 3px 0 20px; border-bottom: 1px solid var(--ui-line); }
+.grid-backlog { gap: 16px; }
+.feature-bloco { box-shadow: 0 12px 32px rgba(0,0,0,.11); }
+.feature-cab .feature-token { color: var(--ui-hot); }
+
+@media (max-width: 800px) {
+  .grid-backlog { grid-template-columns: 1fr; }
+}

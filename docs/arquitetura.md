@@ -411,9 +411,27 @@ Dashboard vanilla, reskin **"Industry HUD"** desde 21/08/2026
 (mock hi-fi do dono em `design_handoff_painel_hud/`; tokens/tipografia
 declarados como finais no handoff da época — Barlow/Barlow Condensed/IBM Plex Mono
 vendorizados em `publico/vendor/fonts/`, mesmo princípio zero-CDN do
-Mermaid). Em 12/10/2026, `publico/protocolo.css` sobrepõe o visual das abas
+Mermaid). Em 12/10/2026, a camada Protocolo passou a sobrepor o visual das abas
 segundo o protótipo do dono, sem mudar lógica. Desde 28/10/2026 a entrada (`/`, `#/hangar`) é o **Hangar** (§ abaixo); seguem as abas — **Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs** — mais
 o console do C-3PO como overlay por ⌘K/Ctrl+K:
+
+#### CSS (partido por aba desde 31/10/2026, PAINEL-51)
+
+`index.html` carrega, nesta ordem: `tokens.css` (único lugar de `@font-face`
+e de variáveis — base Industry, camada Protocolo por cima, `--hg-*` do
+Hangar), `base.css` (reset, elementos globais, cabeçalho, barra de abas e
+peças comuns: `.moldura`, `.discreto`, `.etiqueta`, `.kicker`,
+`.titulo-secao`, `.pagina-intro`), `orquestracao.css`, `console.css`
+(overlay e palco de voz), `projeto.css`, `backlog.css`, `decisoes.css`
+(grupos por projeto, que Chaves e Docs reaproveitam, e o bloco Astargne),
+`contas.css`, `chaves.css`, `docs.css` e `hangar.css`. São as regras de
+`estilo.css`, `protocolo.css` e `orquestrador.css` sem nenhuma mudança: dentro de
+cada arquivo vem antes o trecho Industry e depois o Protocolo que o
+sobrepõe, como na cascata antiga — **reordenar arquivo ou trecho muda o
+visual sem erro**. Lista de seletores que misturava abas foi partida (mesma
+declaração, um seletor por arquivo). `test/css-partes.test.js` confere que
+todo CSS é carregado, todo `<link>` existe, toda classe do HTML tem regra e
+tokens só em `tokens.css`. `/c3po/` usa só o próprio `c3po/estilo.css`.
 
 #### app.js
 
@@ -470,7 +488,7 @@ login no Cadastro Único; o 401 vira a orientação de login na própria aba. **
 detecta a troca de view por `viewAtual`) e após cada ação — o `rotear()`
 de 60 s passando pela mesma view não dispara ssh nenhum.
 
-#### orquestrador.js (publico/) e orquestrador.css
+#### orquestrador.js (publico/) e orquestracao.css
 
 A aba está partida em `publico/orquestracao/`: núcleo (estado e HTTP), demanda (elegibilidade na carta, pré-checagem em `demanda-prontidao.js`, portão em `demanda-portao.js`, histórico em `demanda-historico.js`), fila (filtro em `fila-filtro.js`, lista em `fila-lista.js`, triagem em `fila-triagem.js`), despacho, gate, conversa (canal em `conversa-canal.js`, handoff em `conversa-handoff.js`), frota (seletores em `modelos-seletores.js`, confirmação em `frota-confirmacao.js`), vigília (desenho em `vigilia-desenho.js`, confirmação em `vigilia-confirmacao.js`), legado, consumo e voz da carta. `orquestrador.js` só liga os tópicos. Leitura/simulação do Plane: painel de projetos candidatos, consulta
 C-3PO sob demanda, impedimentos reais, fila filtrável e touchpoints. Recebe
@@ -568,8 +586,8 @@ encomenda de nave nova só monta o texto de um pedido para o orquestrador.
   6 acessórios e contêineres do 13º módulo em diante). O preenchimento da
   peça é sempre a fração do Plane; os droids não mexem nele. Fora da aba ou
   com a janela oculta, poll e animação param. `prefers-reduced-motion`
-  desliga os voos. Paleta: sempre escura, no cobre-âmbar do tema escuro de
-  `protocolo.css` (tokens `--hg-*` em `hangar.css`; as cores da cena em
+  desliga os voos. Paleta: sempre escura, no cobre-âmbar do tema escuro da
+  camada Protocolo (tokens `--hg-*` em `tokens.css`; as cores da cena em
   `cena.js` e `estado.js`, que precisam acompanhar à mão). `estado.js` define
   `COR_PAPEL` (orquestração, codificação, validação, zelador) para os droids
   da frota da F3/F4; sessão humana não tem papel e mantém a cor da fábrica.

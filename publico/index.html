@@ -16,9 +16,18 @@
       } catch { /* localStorage indisponível: fica no padrão escuro */ }
     })();
   </script>
-  <link rel="stylesheet" href="estilo.css">
-  <link rel="stylesheet" href="protocolo.css">
-  <link rel="stylesheet" href="orquestrador.css?v=20261022-3campos">
+  <!-- A ordem dos CSS é a da cascata (arquitetura.md § CSS): trocar a ordem
+       muda o visual sem erro nenhum. -->
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="orquestracao.css">
+  <link rel="stylesheet" href="console.css">
+  <link rel="stylesheet" href="projeto.css">
+  <link rel="stylesheet" href="backlog.css">
+  <link rel="stylesheet" href="decisoes.css">
+  <link rel="stylesheet" href="contas.css">
+  <link rel="stylesheet" href="chaves.css">
+  <link rel="stylesheet" href="docs.css">
   <link rel="stylesheet" href="hangar.css">
   <script src="vendor/mermaid.min.js"></script>
 </head>
