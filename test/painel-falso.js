@@ -49,6 +49,8 @@ export async function montarComFalsos({ ambiente = { ORQ_OWNER_USER_ID: DONO }, 
       coletores: espiao('coletores'),
       agora: () => Date.parse('2026-10-31T12:00:00Z'),
       diretorioCodex: path.join(diretorio, 'codex'),
+      // As chaves das identidades do catálogo nunca vêm do ~/.config/plane real num teste.
+      diretorioChaves: path.join(diretorio, 'chaves'),
       ...externos,
     },
   });

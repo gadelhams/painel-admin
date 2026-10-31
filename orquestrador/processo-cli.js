@@ -3,11 +3,14 @@
 import { createWriteStream } from 'node:fs';
 
 export class ProcessoCli {
-  constructor({ spawn, env, agora = Date.now, maxSaidaBytes }) {
+  // `aoIniciar(pgid)`: avisado a cada filho lançado (o grupo é o pid, por `detached`); o
+  // executor grava o grupo no lease da tentativa (J51). Falha do aviso não para o filho.
+  constructor({ spawn, env, agora = Date.now, maxSaidaBytes, aoIniciar = null }) {
     this.spawn = spawn;
     this.env = env;
     this.agora = agora;
     this.maxSaidaBytes = maxSaidaBytes;
+    this.aoIniciar = aoIniciar;
   }
 
   rodar({ executavel, argumentos, cwd, stdin = null, timeoutMs, maxSaidaBytes = this.maxSaidaBytes, log = null }) {
@@ -20,6 +23,7 @@ export class ProcessoCli {
       let filho;
       try { filho = this.spawn(executavel, argumentos, { cwd, env: this.env, stdio: ['pipe', 'pipe', 'pipe'], detached: true }); }
       catch (erro) { arquivo?.end(); return resolve({ codigo: null, sinal: null, expirou: false, erroSpawn: erro.message, stdout: '', stderr: '', duracaoMs: 0 }); }
+      if (this.aoIniciar && Number.isInteger(filho.pid)) Promise.resolve().then(() => this.aoIniciar(filho.pid)).catch(() => {});
       let expirou = false;
       let erroSpawn = null;
       const matar = () => { try { process.kill(-filho.pid, 'SIGKILL'); } catch { try { filho.kill('SIGKILL'); } catch { /* já morreu */ } } };

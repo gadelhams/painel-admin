@@ -343,6 +343,37 @@ que tocam o play e a limpeza.
   `SEM_IDENTIDADE` antes da CLI); a CLI do zelador nunca rodou de verdade (`--tools ""` e a saída
   JSON do `claude -p` sem ferramentas); a linha `ORQ_AGENDADOR` não foi posta na unit.
 
+## F4a feita (31/10/2026)
+
+A F4 foi partida em duas: a F4a fecha o que o despacho e a leitura precisam antes de o zelador
+marcar gate; a F4b liga o gate do zelador e o despacho do Hangar inteiro. Mecanismo em
+[arquitetura.md](arquitetura.md) § orquestrador/ (Puxar, F4a).
+- **Janelas fechadas, cada uma com teste e mutação nomeada** (`test/frota-f4a.test.js`,
+  `test/identidades-escrita.test.js`, `test/reservas.test.js`): J51 (uma tentativa por vez no disco,
+  pgid no lease), J54 do lado do leitor (cabeçalho `papel=decisao`, fonte da lista fechada; malformado
+  anotado, não lança), J55 (recibo amarrado à instância da etiqueta pelas atividades), J56 restante
+  (catálogo, `/users/me` = ator fixo, Member e não Admin, chaves e atores distintos no arranque), J70
+  restante (`origemDespacho`/`origemGate` no HANDOFF), J74 (recibo editado não vale); item 7
+  (`instalarEm`) e item 9 (reserva de carta por sessão, pedido do dono: "como evitar double work?").
+- **Escolhas:**
+  - **atores distintos**: Guest, zelador, Painel Admin e cada orquestrador; o dono não entra, porque
+    o painel não sabe o UUID dele no Plane (`ORQ_OWNER_USER_ID` é do Cadastro Único);
+  - **conferência a cada 15 min**: uma chave trocada no disco é recusada até a próxima, e uma
+    divergência corrigida volta sozinha; Plane fora deixa "pendente", não desliga;
+  - **reserva sem SSO**: quem reserva é o agente local; o painel acha o processo do socket no `/proc`
+    em vez de confiar num pid informado; humano sem CLI fica só com o lease local;
+  - **mesa**: a recusa da carta reservada é um embrulho do `preparar` na montagem (nada muda em
+    `decisao/`); vem depois do preparar da mesa e, se a resolução pela Guest falhar, a decisão do dono
+    segue (a reserva coordena agentes, não trava o dono).
+- **Fica para a F4b:** gate do zelador (J58, J59), sandbox (J60), o despacho do Hangar inteiro em
+  round-robin (item 6), J72, o zelador e a skill `zeladoria-de-cartas` respeitarem a reserva (a
+  porta é `ReservasCarta.ocupadaPorOutro`) e o zelador recusar chave igual à de um orquestrador (hoje
+  só o lado do orquestrador confere).
+- **Não verificado no real:** as identidades de CAD, EMU e PAINEL nunca foram conferidas contra o
+  Plane de verdade (`member_role` em `GET /projects/<id>/` e o 403 de `/workspaces/<ws>/members/` para
+  Guest foram lidos no código do Plane v1.4.2, não medidos); o script de reserva não rodou contra o
+  painel em produção.
+
 ## Mudanças nas regras (docs na mesma entrega)
 
 - `ProjetosPessoais/ORQUESTRADOR-PROJETOS.md`: hoje só a marcação de gate
@@ -380,7 +411,8 @@ que tocam o play e a limpeza.
    - **Destaque do bloqueio:** aparece no painel lateral quando a nave fica
      sem nada a fazer.
 5. **F4, puxar:** `READY TO DEV` e `READY TO TEST` pelo zelador e despacho pela
-   frota, depois do piloto PAINEL-34.
+   frota, depois do piloto PAINEL-34. A F4a (trava global, recibo, identidades,
+   reserva de carta) foi feita em 31/10/2026; falta a F4b.
 6. **A mesa (PAINEL-53)** absorve a aba Demanda.
 
 ## Decisões do dono (28/10/2026)

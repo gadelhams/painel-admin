@@ -103,10 +103,11 @@ export function conteudo(a) {
       fala: d.encerrar ? `O ${d.rotulo} encerrou a sessão e está voltando à fábrica do ${f.nome}.`
         : `${d.s.estado === 'aguardando' && !d.passo
           ? `O ${d.rotulo} terminou o turno e espera a sua resposta na conversa do ${f.nome} (terminal ou editor), mestre. Enquanto você não escrever, ele não faz nada.`
-          : `O ${d.rotulo} está ${oQueFaz(d)}, mestre.`}${carta ? ` O último cartão que tocou foi ${carta[1]}: ${carta[2]}.` : ' Não sei em qual cartão do Plane: a sessão ainda não tocou nenhum pelo MCP, pela ponte REST do projeto nem por SIGLA-N ou URL de carta num comando.'}`,
+          : `O ${d.rotulo} está ${oQueFaz(d)}, mestre.`}${d.s.reserva && carta ? ` Reservou ${carta[1]}: ${carta[2]}.` : carta ? ` O último cartão que tocou foi ${carta[1]}: ${carta[2]}.` : ' Não sei em qual cartão do Plane: a sessão ainda não tocou nenhum pelo MCP, pela ponte REST do projeto nem por SIGLA-N ou URL de carta num comando.'}${d.s.reserva ? '' : ' Esta sessão está sem reserva de carta.'}`,
       corpo: `<dl class="hg-campos"><dt>IA</dt><dd>${f.nome}</dd><dt>Estado</dt><dd data-estado-droid="${esc(d.id)}"></dd>
         <dt>Projeto</dt><dd>${n ? linkNave(n) : esc(ondeDroid(d))}</dd>
         <dt>Cartão</dt><dd>${carta ? `${esc(carta[1])} · ${esc(carta[2])}` : '—'}</dd>
+        <dt>Reserva</dt><dd>${d.s.reserva ? `${esc(d.s.reserva.carta)} até ${esc(d.s.reserva.validaAte)}` : 'sem reserva'}</dd>
         <dt>Sessão</dt><dd class="hg-mono">${esc(d.id.slice(0, 8))}</dd></dl>
         <h4>Últimas ações · só ferramenta e arquivo</h4>
         ${acoes.length ? `<ul class="hg-linhas">${acoes.map((x) => `<li>${chip(COR_TIPO[x.tipo] ?? '#ac9b81', VERBO[x.tipo] ?? esc(x.tipo))}<span class="hg-mono">${alvoDaAcao(x, n)}</span><span class="hg-apagado hg-mono">${haQuanto(Date.now() - Date.parse(x.em))}</span></li>`).join('')}</ul>` : vazio('Nenhuma nos últimos 15 minutos.')}

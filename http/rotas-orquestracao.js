@@ -13,9 +13,10 @@ import { RotasOrqPlay } from './rotas-orq-play.js';
 import { RotasOrqZelador } from './rotas-orq-zelador.js';
 import { RotasOrqNativo } from './rotas-orq-nativo.js';
 import { RotasOrqVoz } from './rotas-orq-voz.js';
+import { RotasOrqReservas } from './rotas-orq-reservas.js';
 
 export class RotasOrquestracao {
-  constructor({ resposta, orquestracao, triagemDev, lerConsumo, lerDiarioFrota, estadoPlay, apiPlay, estadoZelador, liberacaoNativa, apiFrota, apiHandoff, apiGate, apiDespacho, apiNativo, apiVoz, xai }) {
+  constructor({ resposta, orquestracao, triagemDev, lerConsumo, lerDiarioFrota, estadoPlay, apiPlay, estadoZelador, liberacaoNativa, apiFrota, apiHandoff, apiGate, apiDespacho, apiNativo, apiVoz, xai, apiReservas }) {
     this.resposta = resposta;
     this.fila = new RotasOrqFila({ resposta, orquestracao });
     this.triagem = new RotasOrqTriagem({ resposta, triagemDev });
@@ -30,11 +31,12 @@ export class RotasOrquestracao {
     this.zelador = new RotasOrqZelador({ resposta, estadoZelador });
     this.nativo = new RotasOrqNativo({ resposta, liberacaoNativa, apiNativo });
     this.voz = new RotasOrqVoz({ resposta, apiVoz, xai });
+    this.reservas = new RotasOrqReservas({ resposta, apiReservas });
   }
 
   async tentar(req, res, url) {
     if (!url.pathname.startsWith('/api/orquestracao')) return false;
-    for (const grupo of [this.fila, this.triagem, this.canal, this.frota, this.handoff, this.gate, this.despacho, this.consumo, this.diario, this.play, this.zelador, this.nativo, this.voz]) {
+    for (const grupo of [this.fila, this.triagem, this.canal, this.frota, this.handoff, this.gate, this.despacho, this.consumo, this.diario, this.play, this.zelador, this.nativo, this.voz, this.reservas]) {
       if (await grupo.tentar(req, res, url)) return true;
     }
     const soPost = /\/(preparar|confirmar|simular|transcrever)$/.test(url.pathname);

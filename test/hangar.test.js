@@ -75,7 +75,7 @@ test('Codex: arquivo do apply_patch, programa do cmd, guardian marcado como sub-
   assert.equal(sessaoCodex([{ type: 'session_meta', payload: { source: { subagent: { other: 'guardian' } } } }], { raiz }).subagente, true);
 });
 
-function cenario({ processos = ['claude'], transcripts = () => ({}) } = {}) {
+function cenario({ processos = ['claude'], transcripts = () => ({}), reservas = [] } = {}) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'hangar-'));
   const raiz = path.join(base, 'Work');
   for (const d of ['ProjetosPessoais/alfa/src', 'ProjetosPessoais/licoes-vivas', 'Exitlag/x']) fs.mkdirSync(path.join(raiz, d), { recursive: true });
@@ -100,6 +100,7 @@ function cenario({ processos = ['claude'], transcripts = () => ({}) } = {}) {
       projetos: [{ pasta: 'alfa', area: 'ProjetosPessoais', plane: UUID_PRJ, sigla: 'ALFA' }, { pasta: 'beta', area: 'ProjetosPessoais', plane: UUID_BETA, sigla: 'BETA' }],
       acervo: fontesAcervo({ raiz, casa: path.join(base, 'casa') }),
       agora,
+      lerReservas: async () => reservas,
     }),
   };
 }
@@ -366,4 +367,18 @@ test('sessão: a última carta vista fica com a sessão quando sai da cauda', as
   fs.writeFileSync(arq, `${JSON.stringify(assistente(5, [{ type: 'tool_use', name: 'Bash', input: { command: 'ls -la' } }], 'tool_use', path.join(c.raiz, 'ProjetosPessoais/alfa')))}\n`);
   const [s] = (await c.ler(AGORA)).sessoes;
   assert.deepEqual([s.cartao, s.acoes.map((a) => a.programa)], ['ALFA-5', ['ls']]);
+});
+
+test('item 9: a carta reservada pela sessão vence a inferida pelo comando; sessão viva sem reserva diz "sem reserva"', async () => {
+  const transcripts = () => ({
+    'slug/s1.jsonl': [assistente(20, [{ type: 'tool_use', name: 'mcp__plane__update_issue', input: { project_id: UUID_PRJ, issue_id: UUID_CARTA } }])],
+    'slug/s2.jsonl': [assistente(10, [{ type: 'tool_use', name: 'Bash', input: { command: 'ls' } }])],
+  });
+  const reservas = [{ carta: 'ALFA-7', sessao: 's1', quem: 'CLAUDE_CODE', desde: em(30), validaAte: em(-3600), viva: true }];
+  const { sessoes } = await cenario({ transcripts, reservas }).ler(AGORA);
+  const [s1, s2] = sessoes;
+  assert.deepEqual([s1.id, s1.cartao, s1.reserva?.carta], ['s1', 'ALFA-7', 'ALFA-7']);
+  assert.deepEqual([s2.id, s2.reserva], ['s2', null]);
+  const semReserva = (await cenario({ transcripts }).ler(AGORA)).sessoes[0];
+  assert.deepEqual([semReserva.cartao, semReserva.reserva], [UUID_CARTA, null], 'sem reserva, a inferência continua');
 });

@@ -34,6 +34,6 @@ export class ChecagemDespacho {
       : path.join(this.s.raiz, projeto.pasta, projeto.subRepo ?? '');
     await this.s.executor.validar({ pasta, contrato, comando, plano, carta: item });
     return { carta: item.identificador, cartaId, projetoId: item.projetoId, versaoCarta,
-      comandoId, comando, plano, contrato, gate: item.gate, frota, perfilAntigo: item.perfilAntigo ?? null, pasta };
+      comandoId, comando, plano, contrato, gate: item.gate, origemGate: item.origemGate ?? null, frota, perfilAntigo: item.perfilAntigo ?? null, pasta };
   }
 }

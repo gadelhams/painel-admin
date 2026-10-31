@@ -163,6 +163,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-orq-handoff.js` — Preparar e confirmar o handoff. Não lista o canal.
 - `rotas-orq-nativo.js` — Estado e alternância da liberação do jogo nativo. A leitura é aberta: é ela que o pré-flight nativo consulta.
 - `rotas-orq-play.js` — Estado e alternância do play por nave. A leitura é aberta e não diz quem ligou.
+- `rotas-orq-reservas.js` — Reserva de carta por sessão (/api/orquestracao/reservas): GET resolve SIGLA-N e diz se há reserva viva; POST comenta RESERVA/v1 na carta. A recusa (sem SSO, só o agente local) mora em orquestrador/reserva-servico.js.
 - `rotas-orq-triagem.js` — Triagem das folhas sem gate. Não altera etiqueta.
 - `rotas-orq-voz.js` — Presença da chave e a transcrição. A síntese mora em rotas-voz.js.
 - `rotas-orq-zelador.js` — Estado do zelador do Hangar: job em curso, o diário estruturado e o fim do último job por projeto. Só leitura.
@@ -225,7 +226,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `contrato-local.js` — Contrato local `.orquestrador.json` de um projeto do catálogo.
 - `contrato-politica.js` — Gramática do contrato opt-in: o que o projeto permite executar.
 - `dependencias-carta.js` — Junta a relação formal do Plane com o que a carta declara no texto.
-- `dependencias-worktree.js` — Instalação do worktree quando há lock e faltam os módulos. Sem scripts de pacote.
+- `dependencias-worktree.js` — Instalação do worktree: a raiz e cada subpasta do `instalarEm` do contrato que tem lock e ainda não tem os módulos. Sem scripts de pacote.
 - `desafio-duas-acoes.js` — Esqueleto das duas ações privilegiadas: preparar guarda um desafio, confirmar o executa uma vez. Não sabe o que valida nem o que grava.
 - `despacho-servico.js` — Junta a checagem e a tentativa real. A prévia sem lease mora em simulacao-despacho.js.
 - `diario-frota.js` — Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho, diários da vigília e, desde a F3, os três últimos dias do diário do zelador).
@@ -233,10 +234,11 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `erro-acesso.js` — Erro das ações privilegiadas. Não decide quem entra.
 - `escritor-gate-plane.js` — Grava a etiqueta depois do comentário. O texto GATE/v1 mora em protocolo-gate.js.
 - `escritor-handoff-plane.js` — Grava o comentário de handoff. O texto HANDOFF/v1 mora em protocolo-handoff.js.
+- `escritor-reserva-plane.js` — Grava o comentário RESERVA/v1 (ou a liberação) na carta, pela identidade técnica do projeto. O texto mora em reserva-servico.js.
 - `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
 - `estado-carta.js` — Troca o grupo de estado de uma carta. Não escolhe modelo nem registra perfil.
 - `estado-plane.js` — Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e In Progress → Done quando a tentativa de teste é aprovada.
-- `estado.js` — Recupera lease e diário depois de uma queda. Cada formato mora no módulo ao lado.
+- `estado.js` — Recupera lease e diário depois de uma queda; uma tentativa por vez no Hangar inteiro (J51). Cada formato mora no módulo ao lado.
 - `executor-cli.js` — Sequência da tentativa: isola, instala, pede os três papéis, roda o aceite e fecha o veredito.
 - `fila-leitura.js` — Junta as cartas do Plane com o contrato local. O julgamento mora em carta-da-fila.js.
 - `fila.js` — Porta da fila. A leitura, o despacho, o gate, o handoff, o perfil e o estado em disco moram nos módulos ao lado.
@@ -251,6 +253,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `gramatica-cli.js` — Gramática estática do scripts.test e dos scripts do contrato. Não prova que o conteúdo é seguro.
 - `handoff-plane.js` — Entrada do handoff no card. O texto mora em protocolo-handoff.js e a escrita em escritor-handoff-plane.js.
 - `handoff-servico.js` — Handoff no card. Texto e voz não autorizam execução.
+- `identidades-escrita.js` — Identidades técnicas de escrita por projeto, a partir do catálogo (`identidadeEscrita` em projetos.js), e a conferência delas no arranque (J56). Não escreve no Plane.
 - `interacao-canal.js` — Forma de um comentário do card: texto visível e o cabeçalho ORQ/v1.
 - `isolamento-git.js` — Worktree e commit do ramo orq/. A árvore principal do projeto não é tocada.
 - `leitor-jsonl.js` — Leitura e acréscimo de um diário JSONL. A última linha sem quebra pode ser escrita interrompida: fica de fora e é sinalizada.
@@ -260,6 +263,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `origem-privilegiada.js` — Recusa POST privilegiado que não venha da própria borda. Não olha o cookie.
 - `papel-cli.js` — Lança um papel de IA. Os argumentos moram em argumentos-cli.js; o retrato, em retrato-cli.js.
 - `passo-vigilia.js` — Um projeto ligado: escolhe a carta, despacha com a frota e avança o gate.
+- `peer-loopback.js` — O processo do outro lado de uma conexão TCP de loopback, pelo /proc (tabela de sockets + descritores). Só leitura; não decide nada.
 - `play.js` — Play por nave: o dono libera a frota para um projeto (zeladoria hoje, despacho pela vigília); presença em play.json = ligado. Não varre nem despacha.
 - `politica.js` — Porta da política da orquestração. Contrato, vigília e prontidão moram nos módulos ao lado.
 - `preavaliacao-gate.js` — Pré-checagem só-leitura do gate. A marcação mora em registro-gate.js.
@@ -267,11 +271,14 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `prontidao-despacho.js` — Pode despachar esta carta. Marcar gate continua em prontidao-gate.js.
 - `prontidao-gate.js` — Pode marcar este gate. Não autoriza despacho.
 - `prontidao.js` — Os dois julgamentos da carta. Quem importa daqui recebe as mesmas funções.
-- `protocolo-gate.js` — Texto GATE/v1: valida a proposta, codifica o comentário e lê a evidência.
+- `protocolo-gate.js` — Texto GATE/v1: valida a proposta, codifica o comentário e lê a evidência (recibo endurecido: J54, J74).
 - `protocolo-handoff.js` — Texto HANDOFF: valida a entrada, codifica o comentário (v2) e lê o card (v1 legado e v2).
 - `protocolo-perfil.js` — Leitura do texto PERFIL-IA/v1 legado. Não grava: desde a F2 da frota (29/10/2026) o perfil por carta não vincula nada.
+- `recibo-gate.js` — Amarra o recibo GATE/v1 à instância ATUAL da etiqueta pelas atividades da carta (J55). Só leitura; não decide elegibilidade além do recibo.
 - `registro-gate.js` — Marcação do gate no card. A pré-checagem só-leitura mora em preavaliacao-gate.js.
 - `relacoes-formais.js` — Relações formais do Plane: blocked_by, start_after e finish_after. Não lê o texto da carta.
+- `reserva-servico.js` — O lado do painel da reserva de carta: resolve SIGLA-N, confere quem pede pelo /proc e comenta RESERVA/v1 na carta pela identidade técnica do projeto. O lease local é do script (reservas.js).
+- `reservas.js` — Reserva de carta por sessão (PAINEL-54, item 9: "como evitar double work?"): um lease local por carta, a consulta "reservada por outra sessão viva?" e o mapa pid → CLI. Porta: o script, a vigília, o despacho, a mesa, o zelador e o Hangar leem daqui. Não escreve no Plane.
 - `resumo-carta.js` — Resumo da carta para a aba: o estado que a descrição declara (compactação do fio, PADROES-BACKLOG.md), o último handoff e gate, e o tamanho do fio.
 - `resumo-fila.js` — Conta cartas por projeto e fecha o envelope da fila. Não julga a carta.
 - `retrato-cli.js` — Retrato do que a CLI devolveu e a causa de uma falha (carta, cli ou limite). Os argumentos moram em argumentos-cli.js.
@@ -421,6 +428,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `check-docs.mjs` — check-docs v1.5 (02/10/2026; v1 de 30/09) — portão de documentação do padrão de contexto por tarefa (~/Work/PADROES-CONTEXTO.md).
 - `mapa-modulos.mjs` — Gera docs/mapa.md a partir do cabeçalho de cada módulo e avisa módulo grande. Não edita módulo nenhum.
 - `reflexao-noturna.mjs` — Entrada do timer `painel-reflexao.timer` (03:30): liga a reflexão noturna do C-3PO à frota real e ao diretório de estado do painel, e sai 0 em todo resultado previsto. Não decide nada.
+- `reservar.mjs` — Reserva (ou solta) uma carta do Plane para a sessão que o roda: `node reservar.mjs SIGLA-N [--soltar]`, de qualquer pasta. Não trabalha na carta nem a fecha.
 
 ## test/
 
@@ -442,11 +450,13 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `fluxo-sse.test.js`
 - `fronteira-http.test.js` — Fronteira HTTP do painel MONTADO (PAINEL-17): o handler de produção de montagem.js atrás de um http.Server de verdade numa porta efêmera, atacado por requisição real.
 - `fronteiras-modulos.test.js` — Portão das fronteiras entre áreas (padroes/modulos.md, regra 14; PAINEL-55): lê os `import` de todo módulo fora de test/ e e2e/ e recusa os que pulam a porta de outra área.
+- `frota-f4a.test.js` — F4a da frota (PAINEL-54): uma tentativa por vez no disco (J51), recibo GATE/v1 endurecido (J54, J55, J74), origem no HANDOFF (J70), `instalarEm` (item 7) e a reserva de carta vista pela vigília e pelo despacho (item 9).
 - `frota.test.js` — Frota (F2, 29/10/2026): catálogo fechado, dois blocos, estado explícito na leitura, troca por duas ações com versão-base e histórico só de acréscimo.
 - `gate-plane.test.js`
 - `guarda.test.js`
 - `handoff-plane.test.js`
 - `hangar.test.js` — Hangar: sessões vivas (/proc e transcripts falsos em pasta temporária) e naves sobre backlog falso. Nada real é lido.
+- `identidades-escrita.test.js` — J56 (F4a): identidades de escrita pelo catálogo — ator fixo, chave em arquivo 600 lida por operação, conferência de arranque (/users/me, papel Member, chaves e atores distintos) e desligamento só da identidade divergente.
 - `identidades-projeto.test.js`
 - `leitura-pesada.test.js` — Leituras pesadas do C-3PO: uma de cada vez, a mesma em curso é compartilhada, vale 2 min e falha não fica guardada.
 - `liberacao-nativa.test.js` — Liberação do jogo nativo (PAINEL-59): prazo que vence sozinho, só projetos com jogo nativo no catálogo, arquivo estranho conta como desligado e a troca só por duas ações.
@@ -464,6 +474,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `protocolo-ui.test.js`
 - `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
 - `reflexao.test.js` — Reflexão noturna (PAINEL-9) com CLI falsa: aplica com histórico; apagar demais vira pendente; segredo recusa; frota não ok recusa sem chamar a CLI; a segunda execução da mesma data não faz nada; sem insumo sai sem CLI.
+- `reservas.test.js` — Item 9 da F4 (dono, 31/10/2026: "como evitar double work?"): reserva de carta por sessão — o lease local, a rota sem SSO (loopback + processo conferido no /proc), o comentário RESERVA/v1, a mesa e o droid do Hangar.
 - `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo painel MONTADO de produção (montagem.js, PAINEL-17): guarda, famílias, autorizador SSO e APIs de duas ações de verdade; só as portas externas (ssh, Plane, SSO, LLM, voz, CLI, coletores) são espiões.
 - `sessao-painel.test.js` — Selo de sessão do cabeçalho (31/10/2026): diz de quem é a sessão SSO sem autorizar nada.
 - `sessao-voz.test.js`
@@ -475,6 +486,10 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.
 - `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.
 - `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.
+
+## test/fixtures/
+
+- `recibo-gate.js` — Recibo GATE/v1 e atividade de etiqueta no formato que o Plane real devolve (F4a: J54, J55, J74), para os Planes falsos dos testes.
 
 ## test/fixtures/canal-legado/
 

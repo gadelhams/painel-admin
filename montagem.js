@@ -25,6 +25,12 @@ import { criarApiFrota, criarConfirmacoesFrota } from './orquestrador/api-frota.
 import { criarApiNativo, criarConfirmacoesNativo } from './orquestrador/api-nativo.js';
 import { LiberacaoNativa } from './orquestrador/liberacao-nativa.js';
 import { criarEscritorHandoffPlane } from './orquestrador/handoff-plane.js';
+import { montarIdentidadesEscrita, lerChaveArquivo, DIRETORIO_CHAVES } from './orquestrador/identidades-escrita.js';
+import { ReservasCarta, sessaoAncestral } from './orquestrador/reservas.js';
+import { ReservaServico, recusarReservadaNaMesa } from './orquestrador/reserva-servico.js';
+import { pidDoCliente } from './orquestrador/peer-loopback.js';
+import { criarEscritorReservaPlane } from './orquestrador/escritor-reserva-plane.js';
+import { ZELADOR_ATOR } from './orquestrador/zelador-politica.js';
 import { criarApiHandoff, criarConfirmacoesHandoff } from './orquestrador/api-handoff.js';
 import { criarApiVoz, criarTranscritorXai } from './orquestrador/voz-xai.js';
 import { ProxyElevenLabs } from './orquestrador/voz-eleven.js';
@@ -78,36 +84,6 @@ const MAX_MENSAGEM = 8_000;
 const inteiroEntre = (valor, min, max, padrao) => { const n = Number(valor); return Number.isInteger(n) && n >= min && n <= max ? n : padrao; };
 const COLETORES = { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes };
 
-// Cada identidade só escreve no projeto explicitamente autorizado. Guest
-// continua exclusivamente de leitura; uma configuração parcial falha fechada.
-function identidadesDeEscrita(ambiente, proprietarioId, fetchPlane, log) {
-  const identidades = {};
-  const chavesUsadas = new Set([ambiente.PLANE_API_KEY?.trim()]);
-  for (const { sufixo, pasta } of [{ sufixo: '', pasta: 'CK3BannerLord' },
-    { sufixo: 'PLAYER_', pasta: 'PlayerForM3UList' }]) {
-    const chave = ambiente[`PLANE_ORQ_${sufixo}WRITE_KEY`]?.trim();
-    const projetoId = ambiente[`PLANE_ORQ_${sufixo}WRITE_PROJECT_ID`]?.trim();
-    const autorId = ambiente[`PLANE_ORQ_${sufixo}WRITE_ACTOR_ID`]?.trim();
-    if (!chave && !projetoId && !autorId) continue;
-    if (!chave || chavesUsadas.has(chave) || projetoId !== PROJETOS.find(p => p.pasta === pasta)?.plane ||
-        !/^[0-9a-f-]{36}$/i.test(autorId ?? '') || !/^[1-9]\d{0,9}$/.test(proprietarioId ?? '')) {
-      log(`[orquestracao] identidade ${pasta} inválida; escrita desativada para o projeto`);
-      continue;
-    }
-    const opcoes = { chave, projetoPermitido: projetoId, autorEsperado: autorId, ...(fetchPlane ? { fetchImpl: fetchPlane } : {}) };
-    try {
-      identidades[projetoId] = {
-        autorEscrita: autorId,
-        escritorHandoff: criarEscritorHandoffPlane(opcoes),
-        escritorGate: criarEscritorGatePlane(opcoes),
-        escritorEstado: criarEscritorEstadoPlane(opcoes),
-      };
-      chavesUsadas.add(chave);
-    } catch { log(`[orquestracao] identidade ${pasta} inválida; escrita desativada para o projeto`); }
-  }
-  return identidades;
-}
-
 /**
  * externos (todas opcionais; ausente = a dependência real):
  * - executarSsh(args, stdin): o ssh do CadastroUnico (Contas, SSO, Chaves);
@@ -120,12 +96,15 @@ function identidadesDeEscrita(ambiente, proprietarioId, fetchPlane, log) {
  * - ocupacaoSessoes, executarGit, arquivoChaveZelador, cliZelador: o leitor estrito de sessões,
  *   o git só-leitura, o arquivo 600 da chave e a CLI do zelador (F3).
  * - arquivoChaveAdmin: o arquivo 600 da chave do Painel Admin (mesa de decisão).
+ * - diretorioChaves: onde moram os `orquestrador-<sigla>.token` das identidades do catálogo (J56).
+ * - pidDoCliente, sessaoAncestral: o /proc da rota de reserva (o processo do socket e a CLI dele).
  */
 export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEstado = DIRETORIO_ESTADO,
   publico = PUBLICO, externos = {}, log = console.error } = {}) {
   const { executarSsh, leituraSsh, sso = {}, fetchPlane, consultarPlane, conversar = conversarReal,
     transcrever, fetchVoz, spawnCli, coletores = COLETORES, agora = Date.now, diretorioCodex,
-    ocupacaoSessoes = ocupacaoPorSessoes, executarGit, arquivoChaveZelador, cliZelador, arquivoChaveAdmin } = externos;
+    ocupacaoSessoes = ocupacaoPorSessoes, executarGit, arquivoChaveZelador, cliZelador, arquivoChaveAdmin,
+    diretorioChaves = DIRETORIO_CHAVES, pidDoCliente: pidDoSocket = pidDoCliente, sessaoAncestral: sessaoDoPid = sessaoAncestral } = externos;
   const diretorioOrquestracao = path.join(diretorioEstado, 'orquestracao');
   const proprietarioId = ambiente.ORQ_OWNER_USER_ID?.trim();
   const verificar = sso.verificar ?? criarVerificadorCadastro({ executar: executarSsh });
@@ -146,8 +125,21 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       ...(spawnCli ? { spawn: spawnCli } : {}) })
     : null;
   if (execucaoHabilitada && !executor) log('[orquestracao] ORQ_EXECUCAO_HABILITADA sem PLANE_API_KEY: executor não construído');
-  const estadoOrquestracao = criarEstadoOrquestracao({ diretorio: diretorioOrquestracao });
-  const orquestracao = criarServicoOrquestracao({ identidadesEscrita: identidadesDeEscrita(ambiente, proprietarioId, fetchPlane, log),
+  // Reserva de carta por sessão (item 9): o lease mora em <estado>/reservas; a reserva da frota
+  // e a fila a consultam (carta reservada por sessão viva = ocupada, J67).
+  const reservas = new ReservasCarta({ diretorioEstado, agora });
+  const cartaReservada = id => reservas.ocupadaPorOutro(id);
+  const estadoOrquestracao = criarEstadoOrquestracao({ diretorio: diretorioOrquestracao, cartaReservada });
+  // Identidades de escrita pelo catálogo (J56): ator fixo, chave em arquivo 600 lida por operação,
+  // conferidas no iniciar(); divergência desliga só a identidade, com motivo na tela.
+  const escrita = montarIdentidadesEscrita({ projetos: PROJETOS, ambiente, proprietarioId, diretorio: diretorioChaves, log, agora,
+    fabricas: { handoff: criarEscritorHandoffPlane, gate: criarEscritorGatePlane, estado: criarEscritorEstadoPlane, reserva: criarEscritorReservaPlane },
+    ...(fetchPlane ? { fetchImpl: fetchPlane } : {}),
+    atoresReservados: { zelador: ZELADOR_ATOR, admin: ambiente.PLANE_ADMIN_ACTOR_ID?.trim() },
+    chavesReservadas: async () => ({
+      zelador: await lerChaveArquivo(arquivoChaveZelador ?? path.join(diretorioChaves, 'zelador.token')).catch(() => null),
+      admin: await lerChaveArquivo(arquivoChaveAdmin ?? path.join(diretorioChaves, 'painel-admin.token')).catch(() => null) }) });
+  const orquestracao = criarServicoOrquestracao({ identidadesEscrita: escrita.identidades, situacaoIdentidade: escrita.situacao, cartaReservada,
     executor, execucaoHabilitada: Boolean(executor), consultar: consultarPlane, agora, estado: estadoOrquestracao });
   // Play por nave (F3): o dono libera o projeto por SSO + duas ações; a vigília despacha e o
   // zelador limpa só nos projetos com play ligado, e só na instância que agenda (J52).
@@ -177,6 +169,8 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     const e = await play.estado({ atividade });
     return { ...e, projetos: e.projetos.map(p => ({ ...p, despacho: vigilia.situacao(p.projeto).motivoOciosa ?? null })) };
   };
+  const reservaServico = new ReservaServico({ consultar: consultarGuest, reservas, porta, log,
+    identidade: id => orquestracao.identidade(id), pidDoCliente: pidDoSocket, sessaoAncestral: sessaoDoPid });
   const autorizarPrivilegiado = criarAutorizador({ verificar, proprietarioId });
   const sessaoPainel = new SessaoPainel({ identificar, proprietarioId, agora });
   const liberacaoNativa = new LiberacaoNativa({ diretorio: diretorioOrquestracao, agora });
@@ -243,12 +237,14 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       apiNativo: confirmar(criarApiNativo, criarConfirmacoesNativo, { liberacao: liberacaoNativa }),
       apiVoz,
       xai: () => Boolean(ambiente.XAI_API_KEY),
+      // Sem SSO por decisão do contrato (é o agente local que reserva): loopback + processo no /proc.
+      apiReservas: (req, url, lerCorpo) => reservaServico.api(req, url, lerCorpo),
     }),
     alinhamento: new RotasAlinhamento({ resposta, alinhamento }),
     chaves: new RotasChaves({ resposta, chaves, apiChaves: confirmar(criarApiChaves, criarConfirmacoesChaves, { servico: chaves }) }),
     acoes: new RotasAcoes({ resposta, apiAcoes }),
     decisao: new RotasDecisao({ resposta, servico: mesa.servico, log,
-      apiDecisao: criarApiDecisao({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.confirmacoes }),
+      apiDecisao: criarApiDecisao({ autorizar: autorizarPrivilegiado, confirmacoes: recusarReservadaNaMesa(mesa.confirmacoes, reservaServico) }),
       apiRetomada: criarApiRetomada({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.retomada }) }),
     memoria: new RotasMemoria({ resposta, apiMemoria, lerEstado: () => estadoMemoria(memoria) }),
   });
@@ -260,6 +256,10 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       // Lease deixado por queda entre RESULTADO e sua remoção é reconciliado no arranque
       // (só metadado local; lease ainda válido de outro processo nunca é tomado).
       orquestracao.recuperarInterrupcoes().catch(e => log('[orquestracao] reconciliação no arranque falhou:', e.message));
+      // Conferência das identidades no arranque e a cada 15 min (chave trocada, Plane que voltou).
+      const conferirIdentidades = () => escrita.conferir().catch(e => log('[orquestracao] conferência das identidades falhou:', e.message));
+      conferirIdentidades();
+      setInterval(conferirIdentidades, 15 * 60_000).unref?.();
       // A migração do toggle antigo vem antes de qualquer agendamento (resposta à P2).
       play.migrar().catch(e => log('[play] migração do toggle da vigília falhou:', e.message))
         .then(() => instancia.tomar())

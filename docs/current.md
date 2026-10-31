@@ -16,15 +16,17 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   [arquitetura.md](arquitetura.md) § Hangar.
 - Abas: Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs.
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
-  identidade técnica (CKBL, PLAYER) por SSO + duas ações —
+  identidade técnica do catálogo por SSO + duas ações —
   [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md).
 - Executor **ligado** (29/10): cada despacho por SSO + duas ações. Play por
   nave: todos desligados; agenda só com `ORQ_AGENDADOR` na unit (falta pôr).
 
 ## Feito em 31/10 e o que falta
 
-- **Frota**: F2 e F3 feitas (play por nave, zelador de limpeza); falta a F4,
-  puxar ([plano](plano-frota-do-hangar.md)). Piloto PAINEL-34 passou (PLAYER-38).
+- **Frota**: F2, F3 e F4a feitas (play, zelador, uma tentativa por vez no
+  disco, recibo amarrado à etiqueta, identidades no catálogo, reserva de carta
+  por `scripts/reservar.mjs`); falta a F4b, puxar
+  ([plano](plano-frota-do-hangar.md)). Piloto PAINEL-34 passou (PLAYER-38).
 - **C-3PO**: lê ssh e git e só propõe rodar a suíte (cartão, SSO); mesa de
   decisão grava como Painel Admin por SSO ([plano](plano-mesa-de-decisao.md)).
 - **Hangar**: encomenda de nave por SSO; o orquestrador atende à mão

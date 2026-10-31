@@ -9,6 +9,7 @@ import { fontesAcervo, setorDoCaminho } from './acervo.js';
 import { lerCabeca, lerCauda } from './transcript-cauda.js';
 import { sessaoClaude } from './transcript-claude.js';
 import { sessaoCodex } from './transcript-codex.js';
+import { ReservasCarta } from '../orquestrador/reservas.js';
 
 export const JANELA_MS = 15 * 60_000;
 const TRABALHANDO_MS = 30_000;
@@ -89,7 +90,16 @@ function estadoDoDroid(sessao, agora) {
   return 'ocioso';
 }
 
-function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
+const QUEM_DA_IA = { claude: 'CLAUDE_CODE', codex: 'CODEX' };
+
+// A reserva da sessão (scripts/reservar.mjs): pelo id da sessão que o Claude Code exporta; sem
+// ele (Codex), pela mesma CLI na mesma pasta. Só reserva viva conta.
+function reservaDaSessao(reservas, { ia, id, cwd }) {
+  return reservas.find((r) => r.sessao && r.sessao === id)
+    ?? reservas.find((r) => !r.sessao && r.quem === QUEM_DA_IA[ia] && r.pasta && r.pasta === cwd) ?? null;
+}
+
+function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo, reservas = [] }) {
   if (!bruta.ultimoEm || bruta.subagente || atribuidor.ehExitlag(bruta.cwd)) return null;
   // O mtime não basta: a CLI regrava metadados (título, modo) sem timestamp em sessão parada há horas.
   if (agora - Date.parse(bruta.ultimoEm) > JANELA_MS) return null;
@@ -140,7 +150,9 @@ function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
     if (carta) saida.itemPlane = carta;
     acoes.push(saida);
   }
-  const cartao = ultimo(cartaDe);
+  // A carta reservada vence a inferida pelo comando (item 9); sessão viva sem reserva diz isso.
+  const reserva = reservaDaSessao(reservas, { ia, id, cwd: bruta.cwd });
+  const cartao = reserva?.carta ?? ultimo(cartaDe);
 
   return {
     id,
@@ -149,6 +161,7 @@ function projetar(bruta, { ia, id, agora, raiz, atribuidor, acervo }) {
     estado: estadoDoDroid(bruta, agora),
     desde: bruta.ultimoEm,
     cartao,
+    reserva: reserva ? { carta: reserva.carta, desde: reserva.desde, validaAte: reserva.validaAte } : null,
     acoes: acoes.slice(-MAX_ACOES),
   };
 }
@@ -171,6 +184,7 @@ const cartaVista = new Map();
 const MAX_CARTAS_VISTAS = 256;
 
 function lembrarCarta(chave, sessao) {
+  if (sessao.reserva) return;
   if (!sessao.cartao) {
     sessao.cartao = cartaVista.get(chave) ?? null;
     return;
@@ -188,11 +202,14 @@ export async function lerSessoes({
   projetos = PROJETOS,
   acervo = fontesAcervo({ raiz }),
   agora = Date.now(),
+  lerReservas = async () => (await new ReservasCarta().todas()).filter((r) => r.viva),
 } = {}) {
   const vivas = await iasVivas(raizProc);
   const desde = agora - JANELA_MS;
   const atribuidor = criarAtribuidor({ raiz, projetos });
-  const contexto = { agora, raiz, atribuidor, acervo };
+  // Reservas ilegíveis não derrubam o Hangar: o droid fica com a carta inferida.
+  const reservas = await lerReservas().catch(() => []);
+  const contexto = { agora, raiz, atribuidor, acervo, reservas };
   // Lista branca do SIGLA-N citado em comando: as siglas do mesmo catálogo que atribui os projetos.
   const siglas = new Set(projetos.map((p) => p.sigla).filter(Boolean));
   const sessoes = [];

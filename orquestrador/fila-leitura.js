@@ -32,7 +32,7 @@ export class FilaLeitura {
     })));
     itens.sort((a, b) => Number(b.elegivel) - Number(a.elegivel) || a.identificador.localeCompare(b.identificador, 'pt-BR', { numeric: true }));
     const podeExecutar = [...this.s.identidades.keys()].some(id => this.s.podeDespachar(id));
-    return ResumoFila.de({ itens, projetos, catalogo, podeExecutar,
+    return ResumoFila.de({ itens, projetos, catalogo, podeExecutar, identidade: id => this.s.situacaoIdentidade(id),
       frota: frotaLida ? { estado: frotaLida.estado, versao: frotaLida.versao ?? null, hash: frotaLida.hash ?? null, motivo: frotaLida.motivo ?? null } : null });
   }
 }

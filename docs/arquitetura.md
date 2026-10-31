@@ -185,6 +185,42 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
   diário da frota (`diario-frota.js`) e a ferramenta `diario_zelador` do C-3PO (`consulta-zelador.js`)
   leem o mesmo arquivo.
 
+**Puxar, F4a** (31/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md) § F4a feita).
+- **Uma tentativa por vez no disco** (J51, `estado.js`): `reservar`, sob a trava global, reconcilia
+  todo outro lease; ativo, ilegível ou em revisão com o grupo de processos gravado (`pgid`) ainda vivo
+  recusa "tentativa em curso em SIGLA-N", sem gravar nada (vale para a vigília e o despacho manual).
+  Cada filho do executor avisa o grupo (`ProcessoCli` `aoIniciar`, `detached`: pgid = pid) e a
+  tentativa o grava no lease (`marcarProcesso`); um filho órfão de uma queda segue ocupando.
+- **Recibo endurecido** (`protocolo-gate.js` `lerGatesDoCanal`, `recibo-gate.js`): `GATE/v1` só vale
+  com o cabeçalho `[ORQ/v1 papel=decisao]`, autor aceito, `external_source` da lista fechada
+  (`FONTES_GATE`: `orquestrador-gate-v1` → origem `dono`) e sem `edited_at` (J54, J74); o resto fica
+  de fora e é contado no motivo, sem derrubar a leitura. A última atividade que pôs a etiqueta atual
+  (`/activities/`, `field: labels`, `new_identifier` = id dela) tem de ser de autor aceito e posterior
+  a um recibo válido; atividade ilegível ou ausente = inelegível (J55).
+- **Identidades pelo catálogo** (J56, `identidades-escrita.js`): `identidadeEscrita: { arquivo, ator }`
+  em `projetos.js`, chave em `~/.config/plane/<arquivo>.token` (`^orquestrador-[a-z]+$`, 600, dono),
+  uma cópia por operação e só a que a conferência validou (hash). Conferência no `iniciar()` e a cada
+  15 min: `/users/me` = ator fixo, `member_role` 15 no projeto, workspace abaixo de Admin, chaves e
+  atores distintos de Guest, zelador, Painel Admin e dos outros orquestradores. Divergência desliga só
+  aquela identidade (motivo na fila e no seletor de projetos); Plane fora deixa pendente. CKBL e PLAYER
+  (`legadoEnv`) usam o `.env` até o arquivo existir.
+- **Origem no HANDOFF** (J70): `origemDespacho` (`dono` pela aba, `hangar` pela vigília) e `origemGate`
+  (da fonte do recibo) nos dois HANDOFF do despacho; o resumo da vigília não diz "confirmado pelo usuário".
+- **`instalarEm`** (item 7, `dependencias-worktree.js`): subpastas do contrato com lock próprio recebem
+  `npm ci --ignore-scripts`; caminho com `.`/`..`, absoluto ou link para fora do worktree recusa.
+- **Reserva de carta por sessão** (item 9, porta `reservas.js`; `scripts/reservar.mjs SIGLA-N
+  [--soltar]`): lease em `~/.local/state/painel-admin/reservas/<cartaId>.json` com a CLI ancestral
+  (`claude`/`codex`, ou o shell do humano), pid + início do processo (pid reaproveitado não herda),
+  validade 4 h renovada a cada reserva da mesma sessão; gravado e solto sob a trava da orquestração;
+  recusa reserva viva de outra sessão e lease da frota; morta ou vencida é tomada, com motivo em
+  `reservas.jsonl`. A fila marca a carta reservada impedida, a reserva da frota recusa sob a trava e a
+  mesa recusa no preparar (embrulho na montagem). `GET /api/orquestracao/reservas?carta=` resolve;
+  `POST` (sem SSO por decisão do contrato: quem reserva é o agente local) só do loopback, sem
+  cabeçalho de navegador, com o processo do socket achado no `/proc` (`peer-loopback.js`) descendente
+  de uma CLI cujo pid é o da reserva; comenta `RESERVA/v1` pela identidade técnica do projeto e põe
+  Backlog/Todo em In Progress (sem identidade: só o lease, com aviso). O droid do Hangar mostra a carta
+  reservada (pelo `CLAUDE_CODE_SESSION_ID`; Codex pela pasta) antes da inferida; sem reserva, diz isso.
+
 **Frota** (F2, 29/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md)).
 Uma configuração só, no lugar do perfil por carta: `frota-catalogo.js` (catálogo
 fechado no código, copiado do que cada CLI declara — 5 modelos Claude low…max e
@@ -990,7 +1026,9 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   o executor faz por ali é gastar cota da assinatura e deixar propostas que só o
   dono, com SSO, confirma.
 - **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` da identidade
-  Guest de leitura e, se habilitado, `PLANE_ORQ_WRITE_KEY` de serviço distinta;
+  Guest de leitura e, legado de CKBL e PLAYER até o arquivo existir, `PLANE_ORQ_WRITE_KEY` distinta;
+  as identidades de escrita do catálogo leem `~/.config/plane/orquestrador-<sigla>.token`, 600, por
+  operação, com o ator fixo conferido no arranque — `orquestrador/identidades-escrita.js`;
   coberto pelo `.gitignore`). A escrita de gate e handoff exige projeto único, SSO do
   Cadastro Único e confirmação separada; não amplia as ferramentas do C-3PO. **Exceção
   delimitada (F3, 31/10/2026): o escritor do zelador** vale para vários projetos, mas só os que

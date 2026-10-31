@@ -399,9 +399,9 @@ três papéis como CLIs descartáveis num worktree fora da árvore, comando de
 aceite do contrato sem shell, ambiente por lista branca, flags fixas de
 isolamento, timeout por grupo, `impedido` para infraestrutura. `montagem.js` só
 o constrói com `ORQ_EXECUCAO_HABILITADA=true`; a variável **não** está no
-`.env` — ligar é o "vai" do dono (PAINEL-34). Limitação registrada: a
-proveniência aceita recibo `GATE/v1` antigo para etiqueta removida e recolocada
-à mão; a correção exige ler as atividades do card e fica como pendência.
+`.env` — ligar é o "vai" do dono (PAINEL-34). Desde a F4a (31/10/2026, J55) o
+recibo `GATE/v1` vale só para a etiqueta que está na carta: a atividade que a pôs
+tem de ser do autor aceito e posterior ao recibo (`orquestrador/recibo-gate.js`).
 
 **Canal legado**: `orquestrador/canal-legado.js` + `SupervisorHandoff/scripts/estado_canal.py`
 (só leitura, sem fetch) mostram no tópico "Canal legado (doc 59)" o que o

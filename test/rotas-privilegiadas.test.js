@@ -24,6 +24,11 @@ const EXCECOES = new Map([
   ['POST /api/orquestracao/simular', 'prévia sem lease, processo ou escrita no Plane'],
   ['POST /api/conversa', 'roda pelo login da CLI (assinatura) com ferramentas só de leitura; aberto por decisão do dono (29/10/2026)'],
   ['POST /api/diagnostico/voz', 'telemetria do microfone no log local; não muda estado nem gasta API'],
+  // F4 item 9 (31/10/2026): sem SSO por decisão do contrato — quem reserva é o agente local, sem
+  // cookie. Fecha por Host/endereço de loopback, sem cabeçalho de navegador, e pelo processo do
+  // socket conferido no /proc como descendente de claude/codex; a prova própria está em
+  // test/reservas.test.js (a borda é recusada com 403 sem ler o corpo nem gravar estado).
+  ['POST /api/orquestracao/reservas', 'reserva de carta pelo agente local (scripts/reservar.mjs): loopback + processo conferido no /proc, sem SSO por decisão do contrato da F4'],
 ]);
 
 const exemplo = padrao => padrao.source.replace(/^\^\\\//, '/').replace(/\$$/, '').replaceAll('\\/', '/').replaceAll('([^/]+)', '1');
@@ -74,7 +79,7 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
     '/api/orquestracao/despacho/confirmar', '/api/orquestracao/play/preparar', '/api/orquestracao/play/confirmar', '/api/orquestracao/play', '/api/orquestracao/zelador', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites', '/api/acoes/preparar', '/api/acoes/confirmar',
     '/api/hangar/encomendas', '/api/hangar/encomendas/preparar', '/api/hangar/encomendas/confirmar',
     '/api/decisao/preparar', '/api/decisao/confirmar', '/api/decisao/retomada/preparar', '/api/decisao/retomada/confirmar', '/api/decisao/carta', '/api/decisao/pendentes',
-    '/api/c3po/memoria', '/api/c3po/memoria/preparar', '/api/c3po/memoria/confirmar']) {
+    '/api/c3po/memoria', '/api/c3po/memoria/preparar', '/api/c3po/memoria/confirmar', '/api/orquestracao/reservas']) {
     assert.ok(caminhos.includes(esperado), `a varredura precisa achar ${esperado}`);
   }
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');

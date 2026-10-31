@@ -16,9 +16,10 @@ const AREAS_COM_PORTA = ['alinhamento', 'chaves', 'coletores', 'contas', 'decisa
 // As primitivas de execução (processo sem shell, ambiente por lista branca) e o contrato local
 // são portas desde a fase 3 do C-3PO (31/10/2026): acoes/ e a leitura de git as reusam em vez de duplicar.
 // consulta-zelador.js (F3 da frota) é a leitura do diário do zelador que o C-3PO consome.
+// reservas.js (F4 item 9) é a reserva de carta por sessão: o Hangar a lê para o droid.
 const PORTAS_ORQUESTRADOR = new Set(['sso.js', 'fila.js', 'triagem.js', 'consulta-c3po.js',
   'api-duas-acoes.js', 'desafio-duas-acoes.js', 'leitor-jsonl.js', 'uuid.js',
-  'processo-cli.js', 'ambiente-cli.js', 'contrato-local.js', 'politica.js', 'consulta-zelador.js']);
+  'processo-cli.js', 'ambiente-cli.js', 'contrato-local.js', 'politica.js', 'consulta-zelador.js', 'reservas.js']);
 // Quem compõe (montagem.js) liga as peças internas de cada área — regra 7, "quem compõe não implementa".
 const COMPOSICAO = 'montagem.js';
 // O motor do C-3PO é só leitura até a fase 3 (invariante 4): nem o fecho dos seus imports alcança
@@ -26,7 +27,7 @@ const COMPOSICAO = 'montagem.js';
 const PROIBIDOS_AO_MOTOR = ['orquestrador/escritor-handoff-plane.js', 'orquestrador/escritor-gate-plane.js',
   'orquestrador/estado-plane.js', 'orquestrador/executor-cli.js', 'orquestrador/api-despacho.js', 'orquestrador/api-gate.js',
   'orquestrador/api-handoff.js', 'orquestrador/api-frota.js', 'orquestrador/escritor-zelador-plane.js', 'orquestrador/zelador-cli.js',
-  'orquestrador/zelador-aplicacao.js', 'orquestrador/api-play.js',
+  'orquestrador/zelador-aplicacao.js', 'orquestrador/api-play.js', 'orquestrador/escritor-reserva-plane.js', 'orquestrador/reserva-servico.js',
   // A porta encomendas.js reexporta só a leitura (PAINEL-50): quem grava fica fora do alcance do motor.
   'encomendas/registro-encomendas.js', 'encomendas/api-encomendas.js',
   // Mesa de decisão (PAINEL-53): o motor lê a carta pela porta decisao.js e nunca chega ao escritor Painel Admin.

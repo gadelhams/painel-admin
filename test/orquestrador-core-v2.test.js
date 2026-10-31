@@ -9,6 +9,7 @@ import { dependenciasDaCarta, criarServicoOrquestracao } from '../orquestrador/f
 import { argumentosModeloCli } from '../orquestrador/modelos.js';
 import { gravarFrota } from './fixtures/frota/frota.js';
 import { codificarGate } from '../orquestrador/gate-plane.js';
+import { reciboGate, etiqueta, atividadeEtiqueta } from './fixtures/recibo-gate.js';
 
 const PROJETO = 'c24e3d36-2e2a-4760-a3f3-53998297a245';
 const CARTA = 'd5b2f207-6076-4507-b85a-59ea9cfa56da';
@@ -235,14 +236,14 @@ test('fila integra Plane, contrato local e simulação sem executar', async () =
     const consultar = async url => {
       consultas.push(url);
       if (url.startsWith('/projects/?')) return { results: [{ id: PROJETO, name: 'painel admin', identifier: 'PAINEL' }] };
-      if (url.includes('/work-items/?')) return { results: [{ ...carta, name: 'Fazer algo', sequence_id: 99, project: PROJETO, parent: null, description_html: '<p>Sem dependências.</p>', updated_at: '2026-10-11T00:00:00Z' }] };
+      if (url.includes('/work-items/?')) return { results: [{ ...carta, labels: [etiqueta('READY TO DEV')], name: 'Fazer algo', sequence_id: 99, project: PROJETO, parent: null, description_html: '<p>Sem dependências.</p>', updated_at: '2026-10-11T00:00:00Z' }] };
       if (url.includes('/relations/')) return { blocked_by: [] };
       if (url.endsWith(`/${CARTA}/`)) return { id: CARTA };
-      if (url.includes('/comments/')) return { results: [{ id: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb', actor: AUTOR,
-        comment_html: codificarGate({ projetoId: PROJETO, cartaId: CARTA,
+      if (url.includes('/activities/')) return [atividadeEtiqueta({ nome: 'READY TO DEV', autor: AUTOR, quando: '2026-10-11T00:00:01Z' })];
+      if (url.includes('/comments/')) return { results: [reciboGate({ autor: AUTOR, quando: '2026-10-11T00:00:00Z', projetoId: PROJETO, cartaId: CARTA,
           chaveIdempotencia: 'cccccccc-cccc-4ccc-cccc-cccccccccccc', versaoCarta: '2026-10-11T00:00:00Z',
           gate: 'READY TO DEV', justificativa: 'Trabalho revisado para desenvolvimento.',
-          evidencias: ['Escopo definido e sem dependências formais.'] }) }], next_page_results: false };
+          evidencias: ['Escopo definido e sem dependências formais.'] })], next_page_results: false };
       throw new Error(`consulta inesperada ${url}`);
     };
     const estado = criarEstadoOrquestracao({ diretorio: path.join(raiz, 'estado') });

@@ -14,7 +14,9 @@ class ListaFila {
     const anterior = select.value;
     select.replaceChildren(new Option('Todos', ''));
     for (const p of this.n.estado.fila.projetos) {
-      const opcao = new Option(`${p.nome} · ${p.candidatas}/${p.cartas}${p.acessivel ? '' : ' · sem acesso'}`, p.id);
+      // J56: identidade desligada aparece com o motivo, para o dono saber por que nada despacha.
+      const id = p.identidade && p.identidade.estado !== 'ok' ? ` · identidade ${p.identidade.estado}: ${p.identidade.motivo ?? '?'}` : '';
+      const opcao = new Option(`${p.nome} · ${p.candidatas}/${p.cartas}${p.acessivel ? '' : ' · sem acesso'}${id}`, p.id);
       select.add(opcao);
     }
     select.value = anterior;

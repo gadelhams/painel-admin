@@ -11,6 +11,7 @@ import { ArquivoFrota } from '../orquestrador/frota.js';
 import { codificarGate } from '../orquestrador/gate-plane.js';
 import { criarConfirmacoesDespacho, criarApiDespacho } from '../orquestrador/api-despacho.js';
 import { ErroAcesso } from '../orquestrador/sso.js';
+import { reciboGate, etiqueta, atividadesDoCaminhoFeliz } from './fixtures/recibo-gate.js';
 
 const PROJETO = 'c24e3d36-2e2a-4760-a3f3-53998297a245';
 const CARTA = 'd5b2f207-6076-4507-b85a-59ea9cfa56da';
@@ -40,15 +41,16 @@ async function ambiente(executar, habilitado = true, { frota = FROTA_OPENAI, age
   }));
   const comentarios = [{ id: PERFIL, actor: AUTOR, created_at: VERSAO,
     comment_html: comentarioPerfil() },
-  { id: randomUUID(), actor: AUTOR, created_at: VERSAO,
-    comment_html: codificarGate({ projetoId: PROJETO, cartaId: CARTA, chaveIdempotencia: CHAVE_GATE,
-      versaoCarta: VERSAO, gate: 'READY TO DEV', justificativa: 'Escopo e dependências revisados.',
-      evidencias: ['Sem dependências formais, declarado na carta.'] }) }];
+  reciboGate({ autor: AUTOR, quando: VERSAO, projetoId: PROJETO, cartaId: CARTA, chaveIdempotencia: CHAVE_GATE,
+    versaoCarta: VERSAO, gate: 'READY TO DEV', justificativa: 'Escopo e dependências revisados.',
+    evidencias: ['Sem dependências formais, declarado na carta.'] })];
+  const carta = () => ({ id: CARTA, sequence_id: 99, name: 'Trabalho', parent: null,
+    state: { name: 'Todo', group: 'unstarted' }, labels: [etiqueta('READY TO DEV')],
+    description_html: '<p>Sem dependências.</p>', updated_at: versaoAtual });
   const consultar = async url => {
     if (url.startsWith('/projects/?')) return { results: [{ id: PROJETO, name: 'Painel', identifier: 'PAINEL' }] };
-    if (url.includes('/work-items/?')) return { results: [{ id: CARTA, sequence_id: 99, name: 'Trabalho', parent: null,
-      state: { name: 'Todo', group: 'unstarted' }, labels: [{ name: 'READY TO DEV' }],
-      description_html: '<p>Sem dependências.</p>', updated_at: versaoAtual }] };
+    if (url.includes('/work-items/?')) return { results: [carta()] };
+    if (url.includes('/activities/')) return { results: atividadesDoCaminhoFeliz(carta(), comentarios, AUTOR), next_page_results: false };
     if (url.includes('/relations/')) return { blocked_by: [] };
     if (url.includes('/comments/')) return { results: comentarios, next_page_results: false };
     if (url.endsWith(`/${CARTA}/`)) return { id: CARTA, updated_at: versaoAtual };
@@ -143,10 +145,10 @@ test('concorrência permite só uma tentativa; falha depois do lançamento conse
   const a = await ambiente(async () => { iniciadas++; await new Promise(r => { liberar = r; });
     throw Error('resultado do executor incerto'); });
   try {
-    const primeira = a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO,
+    const primeira = a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO, origemDespacho: 'dono',
       ...a.frotaPedido, chaveIdempotencia: randomUUID(), usuarioId: '7' });
     while (!liberar) await new Promise(r => setTimeout(r, 5));
-    await assert.rejects(a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO,
+    await assert.rejects(a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO, origemDespacho: 'dono',
       ...a.frotaPedido, chaveIdempotencia: randomUUID(), usuarioId: '7' }), /lease ativo|carta impedida/);
     liberar();
     await assert.rejects(primeira, /incerto/);
@@ -161,7 +163,7 @@ test('repetição persistida não reexecuta depois de perder a confirmação em 
   const a = await ambiente(async () => { chamadas++; return { resultado: 'concluido',
     resumo: 'Testes concluídos.', evidencia: ['Teste falso passou'] }; });
   const chaveIdempotencia = randomUUID();
-  const pedido = { cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO,
+  const pedido = { cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO, origemDespacho: 'dono',
     ...a.frotaPedido, chaveIdempotencia, usuarioId: '7' };
   try {
     const primeira = await a.servico.iniciarDespacho(pedido);
@@ -211,7 +213,7 @@ test('J-A: troca de frota entre a checagem e a reserva recusa "frota mudou" sem 
     aoValidar: async (n) => { if (n === 1) await gravarFrota(path.join(a.raiz, 'estado'), FROTA_TROCADA()); },
   });
   try {
-    await assert.rejects(a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO,
+    await assert.rejects(a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO, origemDespacho: 'dono',
       ...a.frotaPedido, chaveIdempotencia: randomUUID(), usuarioId: '7' }), /frota mudou antes da reserva/);
     assert.equal(await a.estado.lerLease(CARTA), null);
     assert.equal((await a.estado.lerHistorico(CARTA)).filter(e => e.tipo === 'TENTATIVA').length, 0);
@@ -226,7 +228,7 @@ test('J3: troca de frota depois da reserva não muda os papéis e o HANDOFF grav
     aoValidar: async (n) => { if (n === 2) await gravarFrota(path.join(a.raiz, 'estado'), FROTA_TROCADA()); },
   });
   try {
-    const r = await a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO,
+    const r = await a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO, origemDespacho: 'dono',
       ...a.frotaPedido, chaveIdempotencia: randomUUID(), usuarioId: '7' });
     assert.equal(r.resultado, 'concluido');
     assert.equal(r.frotaVersao, 1);
@@ -275,7 +277,7 @@ test('J5: frota ausente, ilegível ou inválida bloqueia o despacho, sem cair pa
       await fs.mkdir(path.join(a.raiz, 'estado'), { recursive: true });
       await preparar(path.join(a.raiz, 'estado'));
       await assert.rejects(a.servico.validarDespacho(CARTA, 'testes', VERSAO), new RegExp(`frota ${nome}`), nome);
-      await assert.rejects(a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO,
+      await assert.rejects(a.servico.iniciarDespacho({ cartaId: CARTA, comandoId: 'testes', versaoCarta: VERSAO, origemDespacho: 'dono',
         frotaVersao: 1, frotaHash: 'a'.repeat(64), chaveIdempotencia: randomUUID(), usuarioId: '7' }), new RegExp(`frota ${nome}`));
       assert.equal(a.validacoes(), 0, `${nome}: executor nem validado`);
       assert.equal(chamadas, 0);

@@ -11,6 +11,10 @@ const MARCADOR_V1 = 'HANDOFF/v1 ';
 const MARCADOR = 'HANDOFF/v2 ';
 const PAPEIS = new Set(['orquestracao', 'desenvolvedor', 'validador']);
 const RESULTADOS = new Set(['proposta', 'em_andamento', 'concluido', 'impedido', 'rejeitado']);
+// J70: quem disparou a tentativa e de onde veio o gate que a liberou. Opcionais (o v2 de antes
+// não os tinha e continua legível); o despacho do executor sempre os grava.
+const ORIGENS_DESPACHO = new Set(['dono', 'hangar']);
+const ORIGENS_GATE = new Set(['dono', 'zelador']);
 const escapar = valor => String(valor).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -40,7 +44,7 @@ export function validarOrigemModelos(origem, { catalogo = true } = {}) {
     tuplas: Object.fromEntries(Object.entries(tuplas).map(([p, t]) => [p, { ...t }])) };
 }
 
-export function validarHandoff({ papel, tentativaId = null, resultado, evidencia, resumo, origemModelos }, { catalogo = true } = {}) {
+export function validarHandoff({ papel, tentativaId = null, resultado, evidencia, resumo, origemModelos, origemDespacho = null, origemGate = null }, { catalogo = true } = {}) {
   if (!PAPEIS.has(papel)) throw new Error('papel de handoff inválido');
   if (!RESULTADOS.has(resultado)) throw new Error('resultado de handoff inválido');
   if (papel !== 'orquestracao' && !UUID.test(tentativaId ?? '')) throw new Error('tentativa obrigatória para desenvolvedor ou validador');
@@ -48,8 +52,10 @@ export function validarHandoff({ papel, tentativaId = null, resultado, evidencia
   if (typeof resumo !== 'string' || resumo.trim().length < 10 || resumo.length > 2000) throw new Error('resumo de handoff inválido');
   if (!Array.isArray(evidencia) || !evidencia.length || evidencia.length > 10 || evidencia.some(x =>
     typeof x !== 'string' || x.trim().length < 5 || x.length > 500)) throw new Error('evidência de handoff obrigatória');
+  if (origemDespacho !== null && !ORIGENS_DESPACHO.has(origemDespacho)) throw new Error('origem do despacho inválida no handoff');
+  if (origemGate !== null && !ORIGENS_GATE.has(origemGate)) throw new Error('origem do gate inválida no handoff');
   return { papel, tentativaId, resultado, resumo: resumo.trim(), evidencia: evidencia.map(x => x.trim()),
-    origemModelos: validarOrigemModelos(origemModelos, { catalogo }) };
+    origemModelos: validarOrigemModelos(origemModelos, { catalogo }), origemDespacho, origemGate };
 }
 
 export function codificarHandoff({ projetoId, cartaId, chaveIdempotencia, versaoCarta, ...entrada }) {
@@ -61,7 +67,9 @@ export function codificarHandoff({ projetoId, cartaId, chaveIdempotencia, versao
   const tentativa = dados.tentativaId ? ` tentativa=${dados.tentativaId}` : '';
   const origem = dados.origemModelos.fonte === 'frota' ? `<p>Frota v${dados.origemModelos.versao}: ${Object.entries(dados.origemModelos.tuplas)
     .map(([p, t]) => `${escapar(p)} ${escapar(t.provedor)}/${escapar(t.modelo)}/${escapar(t.esforco)}`).join(' · ')}</p>` : '';
-  return `<p>[ORQ/v1 papel=${dados.papel}${tentativa}] ${MARCADOR}${codigo}</p><p>${escapar(dados.resumo)}</p>${origem}<ul>${dados.evidencia.map(x => `<li>${escapar(x)}</li>`).join('')}</ul>`;
+  const disparo = dados.origemDespacho || dados.origemGate
+    ? `<p>Despacho: ${escapar(dados.origemDespacho ?? '?')} · gate: ${escapar(dados.origemGate ?? '?')}</p>` : '';
+  return `<p>[ORQ/v1 papel=${dados.papel}${tentativa}] ${MARCADOR}${codigo}</p><p>${escapar(dados.resumo)}</p>${origem}${disparo}<ul>${dados.evidencia.map(x => `<li>${escapar(x)}</li>`).join('')}</ul>`;
 }
 
 function decodificar(e, { projetoId, cartaId }) {
