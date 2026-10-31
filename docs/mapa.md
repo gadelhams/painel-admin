@@ -346,6 +346,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 ## test/
 
 - `alinhamento.test.js` — Rotina de alinhamento com Plane, git e portão de docs FALSOS.
+- `briefings.test.js` — Piloto PAINEL-34 (31/10/2026): o briefing dizia que os únicos comandos eram os do contrato e "não rode comando".
 - `caminhos.test.js`
 - `chaves.test.js` — Tela Chaves: só nomes saem; valor só entra pela confirmação; escrita local atômica 0600; servidor por ssh falso com valor no stdin; portão SSO.
 - `consulta-c3po.test.js`

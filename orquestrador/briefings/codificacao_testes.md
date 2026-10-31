@@ -18,7 +18,10 @@ revisão humana. Nada aqui é publicado, implantado ou enviado a servidor algum.
 - Ambiente: {{ambiente}}
 - Critérios de aceite: {{criteriosAceite}}
 - Ações proibidas: {{acoesProibidas}}
-- Comandos permitidos — os ÚNICOS que você pode executar, exatamente assim: {{comandos}}
+- Comandos de execução permitidos — os ÚNICOS que testam, compilam ou rodam algo, exatamente assim: {{comandos}}
+  Ler não é executar: para ler e navegar use as ferramentas de leitura da sua CLI (Read/Grep, ou no shell
+  `cat`, `sed -n`, `head`, `rg`, `ls`, `find`, `git status`, `git diff`, `git log`), só dentro do worktree.
+  Nada além disso: sem instalar dependência, sem rede, sem script do projeto fora da lista.
   Depois da sua sessão o orquestrador roda `{{comandoDeAceite}}` neste worktree; o resultado
   entra na avaliação.
 
