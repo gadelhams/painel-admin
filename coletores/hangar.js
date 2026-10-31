@@ -47,7 +47,7 @@ export function montarNave(projeto, backlog) {
   const nave = {
     pasta: projeto.pasta,
     titulo: projeto.titulo,
-    sigla: null,
+    sigla: projeto.sigla ?? null,
     semente: sementeDe(projeto.pasta),
     congelado: Boolean(projeto.congelado),
     producao: projeto.producao ?? null,
@@ -63,6 +63,9 @@ export function montarNave(projeto, backlog) {
     // UUID da carta no Plane → [índice da peça, identificador, título]: o droid
     // que toca a carta pelo MCP (que só traz o UUID) mostra a carta e leva a peça certa.
     cartoes: {},
+    // Índice reverso SIGLA-N → UUID: a ponte REST e o comando citam a carta
+    // pelo identificador, e o front a troca pelo UUID para ela aparecer igual.
+    identificadores: {},
   };
   if (backlog?.estado !== 'ok') return nave;
 
@@ -74,6 +77,7 @@ export function montarNave(projeto, backlog) {
       cont[grupoDe(n)] += 1;
       if (n.identificador && !nave.sigla) nave.sigla = n.identificador.replace(/-\d+$/, '');
       if (n.idRastreador) nave.cartoes[n.idRastreador] = [indice, n.identificador ?? null, n.texto];
+      if (n.idRastreador && n.identificador) nave.identificadores[n.identificador] = n.idRastreador;
       if (n.estado === 'pronto' || nave.congelado) continue;
       if (n.produto) nave.decisoesProduto.push(decisao(n, f.titulo));
       else if (n.tags?.some((t) => t.tag === 'ASTARGNE')) decisoes.push(decisao(n, f.titulo));

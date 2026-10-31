@@ -34,6 +34,7 @@ function aplicarNave(api, i) {
     pct: api.pct / 100,
     cartas: { aberto: api.cartas.abertas, andamento: api.cartas.andamento, feito: api.cartas.feitas },
     cartoes: api.cartoes,
+    identificadores: api.identificadores ?? {},
     produto: api.decisoesProduto,
   });
   n.pecas = api.pecas.map((p, k) => ({
@@ -101,12 +102,25 @@ async function carregarFrota() {
   catch { H.frota = { estado: 'indisponivel' }; }
 }
 
+// A sessão cita a carta por UUID (MCP, URL) ou por SIGLA-N (ponte REST,
+// comando). O índice reverso da nave dona da sigla devolve o UUID: dali em
+// diante a carta é uma só, na bancada, no popup e na lista de droids.
+function uuidDaCarta(chave) {
+  const sigla = /^([A-Z][A-Z0-9]*)-\d+$/.exec(chave ?? '')?.[1];
+  if (!sigla) return chave;
+  return H.naves.find((n) => n.sigla === sigla)?.identificadores?.[chave] ?? chave;
+}
+
+function comUuid(s) {
+  return { ...s, cartao: uuidDaCarta(s.cartao), acoes: s.acoes.map((a) => (a.itemPlane ? { ...a, itemPlane: uuidDaCarta(a.itemPlane) } : a)) };
+}
+
 export async function carregarSessoes() {
   try {
     const r = await json('/api/hangar/sessoes');
     for (const f of FABRICAS) f.ativa = r.ias.find((i) => i.id === f.id)?.viva ?? false;
     H.sessoesEm = Date.now();
-    emitir('sessoes', r.sessoes);
+    emitir('sessoes', r.sessoes.map(comUuid));
   } catch {
     // poll de 5 s: a próxima rodada tenta de novo; os droids ficam onde estão
   }

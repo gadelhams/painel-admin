@@ -22,6 +22,15 @@ test('toda entrada do catálogo tem área válida e pasta que existe no disco', 
   }
 });
 
+// PAINEL-57: a sigla é a lista branca do SIGLA-N citado em comando no Hangar e
+// a chave do índice reverso; repetida, uma carta cairia na nave errada.
+test('toda entrada com projeto no Plane tem sigla própria e única', () => {
+  const comPlane = PROJETOS.filter((p) => p.plane);
+  for (const p of comPlane) assert.match(p.sigla ?? '', /^[A-Z][A-Z0-9]{1,7}$/, `${p.pasta}: sem sigla`);
+  const siglas = comPlane.map((p) => p.sigla);
+  assert.equal(new Set(siglas).size, siglas.length, `sigla repetida: ${siglas}`);
+});
+
 test('Exitlag e a raiz solta ficam fora do alcance, por nome direto ou por ..', () => {
   assert.equal(resolverDentroDaRaiz('Exitlag', 'x.md'), null);
   assert.equal(resolverDentroDaRaiz('CLAUDE.md'), null);

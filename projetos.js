@@ -5,6 +5,9 @@
 // `area` = a pasta de ~/Work onde o projeto mora desde a reorganização de
 // 30/09/2026 (ProjetosPessoais ou ProjetosCompartilhados). `pasta` continua
 // sendo o identificador (rotas, relacoes.js, nomes curtos).
+// `sigla` = a do projeto no Plane, copiada da tabela de praticantes de
+// ../../PADROES-BACKLOG.md; é a lista branca do Hangar para `SIGLA-N` citado
+// num comando (`UTF-8` e `SHA-256` têm a mesma forma e não são carta).
 export const PROJETOS = [
   {
     // Reescrita do Felipe (repo privado feliperodrigues/lore-engine), clonada
@@ -61,7 +64,8 @@ export const PROJETOS = [
     descricao: 'Subsistema geoespacial auditável de Khorvaire — rotas, distâncias, evidências.',
     stack: 'Postgres + PostGIS + pgRouting · SQL cru · PowerShell',
     entrada: 'README.md',
-    plane: '711e5f9f-8990-4a20-95d5-f6ad6fc0a44d', // KHOR
+    plane: '711e5f9f-8990-4a20-95d5-f6ad6fc0a44d',
+    sigla: 'KHOR',
     docs: {
       arquitetura: ['docs/integration-with-lore-engine.md'],
       dataFlow: ['docs/roadmap.md'],
@@ -75,7 +79,8 @@ export const PROJETOS = [
     descricao: 'Bot que grava e transcreve canais de voz; modo campanha alimenta o Lore Engine.',
     stack: 'pnpm · TypeScript · LLM local',
     entrada: 'docs/00_PLANO.md',
-    plane: 'e42d6a02-763e-46aa-9ffb-a21a96fba72c', // DISC
+    plane: 'e42d6a02-763e-46aa-9ffb-a21a96fba72c',
+    sigla: 'DISC',
     docs: { arquitetura: ['docs/02_PLANO_EXECUCAO_ONDAS.md'] },
     portas: [{ porta: 11434, servico: 'Ollama' }],
   },
@@ -87,7 +92,8 @@ export const PROJETOS = [
     stack: 'Python/FastAPI · SQLite · Next.js · Anthropic',
     entrada: 'filosofia/CLAUDE.md',
     subRepo: 'filosofia',
-    plane: '73ad9bad-e37e-4cf0-93ec-eeb9bcaa876b', // FILO
+    plane: '73ad9bad-e37e-4cf0-93ec-eeb9bcaa876b',
+    sigla: 'FILO',
     portas: [
       { porta: 8000, servico: 'API (FastAPI)' },
       { porta: 3000, servico: 'Web (Next)' },
@@ -100,7 +106,8 @@ export const PROJETOS = [
     descricao: 'Remake web do mapa de Warcraft 3 — perseguição single e multiplayer para 12.',
     stack: 'JS vanilla + canvas · Node + ws',
     entrada: 'jogo-web/README.md',
-    plane: '41edb1df-46a9-461e-b2cb-c1888fa4cf86', // CORRE
+    plane: '41edb1df-46a9-461e-b2cb-c1888fa4cf86',
+    sigla: 'CORRE',
     producao: 'https://tarado.astargne.com',
     portas: [{ porta: 8323, servico: 'Servidor' }],
   },
@@ -111,7 +118,8 @@ export const PROJETOS = [
     descricao: 'Skill Alexa que toca a conta pessoal do YouTube Music; Lambda + proxy de áudio em casa.',
     stack: 'Node CommonJS · AWS Lambda + DynamoDB · Docker',
     entrada: 'README.md',
-    plane: '230d23ce-86b5-4601-a6e2-127e52df34e6', // ALEXA
+    plane: '230d23ce-86b5-4601-a6e2-127e52df34e6',
+    sigla: 'ALEXA',
     portas: [{ porta: 3000, servico: 'Proxy de áudio' }],
   },
   {
@@ -121,7 +129,8 @@ export const PROJETOS = [
     descricao: 'Player de listas M3U — PWA, TV Samsung Tizen e iOS futuro.',
     stack: 'React 19 + Vite · hls.js · Capacitor',
     entrada: 'README.md',
-    plane: 'bbcd79e6-ff42-4a2e-8d9d-72011021e664', // PLAYER
+    plane: 'bbcd79e6-ff42-4a2e-8d9d-72011021e664',
+    sigla: 'PLAYER',
     portas: [
       { porta: 5173, servico: 'Dev (Vite)' },
       { porta: 5433, servico: 'Postgres (pfml-local-pg)' },
@@ -134,7 +143,8 @@ export const PROJETOS = [
     descricao: 'Servidor privado de Ragnarok Online (rAthena pré-renewal) empacotado em Docker.',
     stack: 'rAthena (C/C++) · Docker · MariaDB 11',
     entrada: 'README.md',
-    plane: '5205fdb7-e1ff-4c96-961c-e222129db96b', // RAG
+    plane: '5205fdb7-e1ff-4c96-961c-e222129db96b',
+    sigla: 'RAG',
     portas: [
       { porta: 6900, servico: 'login-server' },
       { porta: 6121, servico: 'char-server' },
@@ -151,7 +161,8 @@ export const PROJETOS = [
     descricao: 'Este hub administrativo local — git, portas, sondas de produção e o C-3PO a bordo.',
     stack: 'Node + Claude Agent SDK · vanilla + Web Speech/ElevenLabs',
     entrada: 'CLAUDE.md',
-    plane: 'c24e3d36-2e2a-4760-a3f3-53998297a245', // PAINEL
+    plane: 'c24e3d36-2e2a-4760-a3f3-53998297a245',
+    sigla: 'PAINEL',
     portas: [{ porta: 7777, servico: 'Dashboard + C-3PO' }],
   },
   {
@@ -164,7 +175,8 @@ export const PROJETOS = [
     descricao: 'Login único do astargne.com — convite por e-mail, permissão por app, esqueci minha senha; serve a raiz do domínio.',
     stack: 'Node 22 · Express 5 · node:sqlite · scrypt · Brevo',
     entrada: 'AGENTS.md',
-    plane: '2001df58-5cc1-44a1-8f77-035c04f5a02f', // CAD
+    plane: '2001df58-5cc1-44a1-8f77-035c04f5a02f',
+    sigla: 'CAD',
     // Desde a Fase 2 (23/09/2026) são DOIS endereços: o loopback, por onde o
     // Caddy entra, e o gateway da rede `astargne_sso`, por onde o container do
     // filosofia valida sessão (ADR-0005 do CadastroUnico).
@@ -179,7 +191,8 @@ export const PROJETOS = [
     // O que a liberação nativa deixa abrir (orquestrador/liberacao-nativa.js).
     jogoNativo: 'Bannerlord pela Steam',
     entrada: 'AGENTS.md',
-    plane: '7ce26c40-6e46-49a8-9a7d-bf06bbda6542', // CKBL
+    plane: '7ce26c40-6e46-49a8-9a7d-bf06bbda6542',
+    sigla: 'CKBL',
     portas: [],
   },
   {
@@ -191,7 +204,8 @@ export const PROJETOS = [
     descricao: 'Fliperama pessoal na web (EmulatorJS/WASM) atrás do cadastro único.',
     stack: 'HTML/JS estático · EmulatorJS self-hosted · Caddy',
     entrada: 'docs/00_PLANO.md',
-    plane: '87dd03dc-ff75-4b86-b265-44740e0f112e', // EMU
+    plane: '87dd03dc-ff75-4b86-b265-44740e0f112e',
+    sigla: 'EMU',
     portas: [
       { porta: 8787, servico: 'Site estático (dev)' },
       { porta: 8788, servico: 'Serviço de upload (dev)' },
@@ -210,7 +224,8 @@ export const PROJETOS = [
     descricao: 'Supervisor determinístico que orquestrava agentes; superado pela frota do Hangar em 29/10/2026, só leitura.',
     stack: 'Python 3.12 puro · codex exec + claude -p',
     entrada: 'AGENTS.md',
-    plane: 'e2a3c301-7597-42f7-a2c1-9b4b4b3d3f29', // SUPER
+    plane: 'e2a3c301-7597-42f7-a2c1-9b4b4b3d3f29',
+    sigla: 'SUPER',
     portas: [{ porta: 7791, servico: 'Painel do supervisor (plataforma)' }],
   },
   {
@@ -221,7 +236,8 @@ export const PROJETOS = [
     descricao: 'Sistema de apoio ao RPG autoral Anya 505DC — motor de regras determinístico, CLIs e web da mesa.',
     stack: 'Python 3.12 · uvicorn · TOML',
     entrada: 'CLAUDE.md',
-    plane: '56104829-419b-4ad7-be84-2858f22c5617', // ANYA
+    plane: '56104829-419b-4ad7-be84-2858f22c5617',
+    sigla: 'ANYA',
     portas: [{ porta: 8600, servico: 'Web (uvicorn)' }],
   },
 ];

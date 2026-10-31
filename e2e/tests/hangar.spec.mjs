@@ -20,6 +20,7 @@ const hangar = {
       ],
       decisoesProduto: [{ id: 'ALFA-4', titulo: 'Abrir para visitantes?', url: null, modulo: 'Busca', tags: ['ASTARGNE'], detalhe: null }],
       cartoes: { [CARTA]: [0, 'ALFA-3', 'Qual fonte usar?'] },
+      identificadores: { 'ALFA-3': CARTA },
     }),
     nave('beta', { sigla: null, estado: 'sem_backlog', fonte: null, url: null, pct: 0, cartas: { abertas: 0, andamento: 0, feitas: 0 } }),
   ],
@@ -30,14 +31,14 @@ const frota = { estado: 'ok', versao: 5, hash: 'f'.repeat(64), papeis: { executo
   conteudo: { executor: { orquestracao: T('claude', 'claude-opus-5', 'max'), codificacao_testes: T('openai', 'gpt-6-astra', 'xhigh'), validacao: T('claude', 'claude-opus-5', 'high') },
     zelador: { zelador: T('claude', 'claude-opus-5', 'medium') } } };
 const agora = () => new Date().toISOString();
-const sessoes = () => ({
+const sessoes = (extra = []) => ({
   em: agora(),
   ias: [{ id: 'claude', viva: true, sessoes: 1 }, { id: 'codex', viva: false, sessoes: 0 }, { id: 'grok', viva: false, sessoes: 0 }],
   sessoes: [{ id: 'sessao-1', ia: 'claude', projeto: 'alfa', estado: 'trabalhando', desde: agora(), cartao: CARTA,
-    acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }],
+    acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }, ...extra],
 });
 
-async function fixtures(page, { sessao = { estado: 'sem-sessao' } } = {}) {
+async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [] } = {}) {
   const chamadas = [];
   const errosPagina = [];
   const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
@@ -51,7 +52,7 @@ async function fixtures(page, { sessao = { estado: 'sem-sessao' } } = {}) {
     const json = (d) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(d) });
     if (url.pathname === '/api/sessao') return json(sessao);
     if (url.pathname === '/api/hangar') return json(hangar);
-    if (url.pathname === '/api/hangar/sessoes') return json(sessoes());
+    if (url.pathname === '/api/hangar/sessoes') return json(sessoes(droidsExtra));
     if (url.pathname === '/api/projetos') return json({ projetos: [] });
     if (url.pathname === '/api/backlog') return json({ projetos: [] });
     if (url.pathname === '/api/decisoes') return json({ decisoes: [] });
@@ -96,6 +97,22 @@ test('a raiz abre o Hangar com droids e naves só por GET', async ({ page }) => 
   // Cena 3D ou, sem WebGL no headless, o aviso honesto; nunca erro.
   await expect(page.locator('#hg-camada canvas, #hg-aviso')).toHaveCount(1);
   expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+// PAINEL-57: a ponte REST do CKBL e o commit citam a carta por SIGLA-N; o
+// índice reverso da nave a troca pelo UUID e ela aparece igual à do MCP.
+test('carta citada por SIGLA-N aparece igual à citada por UUID; fora do backlog, pelo identificador', async ({ page }) => {
+  const ponte = (id, cartao) => ({ id, ia: 'codex', projeto: 'alfa', estado: 'trabalhando', desde: agora(), cartao,
+    acoes: [{ em: agora(), tipo: 'cartao', ferramenta: 'exec', programa: 'node', itemPlane: cartao }] });
+  const audit = await fixtures(page, { droidsExtra: [ponte('sessao-2', 'ALFA-3'), ponte('sessao-3', 'ALFA-99')] });
+  await page.goto('/');
+  await expect(page.locator('#hg-droids [data-droid]')).toHaveCount(3);
+  await expect(page.locator('#hg-droids [data-droid="sessao-2"]')).toContainText('ALFA-3');
+  await expect(page.locator('#hg-droids [data-droid="sessao-2"]')).toContainText('Qual fonte usar?');
+  await expect(page.locator('#hg-droids [data-droid="sessao-3"]')).toContainText('ALFA-99');
+  await page.locator('#hg-droids [data-droid="sessao-2"]').click();
+  await expect(page.locator('#hg-holo-fala')).toContainText('ALFA-3: Qual fonte usar?', { timeout: 10_000 });
   expect(audit.errosPagina).toEqual([]);
 });
 
