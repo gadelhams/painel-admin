@@ -29,7 +29,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 - **Piloto real** (PAINEL-34) **passou em 31/10**: PLAYER-38 despachada pelo
   dono, Codex codificou, Claude validou (APROVADO), integrada no PLAYER.
   Falta ver no CLI real a mensagem de limite.
-- **Consumo** (PAINEL-40): Codex pelas sessões, Claude pela statusLine (29/10).
+- **Consumo** (PAINEL-40): Codex pelas sessões; Claude por statusLine e `~/.claude.json`.
 - **Fase 3 do C-3PO** (ações): motor só-leitura; a 1ª ação é a mesa de
   decisão, desenhada e não construída ([plano](plano-mesa-de-decisao.md)).
   Voz: xAI se o navegador não reconhece; falar por cima corta.

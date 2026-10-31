@@ -105,10 +105,36 @@ test('Claude: o arquivo da statusLine vira amostra; ausente ou ilegível não in
   assert.deepEqual(amostrasDoArquivo(dados).map(a => [a.janela, a.percentualUsado]), [['5 h', 23.5], ['semana', 41]]);
   assert.deepEqual(amostrasDoArquivo({ ...dados, versao: 2 }), [], 'formato desconhecido não vira número');
   const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-uso-'));
-  assert.deepEqual(await criarFonteClaude({ arquivo: path.join(raiz, 'nao-existe.json') })(), []);
+  const semCache = path.join(raiz, 'sem-cache.json');
+  assert.deepEqual(await criarFonteClaude({ arquivo: path.join(raiz, 'nao-existe.json'), cacheClaude: semCache })(), []);
   await fs.writeFile(path.join(raiz, 'ruim.json'), '{');
-  assert.deepEqual(await criarFonteClaude({ arquivo: path.join(raiz, 'ruim.json') })(), []);
+  assert.deepEqual(await criarFonteClaude({ arquivo: path.join(raiz, 'ruim.json'), cacheClaude: path.join(raiz, 'ruim.json') })(), []);
   await fs.writeFile(path.join(raiz, 'ok.json'), JSON.stringify(dados));
-  const consumo = await criarLeitorConsumo({ agora: () => Date.parse('2026-10-29T12:05:00Z'), fontes: { claude: criarFonteClaude({ arquivo: path.join(raiz, 'ok.json') }) } })();
+  const consumo = await criarLeitorConsumo({ agora: () => Date.parse('2026-10-29T12:05:00Z'), fontes: { claude: criarFonteClaude({ arquivo: path.join(raiz, 'ok.json'), cacheClaude: semCache }) } })();
   assert.deepEqual(consumo.claude.janelas.map(j => j.percentual), [23.5, 41]);
+});
+
+test('Claude: o cache de uso do ~/.claude.json vira amostra; por janela vale a leitura mais nova; forma estranha não vira número', async () => {
+  const { amostrasDoCache, criarFonteClaude } = await import('../orquestrador/fonte-consumo-claude.js');
+  // Forma lida no Claude Code 2.1.284 em 31/10/2026 (campos de conta e dinheiro nunca saem daqui).
+  const cache = { cachedUsageUtilization: { fetchedAtMs: Date.parse('2026-10-31T11:12:53Z'), accountUuid: 'conta-x',
+    utilization: { five_hour: { utilization: 0, resets_at: null, used_dollars: null }, seven_day: { utilization: 38, resets_at: '2026-11-02T14:00:00.019909+00:00' } } } };
+  assert.deepEqual(amostrasDoCache(cache).map(a => [a.janela, a.percentualUsado, a.reiniciaEm, a.atualizadoEm]),
+    [['5 h', 0, null, '2026-10-31T11:12:53.000Z'], ['semana', 38, '2026-11-02T14:00:00.019Z', '2026-10-31T11:12:53.000Z']]);
+  assert.ok(!JSON.stringify(amostrasDoCache(cache)).includes('conta-x'), 'a conta não sai do cache');
+  assert.deepEqual(amostrasDoCache({ cachedUsageUtilization: { ...cache.cachedUsageUtilization, fetchedAtMs: 'ontem' } }), [], 'sem carimbo, sem amostra');
+  assert.deepEqual(amostrasDoCache({ cachedUsageUtilization: { ...cache.cachedUsageUtilization, utilization: { seven_day: { utilization: 0.38, resets_at: 'amanhã' } } } }), [], 'reinício ilegível descarta a janela');
+  assert.deepEqual(amostrasDoCache({ cachedUsageUtilization: { ...cache.cachedUsageUtilization, utilization: { seven_day: { utilization: 380, resets_at: null } } } }), [], 'fora de 0–100 não vira número');
+  assert.deepEqual(amostrasDoCache({}), []);
+  const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-cache-'));
+  await fs.writeFile(path.join(raiz, 'claude.json'), JSON.stringify(cache));
+  // A statusLine leu a semana depois do cache (11:30 > 11:12): ela vence nessa janela; a de 5 h só existe no cache.
+  await fs.writeFile(path.join(raiz, 'barra.json'), JSON.stringify({ versao: 1, atualizadoEm: '2026-10-31T11:30:00Z', semana: { percentual: 40, reiniciaEm: null } }));
+  const amostras = await criarFonteClaude({ arquivo: path.join(raiz, 'barra.json'), cacheClaude: path.join(raiz, 'claude.json') })();
+  assert.deepEqual(amostras.map(a => [a.janela, a.percentualUsado, a.fonte]).sort(),
+    [['5 h', 0, 'cache de uso do Claude Code (~/.claude.json)'], ['semana', 40, 'barra de status do Claude Code']]);
+  // Ao contrário: a barra é mais velha que o cache, então a semana vem do cache, embora a barra seja lida primeiro.
+  await fs.writeFile(path.join(raiz, 'barra.json'), JSON.stringify({ versao: 1, atualizadoEm: '2026-10-31T11:00:00Z', semana: { percentual: 40, reiniciaEm: null } }));
+  const invertidas = await criarFonteClaude({ arquivo: path.join(raiz, 'barra.json'), cacheClaude: path.join(raiz, 'claude.json') })();
+  assert.deepEqual(invertidas.find(a => a.janela === 'semana').percentualUsado, 38);
 });
