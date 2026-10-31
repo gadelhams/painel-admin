@@ -397,7 +397,7 @@ abortam a anterior e o canal é lido direto pelo projeto. Módulos legados
 **Executor real** em `orquestrador/executor-cli.js` (contrato X01–X06 da matriz):
 três papéis como CLIs descartáveis num worktree fora da árvore, comando de
 aceite do contrato sem shell, ambiente por lista branca, flags fixas de
-isolamento, timeout por grupo, `impedido` para infraestrutura. `servidor.js` só
+isolamento, timeout por grupo, `impedido` para infraestrutura. `montagem.js` só
 o constrói com `ORQ_EXECUCAO_HABILITADA=true`; a variável **não** está no
 `.env` — ligar é o "vai" do dono (PAINEL-34). Limitação registrada: a
 proveniência aceita recibo `GATE/v1` antigo para etiqueta removida e recolocada
