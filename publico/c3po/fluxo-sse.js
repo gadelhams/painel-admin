@@ -108,6 +108,8 @@ class ConversaC3po {
             this.palco.nota('ferramenta', `consultando ${dados.nome}`);
           } else if (evento === 'proposta') {
             this.palco.proposta(dados);
+          } else if (evento === 'proposta_memoria') {
+            this.palco.propostaMemoria(dados);
           } else if (evento === 'inicio' || evento === 'fim') {
             if (dados.sessao) {
               this.sessao = dados.sessao;

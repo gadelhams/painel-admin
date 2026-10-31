@@ -58,6 +58,13 @@ import { criarApiAcoes, criarConfirmacoesAcoes } from './acoes/api-acoes.js';
 import { RotasDecisao } from './http/rotas-decisao.js';
 import { criarMesaDecisao } from './decisao/mesa.js';
 import { criarApiDecisao, criarApiRetomada } from './decisao/api-decisao.js';
+import { RotasMemoria } from './http/rotas-memoria.js';
+import { criarLeitorMemoria } from './memoria/arquivo-memoria.js';
+import { criarEscritorMemoria } from './memoria/escritor-memoria.js';
+import { criarPendenteMemoria } from './memoria/pendente-memoria.js';
+import { propostasMemoria } from './memoria/propostas-memoria.js';
+import { criarDiarioConversas } from './memoria/conversas.js';
+import { criarApiMemoria, criarConfirmacoesMemoria, estadoMemoria } from './memoria/api-memoria.js';
 import { RoteadorPainel } from './http/roteador.js';
 import { criarRegistroEncomendas } from './encomendas/registro-encomendas.js';
 import { criarApiEncomendas, criarConfirmacoesEncomendas } from './encomendas/api-encomendas.js';
@@ -196,13 +203,21 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   // só a lista fechada, só por SSO + duas ações, sob a mesma trava global da orquestração.
   const mesa = criarMesaDecisao({ ambiente, fetchPlane, diretorio: path.join(diretorioEstado, 'c3po'), estado: estadoOrquestracao,
     agora, arquivoChave: arquivoChaveAdmin, limparCache: limparCachePlane, log });
+  // Memória L1 do C-3PO (PAINEL-8): o motor lê e propõe em `propostasMemoria`; gravar é do
+  // dono por SSO + duas ações (ou da reflexão noturna, fora deste processo), com histórico.
+  const diretorioC3po = path.join(diretorioEstado, 'c3po');
+  const memoria = { leitor: criarLeitorMemoria({ diretorio: diretorioC3po }), pendente: criarPendenteMemoria({ diretorio: diretorioC3po }) };
+  const apiMemoria = confirmar(criarApiMemoria, criarConfirmacoesMemoria, { ...memoria, ambiente, agora,
+    escritor: criarEscritorMemoria({ diretorio: diretorioC3po, agora }), propostas: propostasMemoria });
 
   const resposta = new RespostaHttp({ publico, maxCorpo: MAX_CORPO });
   const roteador = new RoteadorPainel({
     porta,
     recusa: criarGuarda(porta),
     resposta,
-    conversa: new ConversaHttp({ resposta, conversar, maxMensagem: MAX_MENSAGEM }),
+    // O diário de conversas é o insumo da reflexão: só pergunta e resposta, filtradas, 14 dias.
+    conversa: new ConversaHttp({ resposta, conversar, maxMensagem: MAX_MENSAGEM, log,
+      diarioConversas: criarDiarioConversas({ diretorio: diretorioC3po, agora, ambiente }) }),
     voz: new RotasVoz({ resposta, proxyEleven: new ProxyElevenLabs(fetchVoz ? { fetchImpl: fetchVoz } : {}), autorizarTts: autorizarPrivilegiado }),
     painel: new RotasPainel({
       resposta, coletores, contas: manipularContas,
@@ -235,6 +250,7 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     decisao: new RotasDecisao({ resposta, servico: mesa.servico, log,
       apiDecisao: criarApiDecisao({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.confirmacoes }),
       apiRetomada: criarApiRetomada({ autorizar: autorizarPrivilegiado, confirmacoes: mesa.retomada }) }),
+    memoria: new RotasMemoria({ resposta, apiMemoria, lerEstado: () => estadoMemoria(memoria) }),
   });
 
   return {

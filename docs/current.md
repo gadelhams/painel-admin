@@ -29,6 +29,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   decisão grava como Painel Admin por SSO ([plano](plano-mesa-de-decisao.md)).
 - **Hangar**: encomenda de nave por SSO; o orquestrador atende à mão
   ([operacao.md](operacao.md)). Consumo: Codex e Claude com fonte local.
+- **Memória L1** do C-3PO: editável por SSO em `/c3po/#memoria`; reflexão
+  noturna 03:30 por timer de usuário.
 
 ## Portão e repositório
 

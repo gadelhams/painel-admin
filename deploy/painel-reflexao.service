@@ -1,0 +1,13 @@
+# Reflexão noturna do C-3PO (PAINEL-9): reescreve só a memória L1 (~/.local/state/painel-admin/c3po/MEMORIES.md),
+# com diário em reflexao.jsonl. Disparada por painel-reflexao.timer; instalação em docs/operacao.md.
+[Unit]
+Description=Reflexão noturna do C-3PO (memória L1 do painel-admin)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Work/ProjetosPessoais/painel-admin
+# node vem do mise e o script chama o claude da assinatura: o PATH é o do painel-admin.service
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# O .env só alimenta o filtro de segredo (valores a esconder); o processo do modelo recebe ambiente por lista branca.
+ExecStart=%h/.local/share/mise/shims/node --env-file-if-exists=.env scripts/reflexao-noturna.mjs
+TimeoutStartSec=15min

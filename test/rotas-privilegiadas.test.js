@@ -73,7 +73,8 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
   for (const esperado of ['/api/orquestracao/frota/preparar', '/api/orquestracao/frota/confirmar', '/api/chaves/confirmar', '/api/hangar',
     '/api/orquestracao/despacho/confirmar', '/api/orquestracao/play/preparar', '/api/orquestracao/play/confirmar', '/api/orquestracao/play', '/api/orquestracao/zelador', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites', '/api/acoes/preparar', '/api/acoes/confirmar',
     '/api/hangar/encomendas', '/api/hangar/encomendas/preparar', '/api/hangar/encomendas/confirmar',
-    '/api/decisao/preparar', '/api/decisao/confirmar', '/api/decisao/retomada/preparar', '/api/decisao/retomada/confirmar', '/api/decisao/carta', '/api/decisao/pendentes']) {
+    '/api/decisao/preparar', '/api/decisao/confirmar', '/api/decisao/retomada/preparar', '/api/decisao/retomada/confirmar', '/api/decisao/carta', '/api/decisao/pendentes',
+    '/api/c3po/memoria', '/api/c3po/memoria/preparar', '/api/c3po/memoria/confirmar']) {
     assert.ok(caminhos.includes(esperado), `a varredura precisa achar ${esperado}`);
   }
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');

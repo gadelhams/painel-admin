@@ -89,8 +89,9 @@ com autoteste, não configuração de ferramenta:
   `triagem`, `consulta-c3po`, `api-duas-acoes`, `desafio-duas-acoes`, `leitor-jsonl`, `uuid`);
   `http/` montado por outro que não `montagem.js`; `servidor.js` importar outra coisa que a
   montagem; `publico/` e servidor se importarem; o fecho do motor alcançar escritor do Plane,
-  `estado-plane`, `executor-cli`, `api-*` de escrita, o registro das encomendas ou o escritor, a aplicação e as duas ações
-  da mesa de decisão (a porta `decisao.js` só reexporta a leitura da carta). `montagem.js` é isenta da regra de porta
+  `estado-plane`, `executor-cli`, `api-*` de escrita, o registro das encomendas, o escritor, a aplicação e as duas ações
+  da mesa de decisão (a porta `decisao.js` só reexporta a leitura da carta) ou o escritor, a API, a pendente e a
+  reflexão da memória L1 (`memoria/`). `montagem.js` é isenta da regra de porta
   (quem compõe liga as peças). As violações de 31/10 ficaram como exceções nomeadas no teste,
   com o porquê; exceção resolvida reprova até sair da lista.
 
@@ -407,7 +408,7 @@ mesmas funções — o motor nunca faz HTTP para o próprio processo.
 
 ### motor.js
 
-Porta da conversa. O catálogo das doze ferramentas (onze de leitura, entre elas `encomendas`, `diario_zelador` e `carta_plane` desde 31/10, e `propor_acao`) mora em
+Porta da conversa. O catálogo das treze ferramentas (onze de leitura, entre elas `encomendas`, `diario_zelador` e `carta_plane` desde 31/10, mais `propor_acao` e `propor_memoria`) mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
 aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
@@ -470,6 +471,50 @@ ação com portão:
 Ferramenta `carta_plane` (31/10/2026, PAINEL-53): lê UMA carta agora, sem cache, pela porta
 `decisao.js` (título, estado, labels, descrição e os últimos 30 comentários em texto; os da mesa
 marcados), com a chave Guest. É o que o C-3PO usa na gaveta da mesa de decisão (§ decisao/).
+
+**Memória L1 e reflexão noturna (31/10/2026, PAINEL-8 e PAINEL-9; decisões do dono).**
+Arquivos em `~/.local/state/painel-admin/c3po/`; código em `memoria/`:
+- `MEMORIES.md`: Markdown simples, UTF-8, teto de 8 KB (`memoria/arquivo-memoria.js` lê,
+  com estado `ausente`/`ok`/`grande`/`ilegivel`; o hash sha256 do texto é a versão).
+  `memoria-historico.jsonl`: uma linha por versão — quando, quem (`dono`, `reflexao`,
+  `proposta-aceita`), origem (`dono`, `desfazer`, `c3po`, `reflexao`), `usuarioId`, hash
+  antes/depois, diff unificado curto (4 000 caracteres), `foraDoPainel` (o arquivo foi
+  editado à mão desde a última versão) e os dois textos, para desfazer por hash.
+- Escrita só em `memoria/escritor-memoria.js`: trava entre processos (`mkdir` de
+  `.memoria.trava`, recuperada após 60 s), base conferida sob a trava, histórico antes do
+  `rename` (queda no meio deixa evento `nunca-aplicada`, nunca versão sem registro).
+- Motor: `motor.js` lê a L1 a cada turno e a põe no fim do `systemPrompt` por
+  `motor/memoria-l1.js` — regra de tratamento fora do bloco, texto dentro de
+  `<memoria_l1>`, com a marca neutralizada se aparecer no texto (texto hostil não fecha o
+  bloco). `propor_memoria` {motivo, acrescentar | de+para} (`motor/memoria-proposta.js` sobre
+  `memoria/propostas-memoria.js`): monta a L1 nova contra a atual, guarda 30 min em memória
+  e devolve id, base e diff; o SSE emite `proposta_memoria` e o chat mostra o cartão de
+  `publico/c3po/memoria-proposta.js` (no `/c3po/`, no console e no popup do Hangar).
+- Dono: `GET /api/c3po/memoria` (texto, estado, hash, bytes, 10 últimas versões sem os
+  textos, pendente da reflexão); `POST /api/c3po/memoria/preparar` {base, origem, valor} —
+  origem `texto` (edição), `proposta` (cartão do chat), `reflexao` (pendente) ou `versao`
+  (desfazer: hash de um texto do histórico) — mostra o diff contra a base e recusa segredo
+  pelo `filtrarSegredo`; `POST /api/c3po/memoria/confirmar` {confirmacaoId} grava uma vez e
+  recusa (409) se a base mudou. Painel "Memória do C-3PO" no `/c3po/` (`#memoria` abre
+  direto; o popup do Hangar tem o link).
+- Diário de conversas (`conversas.jsonl`, `memoria/conversas.js`): até 31/10 o painel não
+  registrava conversa (só a transcrição própria do SDK em `~/.claude/projects`, com
+  resultado cru de ferramenta). `http/conversa.js` anota, ao fim de cada turno, pergunta
+  (600) e resposta (1 200) truncadas e filtradas de segredo; a reflexão poda o que passou de
+  14 dias. Uma conversa anotada durante a poda pode se perder (a poda reescreve às 03:30).
+- Reflexão (`scripts/reflexao-noturna.mjs` → `memoria/reflexao.js`, timer de usuário
+  `deploy/painel-reflexao.timer`, 03:30): uma por data local (marca = linha do dia em
+  `reflexao.jsonl`; segunda execução não faz nada); frota com bloco zelador `ok` e provedor
+  `claude`, senão recusa; sem conversa nas últimas 24 h, `sem-insumo` sem CLI. Roda
+  `claude -p --output-format json --model/--effort` do zelador, `--system-prompt` próprio,
+  `--restricted --tools "" --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+  --no-session-persistence --disable-slash-commands --max-turns 1`, `ambienteLimpo`, cwd num
+  diretório vazio, insumo por stdin, 10 min. Pede a L1 inteira entre marcas e aplica
+  (quem `reflexao`) só se mudou, cabe no teto, passa no filtro de segredo e apaga até 30%;
+  apagar mais grava `memoria-pendente.json` para o dono aceitar; segredo recusa sem diff no
+  diário. Cada execução deixa uma linha em `reflexao.jsonl` (resultado, motivo, modelo,
+  diff, custo). Testes: `test/memoria.test.js`, `test/reflexao.test.js`,
+  `e2e/tests/c3po-memoria.spec.mjs`.
 
 Ferramenta `decisoes` (24/10/2026, pedido do dono): `decisoes-c3po.js` dá ao
 C-3PO a mesma leitura da aba Decisões e do bloco "Astargne" — grupos
@@ -904,13 +949,20 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   não — é a arquitetura da fatia, não um detalhe.
 - **O motor lê e só propõe** (fase 3, 31/10/2026; até então "só-leitura até a
   fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das dez
-  ferramentas MCP — limitação **estrutural**, não promessa de comportamento. A
-  única que não é leitura, `propor_acao`, registra uma proposta e devolve o id
-  dela, nunca um id de confirmação; preparar, confirmar e executar são do dono,
-  pela UI, com SSO + duas ações. Nenhum módulo que o motor importa (fecho
-  transitivo) alcança `acoes/executor-acoes.js` nem `acoes/api-acoes.js`
-  (`test/acoes.test.js`), nem o escritor da mesa de decisão
-  (`test/fronteiras-modulos.test.js`); `carta_plane` só lê.
+  ferramentas MCP — limitação **estrutural**, não promessa de comportamento. As
+  duas que não são leitura, `propor_acao` e `propor_memoria` (31/10/2026,
+  PAINEL-8), registram uma proposta e devolvem o id dela, nunca um id de
+  confirmação; preparar, confirmar, executar e gravar são do dono, pela UI, com
+  SSO + duas ações. Nenhum módulo que o motor importa (fecho transitivo) alcança
+  `acoes/executor-acoes.js`, `acoes/api-acoes.js` (`test/acoes.test.js`), o
+  escritor da mesa de decisão (`carta_plane` só lê) nem o escritor da memória, a API dela, a pendente ou a reflexão
+  (`test/fronteiras-modulos.test.js`). **Escrita da memória L1**
+  (`c3po/MEMORIES.md`): só por `memoria/escritor-memoria.js`, e ele só tem dois
+  chamadores — a API do dono (SSO + duas ações, base conferida sob trava) e a
+  reflexão noturna (`memoria/reflexao.js`, critérios fixos e diário em
+  `c3po/reflexao.jsonl`); toda versão entra no `memoria-historico.jsonl` com
+  quem, hashes e diff, para desfazer. A memória entra no prompt como dado
+  delimitado, nunca como instrução.
 - **Voz não fura o canon de deploy**: qualquer ação futura que mude estado no
   `astargne.com` continua exigindo `validador-deploy` + validação de
   premissas, como para qualquer agente.
@@ -980,7 +1032,7 @@ vivo tinha; provas e evidências ficaram em
 - **Autenticação do motor**: o login do Claude Code já existente na máquina;
   funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
 - **Só-leitura estrutural** (`motor.js`; desde 31/10/2026 "lê e só propõe", § motor.js): `tools: []` + servidor MCP em
-  processo com só as ferramentas do catálogo (doze desde 31/10/2026) + `allowedTools` nelas +
+  processo com só as ferramentas do catálogo (treze desde 31/10/2026) + `allowedTools` nelas +
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.

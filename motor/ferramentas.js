@@ -1,4 +1,4 @@
-// Catálogo das ferramentas do C-3PO: onze de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+// Catálogo das ferramentas do C-3PO: onze de leitura, uma que só propõe ação e uma que só propõe mudança na memória. O portão é esta lista, não o texto da persona.
 //
 // Fase 3 (31/10/2026): consulta_ssh e git_projeto leem; propor_acao registra uma
 // proposta e nada mais — preparar, confirmar e executar são do dono, pela UI, com SSO.
@@ -12,6 +12,8 @@ import { estadoProjetos, estadoProducao, decisoesDoBacklog, lerGitDoProjeto, LEI
 import { LeituraSsh } from '../coletores.js';
 import { propostas } from '../acoes/propostas.js';
 import { PropostaAcao } from './acao-proposta.js';
+import { propostasMemoria } from '../memoria/propostas-memoria.js';
+import { PropostaMemoria } from './memoria-proposta.js';
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarTriagemDev } from '../orquestrador/triagem.js';
 import { consultarOrquestracaoC3po } from '../orquestrador/consulta-c3po.js';
@@ -41,6 +43,7 @@ const proposta = new PropostaAcao({ propostas });
 // A chave Guest é lida na hora (o .env já está em process.env); o modelo não a vê.
 const lerCarta = async (carta) => cartaParaLeitura(await criarLeitorCarta({ chave: process.env.PLANE_API_KEY?.trim() }).retrato(carta),
   { autorMesa: process.env.PLANE_ADMIN_ACTOR_ID?.trim() || null });
+const propostaMemoria = new PropostaMemoria({ propostas: propostasMemoria });
 
 export const ferramentas = createSdkMcpServer({
   name: 'c3po',
@@ -145,6 +148,18 @@ export const ferramentas = createSdkMcpServer({
         comandoId: z.string().describe('id do comando no contrato do projeto (ex.: "testes").'),
       },
       entrada => proposta.propor(entrada),
+    ),
+    // Memória L1 (PAINEL-8, 31/10/2026): só registra; gravar é do dono, pelo cartão com SSO.
+    tool(
+      'propor_memoria',
+      'PROPÕE ao Mestre mudar a sua memória L1 (MEMORIES.md): OU acrescentar um trecho ao fim, OU trocar um trecho exato ("de") por outro ("para"). NÃO grava: registra a proposta e um cartão com o diff aparece no chat para o Mestre confirmar com a sessão do Cadastro Único. Use quando o Mestre pedir para lembrar ou corrigir algo, ou quando ele corrigir você num fato durável. Nunca proponha segredo nem estado vivo (git, portas, produção).',
+      {
+        motivo: z.string().describe('Por que mudar, em uma frase.'),
+        acrescentar: z.string().optional().describe('Trecho Markdown a acrescentar ao fim da memória.'),
+        de: z.string().optional().describe('Trecho exato e único da memória atual a trocar.'),
+        para: z.string().optional().describe('Texto que entra no lugar de "de" (vazio apaga o trecho).'),
+      },
+      entrada => propostaMemoria.propor(entrada),
     ),
   ],
 });

@@ -7,13 +7,13 @@ lista inteira antes do portão.
 1. **Sem login, então porta fechada** — escuta só em `127.0.0.1:7777`; fora dele, só a borda do tailnet restrita ao Windows, com Host e origem conferidos em `guarda.js`. (§1)
 2. **SSH só-leitura** em `/api/producao/ssh` e na `consulta_ssh` (lista fixa, chave `~/.ssh/paroquia-vultr`, sob demanda) — única exceção: o `ssh` de `contas.js` muda só o banco do CadastroUnico, só por `/interno/*`, só pela tabela fechada `OPERACOES` e só com SSO do dono; infra continua SSH manual + `validador-deploy`. (§2)
 3. **O `TOKEN_INTERNO` do CadastroUnico nunca sai do servidor** — não entra no `.env` do painel, não é lido, logado nem devolvido em HTTP; o script remoto monta o cabeçalho lá. (§3)
-4. **O motor lê e só propõe** — `tools: []` + doze ferramentas MCP; `propor_acao` só registra; executar é do dono (SSO + duas ações), fora dos imports do motor; o modelo não herda o `.env`. (§4)
+4. **O motor lê e só propõe** — `tools: []` + treze ferramentas MCP; `propor_*` só registram; executar e gravar a L1 é do dono (SSO + duas ações) ou da reflexão, fora do motor; sem `.env`. (§4)
 5. **Voz não fura o canon de deploy** — ação que mude estado no `astargne.com` exige `validador-deploy` + validação de premissas. (§5)
 6. **Segredo só no `.env`** (exceto as chaves do zelador e do Painel Admin: arquivo 600, lidas só pelo escritor) — Guest só lê Plane; escritor de orquestração: chave própria, projeto único; zelador: projetos com play, lista fechada; mesa: vários projetos, lista fechada, SSO + confirmação. Nunca no navegador, código, log, commit ou HTTP; Chaves troca por SSO + duas ações, escrita 600, só nomes voltam. (§6)
 
 ## Regras fixas espalhadas pelo texto de arquitetura
 
-Proibições vivas do `CLAUDE.md` antigo; o porquê está na seção indicada.
+Proibições do `CLAUDE.md` antigo; o porquê, no título indicado de `arquitetura.md`.
 
 7. O motor **nunca faz HTTP para o próprio processo** — rotas e ferramentas chamam as mesmas funções de `coletores.js`. (§ coletores.js)
 8. `resolverDentroDaRaiz` só aceita `ProjetosPessoais` e `ProjetosCompartilhados`; **`Exitlag/` fica fora do alcance de propósito**, por nome ou por `..`. (§ coletores.js)

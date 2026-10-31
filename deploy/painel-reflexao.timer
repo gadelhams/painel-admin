@@ -1,0 +1,11 @@
+# Uma reflexão por noite às 03:30 (hora local); Persistent recupera a noite perdida com a máquina desligada.
+# O script também recusa a segunda execução da mesma data (diário reflexao.jsonl).
+[Unit]
+Description=Reflexão noturna do C-3PO às 03:30
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

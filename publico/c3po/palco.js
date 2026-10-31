@@ -35,6 +35,13 @@ class Palco {
     return cartao;
   }
 
+  propostaMemoria(dados) {
+    const cartao = globalThis.CartaoMemoria.criar(dados);
+    this.historico.appendChild(cartao);
+    this.historico.scrollTop = this.historico.scrollHeight;
+    return cartao;
+  }
+
   nota(classe, texto) {
     const div = document.createElement('div');
     div.className = classe;

@@ -153,7 +153,7 @@ test('propor_acao só propõe: devolve id de proposta, nunca de confirmação, e
 test('motor: ganha só as leituras novas e o propor; nada que ele importa alcança o executor de ações', async () => {
   const o = opcoesDaConversa(undefined, {});
   for (const t of ['mcp__c3po__consulta_ssh', 'mcp__c3po__git_projeto', 'mcp__c3po__diario_zelador', 'mcp__c3po__encomendas', 'mcp__c3po__carta_plane', FERRAMENTA_PROPOSTA]) assert.ok(o.allowedTools.includes(t), t);
-  assert.equal(o.allowedTools.length, 12, 'leituras das encomendas (PAINEL-50), do diário do zelador (F3) e da carta (mesa, PAINEL-53)');
+  assert.equal(o.allowedTools.length, 13, 'leituras das encomendas, do diário do zelador e da carta, e propor_memoria (31/10)');
   assert.deepEqual(o.tools, []);
   // Fecho transitivo dos imports relativos de motor.js.
   const vistos = new Set();

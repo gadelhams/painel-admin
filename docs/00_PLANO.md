@@ -293,10 +293,10 @@ Ideia a ideia, contra os princípios de nascimento:
 
 | Ideia do post | Veredito | Porquê |
 |---|---|---|
-| Memória L1 **legível e editável** (`MEMORIES.md`) | **ACEITA** — backlog, fase futura | Auditável e corrigível na mão: o dono edita o arquivo e o sistema obedece. Casa com a doutrina da raiz (doc descreve a prática real). |
+| Memória L1 **legível e editável** (`MEMORIES.md`) | **FEITA** (31/10/2026, PAINEL-8) | Auditável e corrigível na mão: o dono edita pela tela (SSO + duas ações) ou no arquivo, com histórico e desfazer; o C-3PO lê em toda conversa como dado e só propõe mudança. Mecanismo em `docs/arquitetura.md` § motor.js. |
 | Memória vetorial (sqlite-vec) + ranking por importância/recência | **RECUSADA por ora** | Nosso corpus (docs modeladores) é pequeno e estruturado — leitura direta basta. Vetor é dependência e opacidade sem dor que o justifique. Reavaliar só se a leitura direta doer. |
 | Compressão de histórico via Ollama local | **RECUSADA** | O Agent SDK já compacta contexto sozinho; segundo motor de resumo é dependência e ponto de falha em dobro. |
-| Fase noturna de "reflexão" (consolidar memória dormindo) | **ACEITA em princípio** — fase futura, com sim expresso do dono | Barata (tarefa agendada + SDK), mas gasta token de madrugada e depende da memória L1 existir antes. |
+| Fase noturna de "reflexão" (consolidar memória dormindo) | **FEITA** (31/10/2026, PAINEL-9, sim expresso do dono) | Timer de usuário às 03:30 com `claude -p` da assinatura, isolado como o executor, modelo do zelador da frota; escreve só na L1, com o diff no diário, e o que apaga mais de 30% vira proposta para o dono. Instalação em `docs/operacao.md`. |
 | Swarm Link (WeChat/Feishu, push proativo fora da máquina) | **RECUSADA** | Fura o localhost-only. A necessidade real ("me alcançar longe da mesa") já tem canal: o remoto do próprio Claude. |
 | Comentário de `Deep_Ad1959`: "o que importa é o que você alimenta no dia 1, não a arquitetura de memória" | **VALIDA o desenho** | É exatamente a `docs_projeto`: alimentar os modeladores em vez de construir memória sofisticada vazia. |
 | Post relacionado: "a armadilha do Jarvis no dia 1 — agente que faz tudo custa meses" | **VALIDA o desenho** | As fases incrementais com aceite observável são a defesa contra isso. |
@@ -310,7 +310,7 @@ Ollama, Python+Rust, app Tauri, 8 agentes prontos, catálogo de ~13k skills.
 |---|---|---|
 | **Digest matinal falado** (resumo do dia ao começar) | **ACEITA** — backlog, candidata forte | Casa perfeita: o gatilho de abertura do workspace JÁ existe — um "bom-dia do C-3PO" na voz do Antônio ao sentar, com estado real dos projetos. Disparo **na abertura** (um uso, custo visível), não agendado às cegas. Entra com sim do dono. |
 | Modelos locais (Ollama) como **motor** da conversa | **RECUSADA** | O motor é decisão recente e expressa do dono: Sonnet 5 sempre, qualidade constante. Trocar por modelo local rebaixa a conversa para economizar o que o dono já decidiu pagar. |
-| Ollama local para a **reflexão noturna** futura | **ACEITA como opção** | Se/quando a fase de reflexão existir (já aceita em princípio), rodá-la no Ollama da casa (porta 11434, já usado por LoreEngine/Transcriber) zera o custo de token de madrugada. Decisão adiada até a fase existir. |
+| Ollama local para a **reflexão noturna** futura | **PRETERIDA** (31/10/2026) | O dono decidiu rodar a reflexão pela CLI do Claude da assinatura, não pelo Ollama. |
 | Catálogo de skills comunitárias (~13k, agentskills.io) | **RECUSADA** | Skill de terceiro é código não auditado com acesso à máquina — contra tudo que o acesso-por-projeto construiu. Ferramenta do C-3PO nasce por contrato neste plano, com allowlist, uma a uma. |
 | Agente de **monitoramento contínuo** com IA | **RECUSADA** | Monitorar é do painel-admin, determinístico e grátis (sonda a cada 60 s). IA rodando sozinha o dia inteiro é token queimando sem dono olhando. |
 | App desktop (Tauri) | **RECUSADA** | Já resolvido com zero código: atalho em modo app do Edge — que ainda é onde a voz oficial mora. |
