@@ -136,6 +136,12 @@ body.hg-ativo main { max-width: none; padding: 10px 14px 12px; }
 .hg-nativo-botoes button { background: transparent; color: var(--hg-apagado); border: 1px solid var(--hg-linha); padding: 6px 10px; font: 600 12px/1 var(--hg-f-titulo); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .hg-nativo-botoes button:first-child { color: var(--hg-ouro); border-color: var(--hg-ouro); }
 .hg-nativo-botoes button:disabled { opacity: .5; cursor: progress; }
+/* Play por nave (F3): o mesmo bloco do "Steam livre", mais o que o último job do zelador deixou. */
+.hg-play { margin-bottom: 6px; }
+.hg-play-bloqueio { font-size: 12.5px; line-height: 1.45; }
+.hg-play-bloqueio p { margin: 0 0 4px; }
+.hg-bloqueio-dono { color: var(--hg-alerta); }
+.hg-chip-bloqueio { font-weight: 600; }
 .hg-conversa { display: grid; gap: 6px; border-top: 1px solid rgba(172, 155, 129, .25); padding-top: 10px; }
 .hg-conversa-resp { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; font-size: 13px; line-height: 1.45; scrollbar-width: thin; }
 .hg-conversa-resp p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

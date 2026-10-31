@@ -1,4 +1,4 @@
-// Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira da vigília.
+// Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira do play.
 import { ErroAcesso } from './sso.js';
 import { criarDesafios } from './desafio-duas-acoes.js';
 import { criarApiDuasAcoes } from './api-duas-acoes.js';

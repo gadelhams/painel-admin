@@ -1,4 +1,4 @@
-// Busca naves (/api/hangar), droids (/api/hangar/sessoes), sondas (/api/producao), a frota (/api/orquestracao/frota) e as encomendas pendentes (/api/hangar/encomendas) e as aplica ao estado da cena sem perder a animação. Só GET.
+// Busca naves (/api/hangar), droids (/api/hangar/sessoes e o job do zelador), sondas (/api/producao), a frota, o play e as encomendas pendentes (/api/hangar/encomendas) e os aplica ao estado da cena sem perder a animação. Só GET.
 
 import {
   H, FABRICAS, ARQ, LADOS, SETORES, MAX_CHAO, nave, corDoIndice, vagaPos, ancorar, emitir,
@@ -90,6 +90,7 @@ export async function carregarHangar() {
     if (!H.acervo.length) montarAcervo(r.acervo);
     carregarFrota();
     carregarEncomendas();
+    carregarPlay();
     if (H.erroHangar) falar('O Plane voltou a responder, mestre. As naves estão em dia.');
     H.erroHangar = null;
   } catch (e) {
@@ -102,6 +103,23 @@ export async function carregarHangar() {
 async function carregarFrota() {
   try { H.frota = await json('/api/orquestracao/frota'); }
   catch { H.frota = { estado: 'indisponivel' }; }
+}
+
+// Play por nave (F3): a situação de cada projeto, para o chip do painel lateral.
+async function carregarPlay() {
+  try {
+    H.play = await json('/api/orquestracao/play');
+    for (const n of H.naves) n.play = H.play.projetos.find((p) => p.projeto === n.planePrj)?.situacao ?? null;
+  } catch { H.play = null; }
+}
+
+// O droid zelador nasce do estado do job (J49): enquanto o job roda, uma "sessão" com papel
+// zelador vai da fábrica do provedor à vaga do projeto e volta quando o job termina.
+function sessaoDoZelador(z) {
+  const a = z?.atual;
+  if (!a?.jobId) return null;
+  return { id: `zelador:${a.jobId}`, ia: a.provedor === 'openai' ? 'codex' : 'claude', papel: 'zelador', fase: a.fase,
+    projeto: a.pasta, estado: 'trabalhando', desde: a.desde, cartao: null, acoes: [] };
 }
 
 // A sessão cita a carta por UUID (MCP, URL) ou por SIGLA-N (ponte REST,
@@ -119,10 +137,12 @@ function comUuid(s) {
 
 export async function carregarSessoes() {
   try {
-    const r = await json('/api/hangar/sessoes');
+    const [r, z] = await Promise.all([json('/api/hangar/sessoes'), json('/api/orquestracao/zelador').catch(() => null)]);
     for (const f of FABRICAS) f.ativa = r.ias.find((i) => i.id === f.id)?.viva ?? false;
     H.sessoesEm = Date.now();
-    emitir('sessoes', r.sessoes.map(comUuid));
+    H.zelador = z;
+    const zelador = sessaoDoZelador(z);
+    emitir('sessoes', [...r.sessoes.map(comUuid), ...(zelador ? [zelador] : [])]);
   } catch {
     // poll de 5 s: a próxima rodada tenta de novo; os droids ficam onde estão
   }

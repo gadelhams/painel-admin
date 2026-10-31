@@ -1,12 +1,19 @@
-// Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho e
-// diários da vigília). Um formato só para a aba, o Hangar e o C-3PO; só campos estruturados.
+// Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho,
+// diários da vigília e, desde a F3, os três últimos dias do diário do zelador). Um formato só
+// para a aba, o Hangar e o C-3PO; só campos estruturados.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PROJETOS } from '../projetos.js';
 import { lerJsonl } from './leitor-jsonl.js';
 
-const CAMPOS = ['tipo', 'carta', 'cartaId', 'tentativaId', 'resultado', 'etapa', 'de', 'para', 'ate', 'grupo', 'frotaVersao'];
+const CAMPOS = ['tipo', 'carta', 'cartaId', 'tentativaId', 'resultado', 'etapa', 'de', 'para', 'ate', 'grupo', 'frotaVersao', 'veredito', 'jobId'];
+const DIA_ZELADOR = /^zelador-\d{4}-\d{2}-\d{2}\.jsonl$/;
+
+async function diasDoZelador(diretorio) {
+  try { return (await fs.readdir(path.join(diretorio, 'zelador'))).filter(n => DIA_ZELADOR.test(n)).sort().slice(-3); }
+  catch (e) { if (e.code === 'ENOENT') return []; throw e; }
+}
 
 function evento(bruto, origem, projetoId = null) {
   const e = { quando: bruto.quando ?? null, origem, projetoId: projetoId ?? bruto.projetoId ?? null };
@@ -15,6 +22,7 @@ function evento(bruto, origem, projetoId = null) {
   // A causa do impedido vem como objeto no despacho e como texto na vigília; sai um só formato.
   const causa = typeof bruto.causa === 'string' ? bruto.causa : bruto.causa?.tipo;
   if (['cli', 'limite', 'carta', 'infra'].includes(causa)) e.causa = causa;
+  if (origem === 'zelador' && typeof bruto.projetoId === 'string') e.projetoId = bruto.projetoId;
   return e;
 }
 
@@ -30,7 +38,8 @@ export function criarLeitorDiarioFrota({ diretorio, projetos = PROJETOS, limite 
     const eventos = [];
     const avisos = [];
     const fontes = [{ arquivo: path.join(diretorio, 'touchpoints.jsonl'), nome: 'despacho', origem: 'despacho', projetoId: null },
-      ...projetos.filter(p => p.plane).map(p => ({ arquivo: path.join(diretorio, 'vigilia', `${p.plane}.jsonl`), nome: `vigília ${p.titulo}`, origem: 'vigilia', projetoId: p.plane }))];
+      ...projetos.filter(p => p.plane).map(p => ({ arquivo: path.join(diretorio, 'vigilia', `${p.plane}.jsonl`), nome: `vigília ${p.titulo}`, origem: 'vigilia', projetoId: p.plane })),
+      ...(await diasDoZelador(diretorio)).map(n => ({ arquivo: path.join(diretorio, 'zelador', n), nome: `zelador ${n.slice(8, 18)}`, origem: 'zelador', projetoId: null }))];
     for (const f of fontes) {
       try {
         const { linhas, truncadaNoFim, truncadasNoMeio } = await lerArquivo(f.arquivo, f.nome);

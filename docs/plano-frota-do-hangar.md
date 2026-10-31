@@ -1,6 +1,6 @@
 # Frota do Hangar — droids configurados no Hangar, zelador varrendo o Plane
 
-Plano de 28/10/2026 (PAINEL-54); a F2 foi feita em 29/10/2026 (seção abaixo), F3 e F4 não. Pedido do dono: "os CLIs têm que ser
+Plano de 28/10/2026 (PAINEL-54); a F2 foi feita em 29/10/2026 e a F3 em 31/10/2026 (seções abaixo); a F4 não. Pedido do dono: "os CLIs têm que ser
 configurados para o hangar e não por task. A ideia do hangar é ter um droid
 que valida o Plane procurando cards para serem feitos, seja limpeza do card
 (atualizar definições, diminuir pendências) ou puxar para desenvolver." O
@@ -293,6 +293,56 @@ O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota).
   - `/api/conversa` continua sem SSO por decisão do dono; a varredura de rotas
     a lista como exceção;
 
+## F3 feita (31/10/2026)
+
+O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Play e zelador). O desenho
+passou pelo validador de invariantes, que deu NÃO RATIFICÁVEL com as janelas J51–J74; a F3 fecha as
+que tocam o play e a limpeza.
+- **Feito:**
+  - **play por nave** no lugar do toggle da vigília (`play.json`, SSO + duas ações, gravado sob a
+    trava, ilegível = desligado, "suspenso por divergência" gravado e distinto de desligado); a
+    vigília lê o play e o relê dentro da reserva; a rota `vigilia/*`, o leitor antigo e a sub-aba
+    Vigília saíram; a migração renomeia o toggle antigo, sob a trava e antes de agendar, e não liga
+    nada;
+  - **trava do agendador**: só agenda a instância com `ORQ_AGENDADOR=true` (só na unit) e o pid em
+    disco;
+  - **job do zelador de limpeza**, com a CLI do bloco zelador da frota, sem ferramentas, num
+    diretório vazio, e o escritor estreito da identidade "Zelador (Hangar)";
+  - **Hangar**: play no popup da nave, droid zelador nascendo do job, destaque do bloqueio só do
+    dono; diário do zelador na aba (Diário da frota) e no C-3PO (`diario_zelador`).
+- **Escolhas:**
+  - **ocupado** é por projeto quando uma sessão de IA tocou o projeto nas últimas 2 h (leitor
+    estrito) e por carta quando outro ator mexeu nela (atividade ou comentário) nas últimas 2 h:
+    uma carta mexida não para o job das outras;
+  - **J58 na própria carta**: a escrita pode acrescentar motivo (fechar, travar), nunca tirar. Por
+    isso o `IA_DECIDE` (tirar `ASTARGNE`) fica sempre recusado nesta fase: tirar a trava deixaria a
+    carta mais perto do gate. O dono decide tirando a etiqueta;
+  - **J57 no lugar da "carta contestada" (J30)**: em vez de um comentário de pergunta, o veredito
+    vira MANTER com o motivo no diário;
+  - **reconciliação por projeto**: o PENDENTE é reconciliado no início do próximo job do mesmo
+    projeto (o fencing é por projeto); pendente de projeto com play desligado espera;
+  - **consumo**: a fonte é o leitor da aba; o uso que a CLI do zelador devolve (custo, turnos) vai
+    ao diário, mas o `claude -p` não devolve percentual da assinatura, e sem leitura da fonte o
+    zelador não roda;
+  - **ordem da divergência**: o recibo DIVERGENTE vem antes da suspensão do play (o escritor só
+    escreve com play ligado); a reconciliação de um recibo DIVERGENTE garante a suspensão;
+  - **saída da CLI**: JSON estrito, aceito também dentro de uma única cerca ```json.
+- **Janelas fechadas, cada uma com teste e as principais com mutação:** J52, J53, J54 (lado do
+  zelador: prefixo fixo e filtro da prosa), J56 (UUID fixo, arquivo por lista branca, chave distinta
+  da Guest e das orquestradoras, uma leitura por operação), J57, J58, J61, J62, J63, J64, J65, J66,
+  J67 (janela de atividade por carta + leitor estrito), J68, J69, J70 (categoria "espera
+  integração"), J71 (frescor da fonte), J73.
+- **Ficam para a F4:** J51 (uma por vez no disco), J54 do lado do leitor (`gatesDoCanal` exigindo
+  `papel=decisao` e `external_source`), J55, J56 restante (Member, não Admin; atores distintos dois a
+  dois no boot; aposentados), J59, J60 (sandbox antes de o gate do zelador valer), J70 restante
+  (`origemDespacho`/`origemGate` no HANDOFF), J72 (cada escrita do zelador segura a trava durante um
+  HTTP de até 15 s, como o N11) e J74 (recibo editado depois não é conferido). Também a skill
+  `zeladoria-de-cartas` rodada à mão com o play ligado (J67): ela ainda não toma o lease; até lá,
+  rodar a skill num projeto com play ligado é decisão de quem a roda.
+- **Não verificado no real:** a chave do zelador não foi provisionada nesta entrega (o job para em
+  `SEM_IDENTIDADE` antes da CLI); a CLI do zelador nunca rodou de verdade (`--tools ""` e a saída
+  JSON do `claude -p` sem ferramentas); a linha `ORQ_AGENDADOR` não foi posta na unit.
+
 ## Mudanças nas regras (docs na mesma entrega)
 
 - `ProjetosPessoais/ORQUESTRADOR-PROJETOS.md`: hoje só a marcação de gate
@@ -322,7 +372,7 @@ O mecanismo está em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota).
 3. **F2, a frota — feita em 29/10/2026** (seção "F2 feita"): a configuração
    geral, gravada com SSO e duas ações; o executor lê a frota no lugar do
    `PERFIL-IA/v1`. A cor do droid por papel ficou para a F3/F4.
-4. **F3, o play por nave e o zelador:**
+4. **F3, o play por nave e o zelador — feita em 31/10/2026** (seção "F3 feita"):
    - **Liberação do projeto:** cada projeto é liberado pelo play.
    - **Identidade nova "Zelador (Hangar)":** Member em cada projeto. O
      escritor estreito dela segue a lista fechada.

@@ -37,6 +37,7 @@ export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
       'mcp__c3po__consulta_ssh',
       'mcp__c3po__git_projeto',
       'mcp__c3po__encomendas',
+      'mcp__c3po__diario_zelador',
       FERRAMENTA_PROPOSTA,
     ],
     permissionMode: 'dontAsk',

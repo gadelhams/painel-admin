@@ -107,11 +107,8 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoFrotaMs = 0, catalog
       if (url.pathname === '/api/contas/convites') return responder({ convites });
       if (url.pathname === '/api/orquestracao') return responder(fila);
       if (url.pathname === '/api/orquestracao/triagem-dev') return responder(triagemDev);
-      if (url.pathname === '/api/orquestracao/vigilia') return responder({ atualizadoEm: VERSAO, intervaloSegundos: 120, varrendo: false,
-        observacao: 'Fixture.', pausasFrota: { legivel: true, provedores: { claude: { ate: '2099-01-01T00:00:00Z', motivo: 'limite de uso do provedor' } },
-          versao: { versao: 3, hash: 'f'.repeat(64), motivo: 'CLI ou modelo openai impedido' } },
-        projetos: [{ projetoId: PROJETO_PLAYER, nome: 'PLAYER', ligada: true, impedimentos: [], limites: null, frota: { estado: 'ok', versao: 3, hash: 'f'.repeat(64) },
-          avisos: ['vigilia.perfilPadrao ignorado: a frota manda'], diario: [], ultimaVarredura: null, proximaCarta: null, motivoOciosa: null, tentativasHoje: 0 }] });
+      if (url.pathname === '/api/orquestracao/play') return responder({ legivel: true, agora: VERSAO, projetos: [], observacao: 'Fixture.' });
+      if (url.pathname === '/api/orquestracao/zelador') return responder({ atual: null, porProjeto: {}, diario: [], avisos: [] });
       if (url.pathname === '/api/orquestracao/frota') {
         if (atrasoFrotaMs) await new Promise(resolve => setTimeout(resolve, atrasoFrotaMs));
         return responder(frotaFixture(catalogo));
@@ -129,7 +126,8 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoFrotaMs = 0, catalog
         estado: 'Estado (29/10/2026): proxy em código, falta a unit.', feito: null, descricao: null, ultimoHandoff: null, ultimoGate: null,
         fio: { comentarios: 3, desdeCompactacao: 3, pedeCompactacao: false, ultimo: null } } });
       if (url.pathname === '/api/orquestracao/diario') return responder({ eventos: [
-        { quando: '2026-10-29T10:00:00Z', origem: 'vigilia', carta: 'PLAYER-38', tipo: 'AVANCO', de: 'READY TO DEV', para: 'READY TO TEST' }], total: 1, avisos: [] });
+        { quando: '2026-10-31T11:00:00Z', origem: 'zelador', carta: 'PLAYER-40', tipo: 'VEREDITO', veredito: 'FECHAR', resultado: 'APLICADO' },
+        { quando: '2026-10-29T10:00:00Z', origem: 'vigilia', carta: 'PLAYER-38', tipo: 'AVANCO', de: 'READY TO DEV', para: 'READY TO TEST' }], total: 2, avisos: [] });
     }
     // N5: escrita da aba Contas sem sessão SSO recebe 401, como no servidor.
     if (req.method() !== 'GET' && url.pathname.startsWith('/api/contas/')) {
@@ -383,14 +381,13 @@ test('resumo da carta e diário da frota: estado da descrição, link do Plane, 
   expect(audit.errosPagina).toEqual([]);
 });
 
-test('Vigília mostra as pausas da frota (provedor e versão), globais, sem pausa por projeto', async ({ page }) => {
+test('F3: a sub-aba Vigília saiu (o play é da nave) e o Diário da frota mostra o veredito do zelador', async ({ page }) => {
   const audit = await fixtures(page);
   await abrirOrquestracao(page);
-  await page.locator('[data-orq-topico="vigilia"]').click();
-  await expect(page.locator('#orq-vigilia')).toContainText('Pausas da frota (todos os projetos): claude pausado até');
-  await expect(page.locator('#orq-vigilia')).toContainText('v3 pausada: CLI ou modelo openai impedido');
-  await expect(page.locator('#orq-vigilia')).toContainText('PLAYER · ligada');
-  await expect(page.locator('#orq-vigilia')).toContainText('vigilia.perfilPadrao ignorado');
+  await expect(page.locator('[data-orq-topico="vigilia"]')).toHaveCount(0);
+  await expect(page.locator('#orq-topico-vigilia')).toHaveCount(0);
+  await page.locator('[data-orq-topico="historico"]').click();
+  await expect(page.locator('#orq-historico')).toContainText('zelador · PLAYER-40 · VEREDITO · FECHAR · APLICADO');
   expect(audit.chamadas.filter(c => c.metodo !== 'GET')).toEqual([]);
   expect(audit.inesperadas).toEqual([]);
   expect(audit.errosPagina).toEqual([]);

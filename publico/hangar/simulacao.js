@@ -8,6 +8,7 @@ import { aleatorio, bez, calmo, nomeCurto, suave, plural } from './util.js';
 import { falar } from './narrador.js';
 
 const LETRA = { claude: 'C', codex: 'X', grok: 'G' };
+const letra = (s) => (s.papel === 'zelador' ? 'Z' : LETRA[s.ia] ?? '?');
 const FORA = ['volta', 'desmonte'];
 const sorte = aleatorio(7);
 export const faiscas = [];
@@ -18,7 +19,7 @@ let lembrete = 60;
 // ---------- Sessões → droids ----------
 
 function rotuloLivre(ia) {
-  const usados = new Set(H.droids.filter((d) => d.ia === ia).map((d) => d.n));
+  const usados = new Set(H.droids.filter((d) => d.ia === ia || (ia === 'zelador' && d.s.papel === 'zelador')).map((d) => d.n));
   let k = 1;
   while (usados.has(k)) k += 1;
   return k;
@@ -31,15 +32,16 @@ function destino(d) {
 }
 
 function criarDroid(s, chegando) {
-  const k = rotuloLivre(s.ia);
+  const k = rotuloLivre(s.papel === 'zelador' ? 'zelador' : s.ia);
   const d = {
-    id: s.id, ia: s.ia, n: k, rotulo: `${LETRA[s.ia] ?? '?'}${k}`, s, fila: [], ultimaEm: s.acoes.at(-1)?.em ?? '',
+    id: s.id, ia: s.ia, n: k, rotulo: `${letra(s)}${k}`, s, fila: [], ultimaEm: s.acoes.at(-1)?.em ?? '',
     idx: H.droids.length, fase: 'montagem', passo: null, acao: null, t: 0, dur: calmo ? 0.01 : 2.2,
     voando: false, pos: plataforma(fabrica(s.ia)), de: null, para: null, ctrl: null, escala: 0, carga: false, feixe: false, ancora: null, encerrar: false,
   };
   d.nave = destino(d);
   // Na primeira carga o droid já está em serviço: nada de desfile de montagem a cada F5.
   if (!chegando) { d.fase = 'tarefa'; d.escala = 1; d.pos = lugar(d); }
+  else if (s.papel === 'zelador') falar(`O droid zelador ${d.rotulo} saiu da fábrica do ${fabrica(s.ia).nome} para revisar as cartas da ${d.nave?.nome ?? s.projeto}.`);
   else falar(`A fábrica do ${fabrica(s.ia).nome} montou o droid ${d.rotulo}${d.nave ? ` para a ${d.nave.nome}` : s.projeto === 'central' ? ' para um trabalho transversal' : ''}.`);
   if (s.acoes.length) d.fila.push(s.acoes.at(-1));
   H.droids.push(d);
@@ -65,7 +67,8 @@ export function reconciliar(sessoes, chegando) {
   for (const d of H.droids) {
     if (!vistos.has(d.id) && !d.encerrar) {
       d.encerrar = true;
-      falar(`O ${d.rotulo} encerrou a sessão e volta à fábrica do ${fabrica(d.ia).nome} para ser desmontado.`);
+      falar(d.s.papel === 'zelador' ? `O zelador ${d.rotulo} terminou o job e volta à fábrica do ${fabrica(d.ia).nome}. O diário diz o que ele fez.`
+        : `O ${d.rotulo} encerrou a sessão e volta à fábrica do ${fabrica(d.ia).nome} para ser desmontado.`);
     }
   }
 }
@@ -199,7 +202,8 @@ function soltarFaisca(n, pc) {
 
 // ---------- Docas: a nave sai do pátio quando um droid trabalha nela e volta depois de um tempo sem ninguém ----------
 
-const demanda = (n) => H.droids.some((d) => d.nave === n && !d.encerrar && !FORA.includes(d.fase));
+// O zelador trabalha na vaga do pátio (lê o Plane e o git), não reboca a nave para a doca.
+const demanda = (n) => H.droids.some((d) => d.nave === n && !d.encerrar && !FORA.includes(d.fase) && d.s.papel !== 'zelador');
 
 function rebocar(n, b, instantaneo) {
   b.ocupante = n; n.baia = b; n.estado = instantaneo ? 'docada' : 'indo';

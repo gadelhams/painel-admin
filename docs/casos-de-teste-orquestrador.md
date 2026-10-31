@@ -73,11 +73,11 @@ ou deploy para cumprir esta matriz.
 | ID | Cenário | Passos | Resultado esperado | Prova automática |
 |---|---|---|---|---|
 | V01 | Contrato com bloco `vigilia` | Perfil padrão fora do contrato, teto 0, comando inexistente | Contrato recusado com o campo nomeado; sem bloco, vigília indisponível | `vigilia.test.js` |
-| V02 | Desligada / ligar sem executor | Varrer; preparar com executor desligado | Nada despacha; 422 "executor desligado"; toggle persiste em disco | `vigilia.test.js` |
+| V02 | Play desligado / sem executor | Varrer com o play desligado, ilegível e ligado sem executor | Nada despacha; play ilegível = desligado; sem executor fica ociosa com o motivo; o play persiste em disco (F3) | `vigilia.test.js` |
 | V03 | Carta DEV em Todo, frota ok | Ligar e varrer | Todo → In Progress, nenhum `PERFIL-IA` gravado, tentativa com a frota, `READY TO DEV` → `READY TO TEST` com recibo; na varredura seguinte, teste aprovado → Done | `vigilia.test.js` |
 | V04 | Uma por vez | Lease ativo em carta do projeto | Varredura não despacha ("tentativa em curso") | `vigilia.test.js` |
 | V05 | Freios | Duas rejeições; teto diário; limite de uso | Carta esgotada; teto segura até passar 24 h; pausa pelo prazo do contrato e retoma | `vigilia.test.js` |
-| V06 | Toggle por SSO | preparar/confirmar sem sessão, payload extra, sessão alheia | 401/422/403; só `{projeto, ligar}` e `{confirmacaoId}` | `vigilia.test.js` |
+| V06 | Play por SSO (F3; o toggle saiu) | preparar/confirmar sem sessão, payload extra, sessão alheia; desligar entre a escolha e a reserva | 401/422/403; só `{projeto, ligar}` e `{confirmacaoId}`; GET sem `usuarioId`; desligado antes da reserva não reserva nem escreve (J66) | `vigilia.test.js` |
 | V07 | Primeira vigília real | Com `ORQ_EXECUCAO_HABILITADA=true`, ligar o PLAYER no tópico | PLAYER-38 despachada sem clique na carta; avanço de gate visível no Plane | **pendente** — decisão do dono |
 
 ## Canal legado (doc 59)

@@ -2,7 +2,7 @@
 
 import {
   H, BAIAS, SETORES, COR_TIPO, NOME_TIPO, COR_PAPEL, NOME_PAPEL,
-  fabrica, setor, nave, droid, acervoItem, naDoca, travada, pecaAlvo, situacao,
+  fabrica, corDroid, setor, nave, droid, acervoItem, naDoca, travada, pecaAlvo, situacao,
 } from './estado.js';
 import { esc, pct, plural, nomeCurto, haQuanto } from './util.js';
 import { estadoDroid } from './simulacao.js';
@@ -15,7 +15,7 @@ const DIF_PRODUTO = 'Decisões de produto decidem o rumo do projeto inteiro e fi
 export const medidor = (rotulo, p, fino) => `<div class="hg-medidor hg-preench${fino ? ' fino' : ''}" style="--pct:${(p * 100).toFixed(1)}%"><span>${esc(rotulo)}</span><b data-p>${pct(p)}</b></div>`;
 export const linkAlvo = (a, texto) => `<button type="button" class="hg-link" data-alvo="${esc(JSON.stringify(a))}">${texto}</button>`;
 const linkFora = (url, texto) => (url ? `<a class="hg-link" href="${esc(url)}" target="_blank" rel="noopener">${texto}</a>` : '');
-export const tagDroid = (d) => `<span class="hg-tag" style="--cor:${fabrica(d.ia).cor}">${esc(d.rotulo)}</span>`;
+export const tagDroid = (d) => `<span class="hg-tag" style="--cor:${corDroid(d)}">${esc(d.rotulo)}</span>`;
 const chip = (cor, texto) => `<span class="hg-chip" style="--c:${cor}">${texto}</span>`;
 const blocoCartas = (n) => `<div class="hg-cartas"><div style="--c:#ac9b81"><b>${n.cartas.aberto}</b><span>em aberto</span></div><div style="--c:var(--hg-alerta)"><b>${n.cartas.andamento}</b><span>em andamento</span></div><div style="--c:var(--hg-ok)"><b>${n.cartas.feito}</b><span>feitas</span></div></div>`;
 const vazio = (t) => `<p class="hg-vazio">${t}</p>`;
@@ -72,11 +72,27 @@ const caminhoAcervo = (x) => (x.nome.startsWith('~') ? x.nome
 
 const linksProjeto = (n) => `<p class="hg-vazio"><a class="hg-link" href="#/projeto/${esc(encodeURIComponent(n.id))}">abrir no painel</a>${n.url ? ` · ${linkFora(n.url, 'abrir no Plane')}` : ''}</p>`;
 
+// O droid zelador nasce do job (F3): o que ele faz sai do diário, não do transcript.
+const FASE_ZELADOR = { identidade: 'conferindo a identidade do zelador', reconciliando: 'reconciliando o que ficou pela metade', retrato: 'montando o retrato do Plane e do git',
+  cli: 'pensando os vereditos (CLI da frota)', aplicando: 'aplicando os vereditos no Plane', fim: 'medindo o que sobrou', inicio: 'saindo da fábrica' };
+function droidZelador(d, f, n) {
+  const fase = FASE_ZELADOR[d.s.fase] ?? 'trabalhando';
+  const ultimos = (H.zelador?.diario ?? []).filter((e) => e.jobId === d.id.replace(/^zelador:/, '')).slice(0, 8);
+  return {
+    cor: corDroid(d), olho: `C-3PO · droid zelador (${f.nome})`, titulo: `Zelador ${esc(d.rotulo)}<small>${n ? esc(n.nome) : esc(d.s.projeto ?? '')}</small>`,
+    fala: d.encerrar ? `O zelador ${d.rotulo} terminou o job e volta à fábrica.` : `O zelador ${d.rotulo} está ${fase} na ${n?.nome ?? d.s.projeto}, mestre. Cada mudança leva comentário com a fonte; o diário mostra o que ele fez.`,
+    corpo: `<dl class="hg-campos"><dt>Papel</dt><dd>${chip(COR_PAPEL.zelador, NOME_PAPEL.zelador)}</dd><dt>Fase</dt><dd>${esc(fase)}</dd>
+      <dt>Projeto</dt><dd>${n ? linkNave(n) : esc(d.s.projeto ?? '—')}</dd><dt>Job</dt><dd class="hg-mono">${esc(d.id.slice(8, 16))}</dd></dl>
+      <h4>Diário deste job</h4>${ultimos.length ? `<ul class="hg-linhas">${ultimos.map((e) => `<li><span class="hg-mono">${esc(e.tipo)}</span> ${esc([e.carta, e.veredito, e.resultado, e.motivo].filter(Boolean).join(' · '))}</li>`).join('')}</ul>` : vazio('Nada anotado ainda.')}`,
+  };
+}
+
 export function conteudo(a) {
   if (a.tipo === 'droid') {
     const d = droid(a.id);
     if (!d) return { cor: '#ac9b81', olho: 'C-3PO · droids', titulo: 'Droid<small>já desmontado</small>', fala: 'Este droid já voltou à fábrica, mestre. A sessão dele acabou.', corpo: '' };
     const f = fabrica(d.ia); const n = d.nave; const carta = cartaoDe(n, d.s.cartao);
+    if (d.s.papel === 'zelador') return droidZelador(d, f, n);
     const acoes = [...d.s.acoes].reverse().slice(0, 8);
     const idas = d.s.acoes.filter((x) => x.tipo === 'consultar');
     return {

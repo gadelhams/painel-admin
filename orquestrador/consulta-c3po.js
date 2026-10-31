@@ -6,7 +6,7 @@ import { PROJETOS } from '../projetos.js';
 const LIMITE = 30;
 // "Por que a frota não puxou?" precisa desta resposta, que nenhum dado da fila dá sozinho.
 // Muda junto com o código quando o play (F3) e o puxar (F4) existirem.
-export const COMO_A_FROTA_PUXA = 'A frota ainda não puxa cartas sozinha. Hoje uma carta só roda por despacho com o clique do dono (SSO + duas ações) ou pela vigília de um projeto ligado, e só se tiver READY TO DEV ou READY TO TEST com recibo GATE/v1, contrato .orquestrador.json no projeto e frota válida. Marcar READY TO DEV e puxar sozinha é a F4 do plano da frota (painel-admin/docs/plano-frota-do-hangar.md), ainda não construída.';
+export const COMO_A_FROTA_PUXA = 'A frota ainda não puxa cartas sozinha. Hoje uma carta só roda por despacho com o clique do dono (SSO + duas ações) ou pela vigília de um projeto com o play da nave ligado, e só se tiver READY TO DEV ou READY TO TEST com recibo GATE/v1, contrato .orquestrador.json no projeto e frota válida. Marcar READY TO DEV e puxar sozinha é a F4 do plano da frota (painel-admin/docs/plano-frota-do-hangar.md), ainda não construída.';
 const pastas = new Map(PROJETOS.filter(projeto => projeto.plane).map(projeto => [projeto.plane, projeto.pasta]));
 const camposDaCarta = item => ({
   identificador: item.identificador,

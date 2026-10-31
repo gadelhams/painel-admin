@@ -71,11 +71,12 @@ async function pedir(painel, metodo, caminho, { sessao = false } = {}) {
 test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo, tocar porta externa nem gravar estado', async () => {
   const caminhos = await caminhosDoCodigo();
   for (const esperado of ['/api/orquestracao/frota/preparar', '/api/orquestracao/frota/confirmar', '/api/chaves/confirmar', '/api/hangar',
-    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites', '/api/acoes/preparar', '/api/acoes/confirmar',
+    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/play/preparar', '/api/orquestracao/play/confirmar', '/api/orquestracao/play', '/api/orquestracao/zelador', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites', '/api/acoes/preparar', '/api/acoes/confirmar',
     '/api/hangar/encomendas', '/api/hangar/encomendas/preparar', '/api/hangar/encomendas/confirmar']) {
     assert.ok(caminhos.includes(esperado), `a varredura precisa achar ${esperado}`);
   }
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');
+  assert.ok(!caminhos.some(c => c.includes('vigilia')), 'o toggle da vigília saiu na F3: o play da nave o substitui');
   for (const esperado of ['/api/projetos/x/docs', '/api/projetos/x/git']) assert.ok(caminhos.includes(esperado), `prefixo não expandido: ${esperado}`);
   const privilegiadas = [];
   const { painel, chamadas, diretorio, limpar } = await montarComFalsos();
@@ -102,6 +103,7 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
   }
   assert.ok(privilegiadas.length >= 20, `rotas privilegiadas varridas: ${privilegiadas.join(', ')}`);
   assert.ok(privilegiadas.filter(p => !p.includes('/api/contas/')).every(p => p.startsWith('POST ')), 'fora de Contas só POST chega à sessão');
+  for (const p of ['POST /api/orquestracao/play/preparar', 'POST /api/orquestracao/play/confirmar']) assert.ok(privilegiadas.includes(p), `${p} sem SSO`);
 });
 
 test('HEAD continua 200 nos handlers só-leitura (a guarda trata HEAD como seguro)', async () => {

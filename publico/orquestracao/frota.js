@@ -25,6 +25,8 @@ class FrotaOrquestracao {
       .map(([provedor, p]) => `${provedor} pausado até ${new Date(p.ate).toLocaleTimeString('pt-BR')} (${p.motivo})`);
     const v = dados.pausas?.versao;
     if (v && v.versao === dados.versao && v.hash === dados.hash) lista.push(`v${dados.versao} pausada: ${v.motivo}`);
+    const z = dados.pausas?.versaoZelador;
+    if (z && z.versao === dados.versao && z.hash === dados.hash) lista.push(`zelador da v${dados.versao} pausado: ${z.motivo}`);
     if (dados.pausas && !dados.pausas.legivel) lista.push('pausas da frota ilegíveis: a vigília fica parada até a próxima frota confirmada');
     return lista;
   }
