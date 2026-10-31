@@ -294,6 +294,10 @@ button:disabled { opacity: .5; cursor: wait; }
   border-bottom: 1px solid var(--ui-line);
 }
 .cabecalho .celula { display: flex; align-items: center; padding: 13.6px 20.4px; }
+.sessao-sso { gap: 10px; border-left: 1px solid var(--ui-line); font-size: 12.5px; white-space: nowrap; }
+.sessao-sso .sessao-quem { color: var(--ui-ink-soft, inherit); }
+.sessao-sso[data-estado="dono"] .sessao-quem { color: var(--ok); }
+.sessao-sso[data-estado="outra-conta"] .sessao-quem, .sessao-sso[data-estado="expirada"] .sessao-quem { color: var(--alerta); }
 
 .marca {
   font-family: var(--font-heading);

@@ -74,7 +74,7 @@ function montar() {
     porta: 7777, recusa: criarGuarda(7777), resposta,
     conversa: new ConversaHttp({ resposta, conversar: async () => { chamadas.push('conversar'); }, maxMensagem: 8000 }),
     voz: new RotasVoz({ resposta, proxyEleven: espiao('eleven'), autorizarTts: negar }),
-    painel: new RotasPainel({ resposta, coletores: espiao('coletores'), ssh: espiao('ssh'), autorizarContas: negar,
+    painel: new RotasPainel({ resposta, coletores: espiao('coletores'), ssh: espiao('ssh'), autorizarContas: negar, sessao: espiao('sessao'),
       contas: criarManipuladorContas({ cliente: espiao('contas') }) }),
     orquestracao: new RotasOrquestracao({ resposta, orquestracao, triagemDev: espiao('triagem'), lerConsumo: espiao('consumo'),
       lerDiarioFrota: espiao('diario'), vigilia: espiao('vigilia'), liberacaoNativa: espiao('nativo'),

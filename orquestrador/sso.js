@@ -4,5 +4,5 @@
 export { ErroAcesso } from './erro-acesso.js';
 export { extrairSessao } from './sessao-cookie.js';
 export { recusaOrigemPrivilegiada } from './origem-privilegiada.js';
-export { criarVerificadorCadastro } from './verificador-cadastro.js';
+export { criarVerificadorCadastro, criarIdentificadorCadastro } from './verificador-cadastro.js';
 export { criarAutorizador } from './autorizador.js';

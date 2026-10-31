@@ -37,7 +37,7 @@ const sessoes = () => ({
     acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }],
 });
 
-async function fixtures(page) {
+async function fixtures(page, { sessao = { estado: 'sem-sessao' } } = {}) {
   const chamadas = [];
   const errosPagina = [];
   const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
@@ -49,6 +49,7 @@ async function fixtures(page) {
     if (url.pathname === '/api/diagnostico/voz') { await route.fulfill({ status: 204, body: '' }); return; }
     chamadas.push({ metodo: req.method(), caminho: url.pathname, em: Date.now() });
     const json = (d) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(d) });
+    if (url.pathname === '/api/sessao') return json(sessao);
     if (url.pathname === '/api/hangar') return json(hangar);
     if (url.pathname === '/api/hangar/sessoes') return json(sessoes());
     if (url.pathname === '/api/projetos') return json({ projetos: [] });
@@ -217,4 +218,21 @@ test('nave com jogo nativo: o interruptor Steam livre prepara e confirma em duas
   await page.locator('#hg-projetos [data-proj="beta"]').click();
   await expect(page.locator('#hg-nativo')).toBeHidden();
   expect(audit.errosPagina).toEqual([]);
+});
+
+test('cabeçalho diz de quem é a sessão SSO: outra conta avisa e manda sair em astargne.com; dono mostra o nome', async ({ page }) => {
+  const audit = await fixtures(page, { sessao: { estado: 'outra-conta', nome: 'astargne', email: 'outra@exemplo' } });
+  await page.goto('/');
+  await expect(page.locator('#sessao-sso .sessao-quem')).toHaveText('astargne · não é o dono');
+  await expect(page.locator('#sessao-sso a')).toHaveAttribute('href', 'https://astargne.com');
+  await expect(page.locator('#sessao-sso')).toHaveAttribute('data-estado', 'outra-conta');
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('cabeçalho no loopback sem sessão aponta para a borda', async ({ page }) => {
+  await fixtures(page);
+  await page.goto('/');
+  await expect(page.locator('#sessao-sso .sessao-quem')).toHaveText('sem sessão (loopback)');
+  await expect(page.locator('#sessao-sso a')).toHaveAttribute('href', 'https://painel.vpn.astargne.com/');
 });

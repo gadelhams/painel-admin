@@ -100,6 +100,7 @@ async function fixtures(page, { preparar = 'sem-sso', atrasoFrotaMs = 0, catalog
       if (url.pathname === '/api/hangar') return responder({ naves: [], acervo: [] });
       if (url.pathname === '/api/hangar/sessoes') return responder({ em: VERSAO, ias: [], sessoes: [] });
       if (url.pathname === '/api/tts') return responder({ disponivel: false, motivo: 'fixture' });
+      if (url.pathname === '/api/sessao') return responder({ estado: 'sem-sessao' });
       if (url.pathname === '/api/contas/apps') return responder({ apps: [] });
       if (url.pathname === '/api/contas/usuarios') return responder({ usuarios: [] });
       if (url.pathname === '/api/contas/convites') return responder({ convites });

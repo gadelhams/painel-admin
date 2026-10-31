@@ -17,7 +17,8 @@ import { criarLeitorConsumo } from './orquestrador/consumo.js';
 import { criarFonteClaude } from './orquestrador/fonte-consumo-claude.js';
 import { criarLeitorDiarioFrota } from './orquestrador/diario-frota.js';
 import { criarFonteCodex } from './orquestrador/fonte-consumo-codex.js';
-import { criarVerificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
+import { criarVerificadorCadastro, criarIdentificadorCadastro, criarAutorizador } from './orquestrador/sso.js';
+import { SessaoPainel } from './orquestrador/sessao-painel.js';
 import { criarApiFrota, criarConfirmacoesFrota } from './orquestrador/api-frota.js';
 import { criarApiNativo, criarConfirmacoesNativo } from './orquestrador/api-nativo.js';
 import { LiberacaoNativa } from './orquestrador/liberacao-nativa.js';
@@ -117,6 +118,8 @@ vigilia.iniciar();
 const triagemDev = criarTriagemDev();
 const lerConsumoIas = criarLeitorConsumo({ fontes: { claude: criarFonteClaude(), openai: criarFonteCodex() } });
 const autorizarPrivilegiado = criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId });
+// Cabeçalho: de quem é a sessão SSO deste navegador (só leitura, 60 s por cookie).
+const sessaoPainel = new SessaoPainel({ identificar: criarIdentificadorCadastro(), proprietarioId });
 // Frota: a configuração geral de modelos por papel; troca só por SSO + duas ações.
 const apiFrota = criarApiFrota({ autorizar: autorizarPrivilegiado, confirmacoes: criarConfirmacoesFrota({ servico: orquestracao }) });
 const apiHandoff = criarApiHandoff({ autorizar: autorizarPrivilegiado,
@@ -155,6 +158,7 @@ const roteador = new RoteadorPainel({
     contas: manipularContas,
     // Escritas da aba Contas: o mesmo autorizador SSO das ações privilegiadas (N5).
     autorizarContas: autorizarPrivilegiado,
+    sessao: sessaoPainel,
     ssh: new LeituraSsh({ chave: CHAVE_SSH }),
   }),
   orquestracao: new RotasOrquestracao({

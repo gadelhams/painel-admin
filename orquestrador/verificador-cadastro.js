@@ -25,6 +25,11 @@ export class VerificadorCadastro {
   }
 
   async verificar(token) {
+    return (await this.identificar(token)).id;
+  }
+
+  // O mesmo que verificar, com nome e e-mail: a tela mostra de quem é a sessão deste navegador.
+  async identificar(token) {
     if (!/^[A-Za-z0-9_-]{43}$/.test(token ?? '')) throw new ErroAcesso('sessão ausente', 401);
     let resposta;
     try { resposta = await this.executar(this.args, JSON.stringify({ token, app: null })); }
@@ -41,11 +46,16 @@ export class VerificadorCadastro {
     if (corpo.ok !== true || !/^[1-9]\d{0,9}$/.test(String(corpo.usuario?.id ?? ''))) {
       throw new ErroAcesso('verificação de sessão indisponível', 502);
     }
-    return String(corpo.usuario.id);
+    return { id: String(corpo.usuario.id), nome: String(corpo.usuario.nome ?? ''), email: String(corpo.usuario.email ?? '') };
   }
 }
 
 export function criarVerificadorCadastro({ executar = criarExecutorSsh() } = {}) {
   const verificador = new VerificadorCadastro({ executar });
   return token => verificador.verificar(token);
+}
+
+export function criarIdentificadorCadastro({ executar = criarExecutorSsh() } = {}) {
+  const verificador = new VerificadorCadastro({ executar });
+  return token => verificador.identificar(token);
 }

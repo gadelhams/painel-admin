@@ -19,7 +19,7 @@ export class Autorizador {
     const token = extrairSessao(req.headers.cookie);
     if (!token) throw new ErroAcesso('entre no Cadastro Único para confirmar esta ação', 401);
     const usuarioId = await this.verificar(token);
-    if (usuarioId !== String(this.proprietarioId)) throw new ErroAcesso('usuário sem permissão para confirmar', 403);
+    if (usuarioId !== String(this.proprietarioId)) throw new ErroAcesso('esta sessão do Cadastro Único não é a do dono; troque de conta em https://astargne.com e volte a esta aba', 403);
     return { usuarioId, sessaoHash: createHash('sha256').update(token).digest('hex') };
   }
 }

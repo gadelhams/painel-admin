@@ -128,6 +128,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-producao.js` — Sondas HTTPS da produção.
 - `rotas-projetos.js` — Estado local, documentos e git de um projeto.
 - `rotas-relacoes.js` — Catálogo estático de relações entre projetos.
+- `rotas-sessao.js` — De quem é a sessão SSO deste navegador.
 - `rotas-ssh.js` — Consulta SSH só de leitura da produção.
 - `rotas-voz.js` — ElevenLabs, diagnóstico do navegador e presença da transcrição.
 - `roteador.js` — Despacha o pedido depois da guarda.
@@ -216,6 +217,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `retrato-cli.js` — Retrato do que a CLI devolveu e a causa de uma falha (carta, cli ou limite).
 - `servico-orquestracao.js` — Liga leitura, despacho, gate, handoff e frota.
 - `sessao-cookie.js` — Lê o cookie astargne_session.
+- `sessao-painel.js` — De quem é a sessão do Cadastro Único neste navegador, para o cabeçalho do painel.
 - `simulacao-despacho.js` — Prévia do despacho com a frota atual.
 - `sso.js` — Porta das ações privilegiadas.
 - `tentativa-despacho.js` — Tentativa real: lease, handoff e executor.
@@ -282,6 +284,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `secao-fila.js` — O lugar da fila de jobs.
 - `secao-outline.js` — Outline do backlog do projeto aberto.
 - `secao-producao.js` — Sondas de produção e a consulta SSH sob demanda.
+- `sessao-sso.js` — Selo do cabeçalho: de quem é a sessão do Cadastro Único neste navegador.
 - `telemetria.js` — Junta a tira de projetos e os bloqueios do palco.
 - `tira-telemetria.js` — Uma célula da tira de projetos.
 
@@ -375,6 +378,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `protocolo-ui.test.js`
 - `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
 - `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo roteador REAL: guarda, famílias e APIs de duas ações de verdade; só os serviços no fim da linha são espiões.
+- `sessao-painel.test.js` — Selo de sessão do cabeçalho (31/10/2026): diz de quem é a sessão SSO sem autorizar nada.
 - `sessao-voz.test.js`
 - `sonda-sso.test.js`
 - `triagem-dev.test.js`
