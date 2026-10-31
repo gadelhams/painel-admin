@@ -102,8 +102,9 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
         const antes = carta.labels.map(l => l.name);
         carta.labels = corpo.labels.map(id => ({ ...labels.find(l => l.id === id) }));
         const depois = carta.labels.map(l => l.name);
-        for (const n of depois.filter(x => !antes.includes(x))) atividade(carta.id, { field: 'labels', verb: 'updated', old_value: '', new_value: n, actor: ator });
-        for (const n of antes.filter(x => !depois.includes(x))) atividade(carta.id, { field: 'labels', verb: 'updated', old_value: n, new_value: '', actor: ator });
+        // Como o Plane real: o id da etiqueta vai em new_identifier/old_identifier (o recibo do gate amarra por ele, J55).
+        for (const n of depois.filter(x => !antes.includes(x))) atividade(carta.id, { field: 'labels', verb: 'updated', old_value: '', new_value: n, new_identifier: label(n).id, actor: ator });
+        for (const n of antes.filter(x => !depois.includes(x))) atividade(carta.id, { field: 'labels', verb: 'updated', old_value: n, new_value: '', old_identifier: label(n).id, actor: ator });
       }
       if (corpo.description_html !== undefined) {
         atividade(carta.id, { field: 'description', verb: 'updated', old_value: carta.description_html, new_value: nh3(corpo.description_html), actor: ator });

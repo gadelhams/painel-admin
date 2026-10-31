@@ -1,4 +1,4 @@
-// Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
+// Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
 //
 // Regras (invariants.md §6; J26–J28, J56, J62, J65, J68 do plano e do parecer de 31/10/2026;
 // B6, B13, B15, B19, B20 e B28 da correção):
@@ -26,6 +26,7 @@ import path from 'node:path';
 import { UUID } from './uuid.js';
 import { ZELADOR_ATOR, atorDe, nomesDe } from './zelador-politica.js';
 import { RESULTADOS_RECIBO, mesmoTexto, mudancaNaListaFechada } from './zelador-veredito.js';
+import { criarMarcadorGateZelador } from './escritor-gate-zelador.js';
 
 export const ORIGEM_ZELADOR = 'zelador-hangar-v1';
 const ARQUIVO_CHAVE_ZELADOR = path.join(os.homedir(), '.config', 'plane', 'zelador.token');
@@ -65,7 +66,10 @@ async function hashesVizinhos(arquivo) {
   return hashes;
 }
 
+// `identidadesProibidas()` (F4b): { hashes, atores } das identidades de escrita do catálogo (as
+// orquestradoras, também as do `.env` legado e as de outra pasta); chave ou ator igual recusa.
 export function criarEscritorZelador({ escopoPermitido, escopoRecibo = null, arquivoChave = ARQUIVO_CHAVE_ZELADOR, chavesProibidas = new Set(),
+  identidadesProibidas = async () => ({ hashes: new Set(), atores: new Set() }),
   ator = ZELADOR_ATOR, apiBase = process.env.PLANE_API_BASE ?? 'http://127.0.0.1:8095', fetchImpl = fetch, lerChave = lerChaveZelador,
   timeoutSobTravaMs = TIMEOUT_SOB_TRAVA_MS, tetoSobTravaMs = TETO_SOB_TRAVA_MS }) {
   if (typeof escopoPermitido !== 'function' || !UUID.test(ator)) throw new Error('escritor do zelador sem escopo ou ator');
@@ -81,6 +85,10 @@ export function criarEscritorZelador({ escopoPermitido, escopoRecibo = null, arq
     if (!UUID.test(projetoId ?? '') || !(await noEscopo(projetoId, chaveRecibo))) throw foraDoEscopo();
     const chave = await lerChave(arquivoChave);
     if (chavesProibidas.has(chave) || (await hashesVizinhos(arquivoChave)).has(sha(chave))) throw new Error('chave do zelador igual a outra identidade');
+    let catalogo;
+    try { catalogo = await identidadesProibidas(); } catch { throw new Error('identidades do catálogo ilegíveis; distinção não conferida'); }
+    if (catalogo.hashes.has(sha(chave))) throw new Error('chave do zelador igual à de um orquestrador do catálogo');
+    if (catalogo.atores.has(ator)) throw new Error('ator do zelador igual ao de um orquestrador do catálogo');
     const pedir = async (caminho, opcoes = {}) => {
       const { timeoutMs = 15_000, ...resto } = opcoes;
       const r = await fetchImpl(`${raiz}${caminho}`, { ...resto, redirect: 'error',
@@ -174,5 +182,8 @@ export function criarEscritorZelador({ escopoPermitido, escopoRecibo = null, arq
     return { conferiu: verificada.id === cartaId && alvo.esperado(verificada), versaoCarta: verificada.updated_at ?? null };
   }
 
-  return { comentar, mudar, conferir };
+  // F4b: o gate do zelador, com a mesma sessão (chave, distinção, `/users/me`) e o mesmo teto sob a trava.
+  const marcarGate = criarMarcadorGateZelador({ sessao, escopoPermitido, foraDoEscopo, prazoSobTrava, ator });
+
+  return { comentar, mudar, conferir, marcarGate };
 }

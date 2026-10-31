@@ -20,7 +20,7 @@ import { EstadoCarta } from './estado-carta.js';
 export class ServicoOrquestracao {
   constructor({ consultar, raiz = RAIZ, estado = criarEstadoOrquestracao({ diretorio: path.join(os.homedir(), '.local', 'state', 'painel-admin', 'orquestracao') }),
     escritorHandoff = null, escritorGate = null, projetoEscrita = null, autorEscrita = null,
-    identidadesEscrita = {}, situacaoIdentidade = null, cartaReservada = null, executor = null, execucaoHabilitada = false, agora = Date.now, frota = null, pausasFrota = null } = {}) {
+    identidadesEscrita = {}, situacaoIdentidade = null, cartaReservada = null, gateZelador = null, executor = null, execucaoHabilitada = false, agora = Date.now, frota = null, pausasFrota = null } = {}) {
     this.consultar = consultar;
     this.raiz = raiz;
     this.estado = estado;
@@ -35,6 +35,8 @@ export class ServicoOrquestracao {
     this.lerSituacaoIdentidade = situacaoIdentidade;
     // Reserva viva de outra sessão (porta reservas.js, item 9): a fila marca a carta impedida.
     this.cartaReservada = cartaReservada;
+    // Gate do zelador (F4b): `(projetoId) → { ok, motivo, ator }`; sem ele, o zelador não é autor aceito.
+    this.gateZelador = gateZelador;
     if (projetoEscrita && autorEscrita) {
       if (this.identidades.has(projetoEscrita)) throw new Error('identidade de escrita duplicada para o projeto');
       this.identidades.set(projetoEscrita, { escritorHandoff, escritorGate, autorEscrita });

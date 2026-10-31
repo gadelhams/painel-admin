@@ -5,8 +5,8 @@ import { PROJETOS } from '../projetos.js';
 
 const LIMITE = 30;
 // "Por que a frota não puxou?" precisa desta resposta, que nenhum dado da fila dá sozinho.
-// Muda junto com o código quando o play (F3) e o puxar (F4) existirem.
-export const COMO_A_FROTA_PUXA = 'A frota ainda não puxa cartas sozinha. Hoje uma carta só roda por despacho com o clique do dono (SSO + duas ações) ou pela vigília de um projeto com o play da nave ligado, e só se tiver READY TO DEV ou READY TO TEST com recibo GATE/v1, contrato .orquestrador.json no projeto e frota válida. Marcar READY TO DEV e puxar sozinha é a F4 do plano da frota (painel-admin/docs/plano-frota-do-hangar.md), ainda não construída.';
+// Muda junto com o código (F4b, 31/10/2026: o zelador marca READY TO DEV e a vigília do Hangar despacha).
+export const COMO_A_FROTA_PUXA = 'A frota puxa sozinha só nos projetos com o play da nave ligado e só onde a unit tem ORQ_AGENDADOR=true: o zelador propõe PRONTA e o painel, depois de conferir ao vivo a prontidão, os ancestrais e a sandbox bwrap, marca READY TO DEV com recibo GATE/v1 próprio; a vigília do Hangar despacha UMA carta por vez, de qualquer projeto com play, contrato .orquestrador.json, identidade técnica e frota válida, em round-robin e sob o teto diário. Sem isso, uma carta só roda por despacho com o clique do dono (SSO + duas ações). Nunca push nem merge (painel-admin/docs/plano-frota-do-hangar.md).';
 const pastas = new Map(PROJETOS.filter(projeto => projeto.plane).map(projeto => [projeto.plane, projeto.pasta]));
 const camposDaCarta = item => ({
   identificador: item.identificador,

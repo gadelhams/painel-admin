@@ -11,14 +11,16 @@ import { JobZelador } from './zelador-job.js';
 import { AgendadorZelador } from './zelador-agendador.js';
 
 export function criarZelador({ servico, estado, play, escritor, diretorio, consultar, spawn, ambiente = process.env, lerConsumo, ocupacao,
-  executarGit, raiz, intervaloMs, tetoDia, agora = Date.now, registrarLog = () => {}, cli = null, projetos, pendenciasMesa }) {
+  executarGit, raiz, intervaloMs, tetoDia, agora = Date.now, registrarLog = () => {}, cli = null, projetos, pendenciasMesa,
+  elegibilidadeGate, cartaReservada = null }) {
   const diario = new DiarioZelador({ diretorio, agora });
   const leases = new LeaseZelador({ diretorio, comTrava: servico.comTrava, agora });
   const git = new GitZelador(executarGit ? { executar: executarGit } : {});
-  const retrato = new RetratoZelador({ consultar, git, estado, ...(projetos ? { projetos } : {}), ...(pendenciasMesa ? { pendenciasMesa } : {}) });
+  const retrato = new RetratoZelador({ consultar, git, estado, cartaReservada, ...(projetos ? { projetos } : {}), ...(pendenciasMesa ? { pendenciasMesa } : {}) });
   const cliZelador = cli ?? new CliZelador({ spawn, ambiente, agora });
   const fabricaJob = ({ jobId, projeto, pasta, tupla, frotaCongelada, aoFase }) => new JobZelador({ jobId, projeto, pasta, tupla, frotaCongelada,
-    play, leases, diario, retrato, cli: cliZelador, git, escritor, estado, pausas: servico.pausasFrota, consultar, comTrava: servico.comTrava, agora, ocupacao, aoFase });
+    play, leases, diario, retrato, cli: cliZelador, git, escritor, estado, pausas: servico.pausasFrota, consultar, comTrava: servico.comTrava, agora, ocupacao, aoFase,
+    servico, cartaReservada, ...(elegibilidadeGate ? { elegibilidadeGate } : {}) });
   const agendador = new AgendadorZelador({ servico, play, diario, leases, fabricaJob, lerConsumo, ocupacao, consultar,
     ...(raiz ? { raiz } : {}), ...(intervaloMs ? { intervaloMs } : {}), ...(tetoDia ? { tetoDia } : {}), agora, registrarLog });
   // O que está em curso no projeto, para o aviso do play: o job desta instância ou, pelo lease

@@ -66,9 +66,19 @@ Saída 0 = reservada (ou solta), 1 = recusada (outra sessão viva ou tentativa d
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
 | `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), lida uma vez por operação (aberta sem seguir elo); antes de escrever, `/users/me` tem de devolver este UUID |
 | `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ligada em 24/10/2026** depois de REPROVADO (1ª) e APROVADO (2ª) do `validador-deploy`; remover a linha desliga a troca no servidor (o inventário continua) |
-| `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada, a **vigília** de um projeto com o **play da nave** ligado (Hangar, SSO + confirmação) passa a despachar sozinha dentro dos freios do contrato |
+| `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada (e `ORQ_AGENDADOR` na unit), a **vigília do Hangar** despacha uma carta por vez de qualquer projeto com o **play da nave** ligado (Hangar, SSO + confirmação), sozinha, dentro dos freios do contrato e do teto global |
 | `ORQ_AGENDADOR` | `true` deixa ESTA instância agendar a vigília e o zelador (trava em `agendador.json`, pid conferido a cada volta). **Só na unit systemd, nunca no `.env`**: o smoke na 7787 lê o mesmo `.env` e o mesmo estado, e dois agendadores despachariam duas vezes. Linha a acrescentar em `~/.config/systemd/user/painel-admin.service`, seção `[Service]`: `Environment=ORQ_AGENDADOR=true` (depois `systemctl --user daemon-reload` e `restart`). Quem não tomou a trava no arranque tenta de novo a cada 5 min e liga sozinho quando o dono antigo morre |
 | `ZELADOR_INTERVALO_MIN` / `ZELADOR_TETO_DIA` | intervalo entre jobs do zelador (5–1440, padrão 30) e teto de jobs em 24 h (1–100, padrão 12); valor fora da faixa cai no padrão |
+| `ORQ_TETO_DIA` | teto de tentativas da vigília em 24 h no **Hangar inteiro** (1–100, padrão 12; F4b), somado dos `vigilia/<projeto>.jsonl` sem as paradas da frota; o teto por projeto do contrato continua |
+
+**Sandbox do executor (F4b, 31/10/2026).** As CLIs dos papéis e o comando de aceite rodam sob
+`/usr/bin/bwrap` (pacote `bubblewrap`, 0.12.0 nesta máquina), com as chaves do Plane, o estado do
+painel, `~/.ssh`, `~/.config/linear`, `~/.config/gh` e os `.env` do catálogo mascarados; o aceite
+roda sem rede, salvo `"redeNoAceite": true` no `.orquestrador.json`. Sem bwrap (pacote removido,
+user namespace desligado), o executor roda como antes, a tentativa de gate do zelador é impedida e
+o popup do play diz "Gate do zelador inelegível: sandbox bwrap indisponível (…)". Prova real de
+31/10: `claude` e `codex` (com o sandbox próprio aninhado) rodaram sob o bwrap e a chave do
+zelador ficou invisível.
 
 Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
 (`leases/`, `touchpoints.jsonl`, `saidas/<tentativa>/`, `worktrees/`,
@@ -81,8 +91,10 @@ recibo), `lease-global.json` e `lease-<projeto>.json`). Lease do zelador ilegív
 até ser apagado à mão. A chave do zelador existe desde 31/10 em `~/.config/plane/zelador.token`
 (600; nunca no `.env`; ator `830e2631-de81-4871-95b7-ed9cc1774b32`); igual a um
 `orquestrador-*.token` ou ao `painel-admin.token` da mesma pasta, ou sem ela, o job para antes da
-CLI com `SEM_IDENTIDADE` no diário. O bloco zelador da frota só roda com provedor `claude` até a
-sandbox da F4b (Codex é recusado pelo nome). PENDENTE de projeto com o play desligado ou suspenso
+CLI com `SEM_IDENTIDADE` no diário (desde a F4b, também igual à chave ou ao ator de qualquer
+orquestrador do catálogo). O bloco zelador da frota só roda com provedor `claude` (Codex é recusado
+pelo nome: a CLI do zelador não vai ao bwrap). O READY TO DEV do zelador grava `GATE_PENDENTE` e
+`GATE_APLICADO` (origem `zelador`) no histórico da carta em `touchpoints.jsonl`. PENDENTE de projeto com o play desligado ou suspenso
 é fechado num job sem CLI, só com o recibo. Os
 worktrees de tentativas ficam para revisão humana — `git -C <projeto> worktree
 remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.

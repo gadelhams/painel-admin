@@ -157,6 +157,9 @@ export class AplicacaoZelador {
           if (await estado.lerLease(p.cartaId).catch(() => ({ ilegivel: true }))) throw abortar('lease de despacho apareceu na carta', true);
           const historico = await estado.lerHistorico(p.cartaId).catch(() => null);
           if (!historico || historico.some(e => e.tipo === 'TENTATIVA' && this.j.agora() - Date.parse(e.quando) < DIA_MS)) throw abortar('tentativa de despacho na carta', true);
+          // Item 9 (F4b): a sessão que reservou a carta no meio da sequência ganha dela.
+          const reserva = this.j.cartaReservada ? await this.j.cartaReservada(p.cartaId).catch(() => ({ motivo: 'reservas ilegíveis' })) : null;
+          if (reserva) throw abortar(`carta reservada por outra sessão: ${reserva.motivo}`, true);
           return acao();
         }) });
       resultado = r.conferiu ? 'APLICADO' : 'DIVERGENTE';

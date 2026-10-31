@@ -58,7 +58,7 @@ test('"por que a frota não puxou": a fila diz como a frota puxa hoje e o resumo
   base.orquestracao.fila = async () => ({ ...await fila(), modo: 'despacho-controlado',
     projetos: [{ id: '87dd03dc-ff75-4b86-b265-44740e0f112e', nome: 'EmuladorWeb', candidatas: 2, elegiveis: 0, impedimento: null, cartas: 21 }] });
   const r = await consultarOrquestracaoC3po(base);
-  assert.match(r.comoAFrotaPuxa, /ainda não puxa cartas sozinha/);
+  assert.match(r.comoAFrotaPuxa, /UMA carta por vez/);
   // O serviço do C-3PO nasce sem executor: o modo do painel não sai (o `modo` aqui é o da consulta).
   assert.equal(r.modo, 'fila');
   assert.deepEqual(r.projetos, [{ nome: 'EmuladorWeb', pasta: 'EmuladorWeb', candidatas: 2, elegiveis: 0, impedimento: null }]);

@@ -6,13 +6,14 @@
 // fim vira JOB_INTERROMPIDO — o droid não fica fantasma — e os leases dele são soltos. Só a
 // instância com a trava do agendador chama `recuperar` e agenda (J52). Projeto elegível com
 // PENDENTE e play desligado ou suspenso vai primeiro, num job que só fecha recibos, sem CLI nem
-// consumo (B13). Só o provedor claude roda no bloco zelador até a sandbox da F4b (B27).
+// consumo (B13). Só o provedor claude roda no bloco zelador (B27): a sandbox bwrap da F4b embrulha as
+// CLIs do executor, não a do zelador, e o Codex só-leitura leria o disco.
 import { randomUUID } from 'node:crypto';
 import { pastaDoContrato, RAIZ, todas } from './contrato-local.js';
 import { projecaoDaLinha } from './zelador-diario.js';
 
 const CONSUMO_CEDE_EM = 85;
-// B27: o Codex sob `--sandbox read-only` ainda LÊ o disco (o token do zelador incluído).
+// B27: o Codex sob `--sandbox read-only` LÊ o disco (o token do zelador incluído); a CLI do zelador não vai ao bwrap.
 const PROVEDORES_ZELADOR = Object.freeze(['claude']);
 const CONSUMO_INDISPONIVEL_MAX_MS = 6 * 60 * 60_000;
 
@@ -58,7 +59,7 @@ export class AgendadorZelador {
     const frota = await this.servico.lerFrota();
     const tupla = frota?.conteudo?.zelador?.zelador;
     if (!tupla || frota.zelador?.estado !== 'ok') return this.ocioso(`frota do zelador ${frota?.zelador?.estado ?? frota?.estado ?? 'ausente'}: nenhum job sem frota válida`);
-    if (!PROVEDORES_ZELADOR.includes(tupla.provedor)) return this.ocioso(`o zelador só aceita o provedor claude até a sandbox da F4b (bloco zelador em ${tupla.provedor})`);
+    if (!PROVEDORES_ZELADOR.includes(tupla.provedor)) return this.ocioso(`o zelador só aceita o provedor claude (bloco zelador em ${tupla.provedor}; a CLI dele não roda sob o bwrap)`);
     const congelada = Object.freeze({ versao: frota.versao, hash: frota.hash, tuplas: Object.freeze({ zelador: tupla }) });
     const pausa = this.servico.pausasFrota.impedimento(await this.servico.pausasFrota.ler(), congelada, 'zelador');
     if (pausa) return this.ocioso(pausa);

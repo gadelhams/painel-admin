@@ -48,6 +48,8 @@ export function validarContrato(valor, projectId) {
   if (valor.instalarEm !== undefined && (!Array.isArray(valor.instalarEm) || valor.instalarEm.length > 10 ||
       valor.instalarEm.some(x => typeof x !== 'string' || x.length > 120 || !SUBPASTA_INSTALACAO.test(x)) ||
       new Set(valor.instalarEm).size !== valor.instalarEm.length)) erros.push('instalarEm inválido (subpastas relativas, sem ..)');
+  // F4b (J60): o comando de aceite roda sem rede; o projeto que precisa dela declara.
+  if (valor.redeNoAceite !== undefined && typeof valor.redeNoAceite !== 'boolean') erros.push('redeNoAceite inválido (true ou false)');
   if (!erros.length) erros.push(...errosDaVigilia(valor));
   return erros;
 }

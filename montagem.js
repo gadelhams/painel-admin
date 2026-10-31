@@ -45,6 +45,8 @@ import { criarApiPlay, criarConfirmacoesPlay } from './orquestrador/api-play.js'
 import { InstanciaAgendador } from './orquestrador/agendador-instancia.js';
 import { criarZelador } from './orquestrador/zelador.js';
 import { criarEscritorZelador } from './orquestrador/escritor-zelador-plane.js';
+import { criarElegibilidadeGateZelador } from './orquestrador/zelador-gate.js';
+import { SandboxCli } from './orquestrador/sandbox-cli.js';
 import { criarServicoChaves, criarConfirmacoesChaves, criarApiChaves } from './chaves.js';
 import { criarAlinhamento } from './alinhamento.js';
 import { criarClientePlane, limparCachePlane } from './plane.js';
@@ -98,13 +100,15 @@ const COLETORES = { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, ler
  * - arquivoChaveAdmin: o arquivo 600 da chave do Painel Admin (mesa de decisão).
  * - diretorioChaves: onde moram os `orquestrador-<sigla>.token` das identidades do catálogo (J56).
  * - pidDoCliente, sessaoAncestral: o /proc da rota de reserva (o processo do socket e a CLI dele).
+ * - sandbox: o SandboxCli (bwrap) das CLIs e do aceite do executor; também decide se o gate do zelador é elegível (F4b, J60).
  */
 export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEstado = DIRETORIO_ESTADO,
   publico = PUBLICO, externos = {}, log = console.error } = {}) {
   const { executarSsh, leituraSsh, sso = {}, fetchPlane, consultarPlane, conversar = conversarReal,
     transcrever, fetchVoz, spawnCli, coletores = COLETORES, agora = Date.now, diretorioCodex,
     ocupacaoSessoes = ocupacaoPorSessoes, executarGit, arquivoChaveZelador, cliZelador, arquivoChaveAdmin,
-    diretorioChaves = DIRETORIO_CHAVES, pidDoCliente: pidDoSocket = pidDoCliente, sessaoAncestral: sessaoDoPid = sessaoAncestral } = externos;
+    diretorioChaves = DIRETORIO_CHAVES, pidDoCliente: pidDoSocket = pidDoCliente, sessaoAncestral: sessaoDoPid = sessaoAncestral,
+    sandbox = new SandboxCli({ diretorioPainel: diretorioEstado }) } = externos;
   const diretorioOrquestracao = path.join(diretorioEstado, 'orquestracao');
   const proprietarioId = ambiente.ORQ_OWNER_USER_ID?.trim();
   const verificar = sso.verificar ?? criarVerificadorCadastro({ executar: executarSsh });
@@ -122,7 +126,7 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   const executor = execucaoHabilitada && ambiente.PLANE_API_KEY?.trim()
     ? criarExecutorCli({ diretorioEstado: diretorioOrquestracao,
       consultar: consultarPlane ?? criarClientePlane({ chave: ambiente.PLANE_API_KEY.trim(), ...(fetchPlane ? { fetchImpl: fetchPlane } : {}) }),
-      ...(spawnCli ? { spawn: spawnCli } : {}) })
+      ...(spawnCli ? { spawn: spawnCli } : {}), sandbox })
     : null;
   if (execucaoHabilitada && !executor) log('[orquestracao] ORQ_EXECUCAO_HABILITADA sem PLANE_API_KEY: executor não construído');
   // Reserva de carta por sessão (item 9): o lease mora em <estado>/reservas; a reserva da frota
@@ -139,12 +143,17 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     chavesReservadas: async () => ({
       zelador: await lerChaveArquivo(arquivoChaveZelador ?? path.join(diretorioChaves, 'zelador.token')).catch(() => null),
       admin: await lerChaveArquivo(arquivoChaveAdmin ?? path.join(diretorioChaves, 'painel-admin.token')).catch(() => null) }) });
+  // Gate do zelador (F4b): play, contrato, identidade e sandbox; a fila aceita o recibo pela mesma regra (montada depois do play).
+  let elegibilidadeGate = async () => ({ ok: false, motivo: 'montagem incompleta' });
   const orquestracao = criarServicoOrquestracao({ identidadesEscrita: escrita.identidades, situacaoIdentidade: escrita.situacao, cartaReservada,
+    gateZelador: id => elegibilidadeGate(id),
     executor, execucaoHabilitada: Boolean(executor), consultar: consultarPlane, agora, estado: estadoOrquestracao });
   // Play por nave (F3): o dono libera o projeto por SSO + duas ações; a vigília despacha e o
   // zelador limpa só nos projetos com play ligado, e só na instância que agenda (J52).
   const play = new PlayHangar({ diretorio: diretorioOrquestracao, comTrava: estadoOrquestracao.comTrava, agora });
-  const vigilia = criarVigilia({ servico: orquestracao, play, diretorioEstado: diretorioOrquestracao, agora, registrarLog: log });
+  elegibilidadeGate = criarElegibilidadeGateZelador({ sandbox, play, contrato: id => orquestracao.contrato(id), identidade: id => orquestracao.identidade(id) });
+  // O despacho do Hangar inteiro (F4b): uma por vez, round-robin, teto diário global `ORQ_TETO_DIA`.
+  const vigilia = criarVigilia({ servico: orquestracao, play, diretorioEstado: diretorioOrquestracao, agora, registrarLog: log, tetoDia: inteiroEntre(ambiente.ORQ_TETO_DIA, 1, 100, 12) });
   const lerConsumo = criarLeitorConsumo({ agora, fontes: { claude: criarFonteClaude({ arquivo: path.join(diretorioEstado, 'claude-uso.json') }),
     openai: criarFonteCodex(diretorioCodex ? { raiz: diretorioCodex } : {}) } });
   const consultarGuest = consultarPlane ?? (ambiente.PLANE_API_KEY?.trim() ? criarClientePlane({ chave: ambiente.PLANE_API_KEY.trim(), ...(fetchPlane ? { fetchImpl: fetchPlane } : {}) })
@@ -156,8 +165,9 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   let mesa = null;
   const zelador = criarZelador({ servico: orquestracao, estado: estadoOrquestracao, play, diretorio: diretorioOrquestracao, consultar: consultarGuest,
     escritor: criarEscritorZelador({ escopoPermitido: id => play.ligado(id), escopoRecibo: (id, chave) => zelador.escopoRecibo(id, chave),
-      chavesProibidas, ...(fetchPlane ? { fetchImpl: fetchPlane } : {}), ...(arquivoChaveZelador ? { arquivoChave: arquivoChaveZelador } : {}) }),
-    pendenciasMesa: () => mesa.servico.pendentes(),
+      chavesProibidas, identidadesProibidas: () => escrita.chavesEAtores(),
+      ...(fetchPlane ? { fetchImpl: fetchPlane } : {}), ...(arquivoChaveZelador ? { arquivoChave: arquivoChaveZelador } : {}) }),
+    pendenciasMesa: () => mesa.servico.pendentes(), elegibilidadeGate: id => elegibilidadeGate(id), cartaReservada,
     spawn: spawnCli ?? spawnReal, lerConsumo, ocupacao: ocupacaoSessoes, executarGit, cli: cliZelador ?? null, agora, registrarLog: log,
     intervaloMs: inteiroEntre(ambiente.ZELADOR_INTERVALO_MIN, 5, 1440, 30) * 60_000, tetoDia: inteiroEntre(ambiente.ZELADOR_TETO_DIA, 1, 100, 12) });
   const instancia = new InstanciaAgendador({ diretorio: diretorioOrquestracao, comTrava: estadoOrquestracao.comTrava,
@@ -172,7 +182,10 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   };
   const estadoPlay = async () => {
     const e = await play.estado({ atividade });
-    return { ...e, projetos: e.projetos.map(p => ({ ...p, despacho: vigilia.situacao(p.projeto).motivoOciosa ?? null })) };
+    // O motivo de o gate do zelador não valer naquela nave vai à tela (F4b: falha fechada com motivo).
+    const projetos = await Promise.all(e.projetos.map(async p => ({ ...p, despacho: vigilia.situacao(p.projeto).motivoOciosa ?? null,
+      gateZelador: await elegibilidadeGate(p.projeto).then(g => ({ ok: g.ok, motivo: g.motivo }), x => ({ ok: false, motivo: x.message })) })));
+    return { ...e, projetos };
   };
   const reservaServico = new ReservaServico({ consultar: consultarGuest, reservas, porta, log,
     identidade: id => orquestracao.identidade(id), pidDoCliente: pidDoSocket, sessaoAncestral: sessaoDoPid });

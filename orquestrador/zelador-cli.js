@@ -5,8 +5,8 @@
 // sem MCP, sem slash command, sem transcript (`--no-session-persistence`/`--ephemeral` — a
 // CLI do zelador não aparece como sessão viva). A falha é classificada como no executor
 // (retrato-cli.js): `limite` pausa o provedor, `cli` pausa a versão no bloco zelador (J61),
-// `carta` é só deste job. O Codex só-leitura ainda lê o disco: o agendador o recusa no bloco
-// zelador até a sandbox da F4b (B27); os argumentos dele ficam prontos para depois.
+// `carta` é só deste job. O Codex só-leitura lê o disco: o agendador o recusa no bloco zelador
+// (B27; a sandbox bwrap da F4b embrulha só o executor); os argumentos dele ficam prontos para depois.
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -69,11 +69,12 @@ export function promptZelador(retratoTexto) {
     'Regra (PADROES-BACKLOG.md § Zeladoria de cartas): a verdade vem do repositório, não da carta. Sem evidência, MANTER.',
     'Vereditos: MANTER; ATUALIZAR (troca um trecho EXATO da descrição por texto novo, ou anexa um parágrafo se "trecho" faltar);',
     'FECHAR (o trabalho está no ramo principal: exige evidência commit); CANCELAR (perdeu o sentido ou é duplicata);',
-    'IA_DECIDE (decisão já registrada resolve; tira ASTARGNE); DONO (só produto, conta externa, dinheiro, credencial, risco aceito ou o que contradiz decisão do dono: põe ASTARGNE, mais PRODUTO se é rumo; prova humana é TAREFA DONO).',
-    'Nunca proponha READY TO DEV/READY TO TEST, módulo, pai, apagar carta ou tirar PRODUTO. Não toque marcador (DONO/(ASTARGNE nem linha "Depende de:".',
+    'IA_DECIDE (decisão já registrada resolve; tira ASTARGNE); DONO (só produto, conta externa, dinheiro, credencial, risco aceito ou o que contradiz decisão do dono: põe ASTARGNE, mais PRODUTO se é rumo; prova humana é TAREFA DONO);',
+    'PRONTA (carta folha com escopo e critério de aceite escritos, dependências resolvidas e sem trava: é só PROPOSTA; o painel confere tudo ao vivo e, se passar, marca READY TO DEV).',
+    'Nunca proponha READY TO TEST, módulo, pai, apagar carta ou tirar PRODUTO. Não toque marcador (DONO/(ASTARGNE nem linha "Depende de:".',
     'Escreva texto puro em português, sem HTML, sem segredo, sem marcadores de protocolo (GATE/, HANDOFF/, ZELADOR/, DECISAO/, [ORQ/).',
     'Responda SÓ com um objeto JSON, sem texto em volta:',
-    '{"vereditos":[{"carta":"SIGLA-N","veredito":"MANTER|ATUALIZAR|FECHAR|CANCELAR|IA_DECIDE|DONO","evidencias":[{"tipo":"commit","sha":"…"},{"tipo":"arquivo","caminho":"docs/x.md","linha":12},{"tipo":"carta","carta":"SIGLA-N"}],"comentario":"o porquê, com a fonte","trecho":"opcional","novoTrecho":"opcional","labelsTrava":["ASTARGNE"]}]}',
+    '{"vereditos":[{"carta":"SIGLA-N","veredito":"MANTER|ATUALIZAR|FECHAR|CANCELAR|IA_DECIDE|DONO|PRONTA","evidencias":[{"tipo":"commit","sha":"…"},{"tipo":"arquivo","caminho":"docs/x.md","linha":12},{"tipo":"carta","carta":"SIGLA-N"}],"comentario":"o porquê, com a fonte","trecho":"opcional","novoTrecho":"opcional","labelsTrava":["ASTARGNE"]}]}',
     '', '--- RETRATO ---', retratoTexto,
   ].join('\n');
 }

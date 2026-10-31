@@ -236,9 +236,10 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `diario-touchpoints.js` — Diário JSONL dos touchpoints. Não cria nem apaga lease.
 - `erro-acesso.js` — Erro das ações privilegiadas. Não decide quem entra.
 - `escritor-gate-plane.js` — Grava a etiqueta depois do comentário. O texto GATE/v1 mora em protocolo-gate.js.
+- `escritor-gate-zelador.js` — Escritor do gate do zelador: grava o recibo GATE/v1 (fonte `zelador-gate-v1`) e a etiqueta READY TO DEV, com a sessão da chave do zelador. Não confere prontidão nem elegibilidade (zelador-gate.js).
 - `escritor-handoff-plane.js` — Grava o comentário de handoff. O texto HANDOFF/v1 mora em protocolo-handoff.js.
 - `escritor-reserva-plane.js` — Grava o comentário RESERVA/v1 (ou a liberação) na carta, pela identidade técnica do projeto. O texto mora em reserva-servico.js.
-- `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
+- `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
 - `estado-carta.js` — Troca o grupo de estado de uma carta. Não escolhe modelo nem registra perfil.
 - `estado-plane.js` — Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e In Progress → Done quando a tentativa de teste é aprovada.
 - `estado.js` — Recupera lease e diário depois de uma queda; uma tentativa por vez no Hangar inteiro (J51). Cada formato mora no módulo ao lado.
@@ -285,6 +286,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `resumo-carta.js` — Resumo da carta para a aba: o estado que a descrição declara (compactação do fio, PADROES-BACKLOG.md), o último handoff e gate, e o tamanho do fio.
 - `resumo-fila.js` — Conta cartas por projeto e fecha o envelope da fila. Não julga a carta.
 - `retrato-cli.js` — Retrato do que a CLI devolveu e a causa de uma falha (carta, cli ou limite). Os argumentos moram em argumentos-cli.js.
+- `sandbox-cli.js` — Sandbox `bwrap` dos filhos do executor (J60): as CLIs dos três papéis e o comando de aceite rodam com as chaves do painel mascaradas. Não decide quem roda; só embrulha e sonda.
 - `servico-orquestracao.js` — Liga leitura, despacho, gate, handoff e frota. A porta pública continua o objeto de funções.
 - `sessao-cookie.js` — Lê o cookie astargne_session. Não verifica a sessão no Cadastro Único.
 - `sessao-painel.js` — De quem é a sessão do Cadastro Único neste navegador, para o cabeçalho do painel. Não autoriza nada.
@@ -294,13 +296,13 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `texto-dependencia.js` — Declarações de dependência no texto da carta. Não olha a relação formal do Plane.
 - `trava.js` — Trava de diretório da orquestração. Quem espera desiste em 60 s; trava de processo morto é recuperada.
 - `triagem.js` — Uma varredura por vez. A classificação mora em classificar-prontidao-dev.js.
-- `uuid.js` — Forma de um UUID v4 do Plane ou do próprio painel. Não valida se o id existe.
+- `uuid.js` — Forma de um UUID do Plane ou do próprio painel, e o UUIDv5 determinístico (RFC 4122 §4.3). Não valida se o id existe.
 - `varredura-triagem.js` — Lê as folhas sem gate e devolve a triagem. Não grava etiqueta.
 - `verificador-cadastro.js` — Pergunta ao Cadastro Único se o token ainda vale. O cookie só viaja no stdin.
 - `vigilia-diario.js` — Diário da vigília: eventos em disco por projeto (`vigilia/<id>.jsonl`). Não escolhe carta nem despacha.
 - `vigilia-politica.js` — Freios da vigília declarados no contrato. Não varre nem despacha.
-- `vigilia-varredura.js` — Percorre os projetos com play ligado. O passo de uma carta mora em passo-vigilia.js.
-- `vigilia.js` — Vigília: com o play do projeto ligado, varre a fila e despacha a carta elegível.
+- `vigilia-varredura.js` — A passada da vigília no Hangar inteiro: uma tentativa por vez, em round-robin justo entre os projetos com play, sob o teto diário global. O passo de uma carta mora em passo-vigilia.js.
+- `vigilia.js` — Vigília: com o play ligado, varre a fila do Hangar inteiro e despacha UMA carta elegível por vez (round-robin, teto global).
 - `voz-eleven.js` — Proxy da ElevenLabs. A chave fica no processo; o navegador manda texto e recebe áudio.
 - `voz-xai.js` — Áudio temporário, sem persistência e sem token no browser. A transcrição é texto para consulta/proposta; nunca converte fala em escrita ou despacho.
 - `zelador-agendador.js` — Agendador do zelador: a cada N minutos escolhe o projeto com play que espera há mais tempo, confere frota, pausas, teto, consumo e ocupação, toma os leases e roda UM job. Não decide veredito.
@@ -308,6 +310,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `zelador-cli.js` — A CLI do zelador: a tupla do bloco zelador da frota, num diretório vazio novo, sem ferramentas nem persistência de sessão, com o retrato pela stdin e a resposta em JSON. Não valida veredito.
 - `zelador-diario.js` — Diário do zelador: um arquivo de acréscimo por dia (`zelador/zelador-AAAA-MM-DD.jsonl`) e o índice de pendentes fora da rotação. Só campos estruturados; não escreve no Plane.
 - `zelador-fim.js` — Fim do job do zelador: o que sobrou no projeto, do Plane atual e sem cache, por uma tabela fechada de quem destrava cada etiqueta. Não escreve.
+- `zelador-gate.js` — O portão do gate do zelador: a proposta PRONTA da CLI só vira READY TO DEV depois de tudo conferido ao vivo pelo painel. Não escreve no Plane (o escritor é escritor-gate-zelador.js).
 - `zelador-git.js` — Git só-leitura do zelador: o retrato do repositório e a conferência das evidências (commit no ramo principal, arquivo rastreado). Sem shell, sem trava do git.
 - `zelador-job.js` — Um job do zelador num projeto: reconcilia o PENDENTE dele, monta o retrato, roda a CLI fora da trava, valida e aplica veredito por veredito, e fecha com o "nada fazível". O lease e a vez moram no agendador.
 - `zelador-lease.js` — Leases do zelador em disco: um global (um job por vez no Hangar) e um por projeto, com jobId e prazo. Toda operação sob a trava global; não chama CLI nem Plane.
@@ -456,6 +459,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `fronteira-http.test.js` — Fronteira HTTP do painel MONTADO (PAINEL-17): o handler de produção de montagem.js atrás de um http.Server de verdade numa porta efêmera, atacado por requisição real.
 - `fronteiras-modulos.test.js` — Portão das fronteiras entre áreas (padroes/modulos.md, regra 14; PAINEL-55): lê os `import` de todo módulo fora de test/ e e2e/ e recusa os que pulam a porta de outra área.
 - `frota-f4a.test.js` — F4a da frota (PAINEL-54): uma tentativa por vez no disco (J51), recibo GATE/v1 endurecido (J54, J55, J74), origem no HANDOFF (J70), `instalarEm` (item 7) e a reserva de carta vista pela vigília e pelo despacho (item 9).
+- `frota-f4b-simulacao.test.js` — F4b da frota (PAINEL-54): simulação ponta a ponta com Plane, CLIs e executor falsos — o zelador marca PRONTA, a vigília do Hangar despacha, o despacho manual simultâneo é recusado, o gate recolocado à mão e o recibo forjado em prosa ficam inelegíveis e a carta reservada por sessão viva é pulada pelo zelador e pela vigília.
+- `frota-f4b.test.js` — F4b da frota (PAINEL-54): gate do zelador (J58, J59, J72), sandbox bwrap (J60), despacho do Hangar inteiro em round-robin com teto global (item 6) e a reserva de carta respeitada pelo zelador (item 9).
 - `frota.test.js` — Frota (F2, 29/10/2026): catálogo fechado, dois blocos, estado explícito na leitura, troca por duas ações com versão-base e histórico só de acréscimo.
 - `gate-plane.test.js`
 - `guarda.test.js`
@@ -496,6 +501,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## test/fixtures/
 
+- `frota-f4b.js` — Cenário da F4b montado pelas portas reais: dois projetos do catálogo (PAINEL e CAD) num Plane falso, fila, despacho, vigília, play, zelador (com o escritor de verdade) e reservas; CLIs, executor, sandbox e sessões falsos. Nada de rede nem de CLI paga.
 - `recibo-gate.js` — Recibo GATE/v1 e atividade de etiqueta no formato que o Plane real devolve (F4a: J54, J55, J74), para os Planes falsos dos testes.
 
 ## test/fixtures/canal-legado/

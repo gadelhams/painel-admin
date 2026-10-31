@@ -23,14 +23,17 @@ const LICOES_VIVAS_PADRAO = path.resolve(import.meta.dirname, '../../licoes-viva
 import { UUID } from './uuid.js';
 const DIFF_MAX = 200 * 1024;
 
+// `sandbox` (F4b, J60): o SandboxCli. Com a sonda ok, as CLIs dos papéis e o comando de aceite
+// rodam sob bwrap; sem ela, rodam como antes, menos a tentativa nascida de gate do zelador, que
+// é impedida (o gate dele só vale com a sandbox: a fila já o recusa, aqui é a segunda trava).
 export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, limites = {}, spawn = spawnPadrao,
-  ambienteBase = process.env, licoesVivasDir = LICOES_VIVAS_PADRAO, agora = Date.now } = {}) {
+  ambienteBase = process.env, licoesVivasDir = LICOES_VIVAS_PADRAO, agora = Date.now, sandbox = null } = {}) {
   if (!diretorioEstado) throw new Error('diretório de estado obrigatório');
   if (typeof consultar !== 'function') throw new Error('consultar obrigatório');
   const bins = { ...BINARIOS_PADRAO, ...binarios };
   const lim = { ...LIMITES_PADRAO, ...limites };
   const env = ambienteLimpo(ambienteBase);
-  const novoProcesso = (aoIniciar = null) => new ProcessoCli({ spawn, env, agora, maxSaidaBytes: lim.maxSaidaBytes, aoIniciar });
+  const novoProcesso = (aoIniciar = null, isolamento = null) => new ProcessoCli({ spawn, env, agora, maxSaidaBytes: lim.maxSaidaBytes, aoIniciar, sandbox: isolamento });
 
   async function binario(nome) {
     const caminho = await resolverBinario(bins[nome], env);
@@ -39,8 +42,8 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
   }
 
   // Cada tentativa tem o seu processo: o aviso de grupo (J51) vai só para o lease dela.
-  const pecas = (processo) => ({ processo, git: new IsolamentoGit({ processo, binario }),
-    papeisCli: new PapelCli({ processo, binario, limites: lim, licoesVivasDir }),
+  const pecas = (processo, processoIsolado = processo) => ({ processo, processoIsolado, git: new IsolamentoGit({ processo, binario }),
+    papeisCli: new PapelCli({ processo: processoIsolado, binario, limites: lim, licoesVivasDir }),
     dependencias: new DependenciasWorktree({ processo, binario, limites: lim }) });
   const { git: gitValidacao } = pecas(novoProcesso());
   const briefing = new BriefingPapel();
@@ -59,9 +62,11 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
     return { inspecao };
   }
 
-  async function executar({ carta, cartaId, projetoId, comandoId, comando, plano, contrato = null, gate: gateDaFila = null, pasta, tentativaId, aoProcesso = null }) {
+  async function executar({ carta, cartaId, projetoId, comandoId, comando, plano, contrato = null, gate: gateDaFila = null, origemGate = null, pasta, tentativaId, aoProcesso = null }) {
     if (!UUID.test(tentativaId ?? '')) throw new Error('tentativa inválida');
-    const { processo, git, papeisCli, dependencias } = pecas(novoProcesso(aoProcesso));
+    const sonda = sandbox ? await sandbox.sondar() : { ok: false, motivo: 'sandbox não configurada' };
+    // git e npm ci ficam fora do bwrap (não rodam código do agente: `--ignore-scripts`); as CLIs e o aceite, dentro.
+    const { processo, processoIsolado, git, papeisCli, dependencias } = pecas(novoProcesso(aoProcesso), novoProcesso(aoProcesso, sonda.ok ? sandbox : null));
     const curto = tentativaId.slice(0, 8);
     const logs = path.join(diretorioEstado, 'saidas', tentativaId);
     await fs.mkdir(logs, { recursive: true });
@@ -72,6 +77,9 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
     const impedido = (motivo, causa = { tipo: 'infra', provedor: null }) => ({ resultado: 'impedido', causa,
       resumo: cortar(`Tentativa ${curto} de ${carta} impedida antes de concluir: ${motivo}.`, 2000),
       evidencia: [...evidencia, cortar(motivo, 500), cortar(`logs: ${logs}`, 500)].slice(0, 10) });
+
+    if (origemGate === 'zelador' && !sonda.ok) return impedido(`gate do zelador exige a sandbox bwrap: ${sonda.motivo}`);
+    evidencia.push(cortar(sonda.ok ? 'sandbox bwrap: chaves, estado do painel, ~/.ssh e .env mascarados' : `sem sandbox bwrap: ${sonda.motivo}`, 500));
 
     let ramo;
     let worktree;
@@ -108,7 +116,9 @@ export function criarExecutorCli({ diretorioEstado, consultar, binarios = {}, li
     let executavelComando;
     try { executavelComando = await resolverBinario(comando.executavel === 'npm' ? bins.npm : comando.executavel, env); } catch { executavelComando = null; }
     if (!executavelComando) return impedido(`executável do comando ${comandoId} indisponível: ${comando.executavel}`);
-    const rc = await processo.rodar({ executavel: executavelComando, argumentos: comando.argumentos, cwd: worktree,
+    // J60: o aceite roda código do agente — sob o sandbox e sem rede, salvo `redeNoAceite: true`.
+    const rc = await processoIsolado.rodar({ executavel: executavelComando, argumentos: comando.argumentos, cwd: worktree,
+      isolar: { rede: contrato?.redeNoAceite === true, gravaveis: [worktree] },
       timeoutMs: lim.minutosComando * 60_000, log: path.join(logs, `comando-${comandoId}.log`) });
     const caudaComando = `${rc.stdout}\n${rc.stderr}`.trim().split('\n').slice(-40).join('\n');
     const comandoOk = !rc.expirou && rc.codigo === 0;

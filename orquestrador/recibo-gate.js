@@ -25,7 +25,7 @@ async function atividadesDa(consultar, projetoId, cartaId) {
 
 /**
  * carta: a carta da fila com `labels` expandidas ({ id, name }); recibos: os GATE/v1 válidos
- * (lerGatesDoCanal) do gate em questão; autores: ids aceitos como autores da etiqueta.
+ * (lerGatesDoCanal) do gate em questão; autores: ids aceitos como autores da etiqueta (o recibo tem de ser do mesmo).
  * Devolve { ok: true, recibo } ou { ok: false, motivo }.
  */
 export async function conferirInstanciaDoGate({ consultar, carta, gate, recibos, autores }) {
@@ -40,7 +40,9 @@ export async function conferirInstanciaDoGate({ consultar, carta, gate, recibos,
   if (!ultima) return { ok: false, motivo: 'atividade que pôs a etiqueta não encontrada' };
   if (!autores.includes(atorDe(ultima))) return { ok: false, motivo: 'etiqueta atual posta por autor não aceito' };
   const quando = Date.parse(ultima.created_at);
-  const recibo = recibos.filter(r => r.gate === gate && Date.parse(r.quando) <= quando)
+  // F4b (J59): o recibo é do MESMO autor que pôs a etiqueta — o do zelador não legitima a
+  // etiqueta posta pela identidade do projeto, nem o contrário.
+  const recibo = recibos.filter(r => r.gate === gate && r.autorId === atorDe(ultima) && Date.parse(r.quando) <= quando)
     .sort((a, b) => Date.parse(a.quando) - Date.parse(b.quando)).at(-1);
   if (!recibo) return { ok: false, motivo: 'etiqueta atual posta antes de qualquer recibo válido' };
   return { ok: true, recibo };

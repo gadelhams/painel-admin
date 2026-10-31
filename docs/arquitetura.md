@@ -117,8 +117,8 @@ fora da árvore principal, comando de aceite do contrato sem shell, ambiente por
 lista branca, timeout que mata o grupo, logs em `~/.local/state/painel-admin/orquestracao/saidas/<tentativa>/`;
 moldes dos papéis em `briefings/`; só é construído com `ORQ_EXECUCAO_HABILITADA=true`)
 **`vigilia.js`**
-(varredura automática dos projetos com play ligado: a passada em `vigilia-varredura.js`, o passo de uma carta em `passo-vigilia.js`, o diário em `vigilia-diario.js` e `vigilia.js` só compõe; a cada dois minutos escolhe a primeira carta
-elegível do projeto, muda Todo → In Progress, chama `iniciarDespacho`
+(varredura automática do Hangar inteiro, desde a F4b: a passada em `vigilia-varredura.js`, o passo de uma carta em `passo-vigilia.js`, o diário em `vigilia-diario.js` e `vigilia.js` só compõe; a cada dois minutos escolhe a primeira carta
+elegível do projeto com play que teve a vez há mais tempo, uma por passada, muda Todo → In Progress, chama `iniciarDespacho`
 com a frota (nunca grava `PERFIL-IA`) e, em `concluido`, troca `READY TO
 DEV` por `READY TO TEST` com recibo ou leva `READY TO TEST` a Done; freios por
 contrato, estado e diário em `vigilia/<projeto>.jsonl`; ligar e desligar é o
@@ -143,10 +143,10 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
   pid vivo de outro recusa, pid morto ou arquivo ilegível é tomado sob a trava (J52). Quem não tomou
   no arranque tenta de novo a cada 5 min (`tomarEVigiar`) e liga quando o dono antigo morre.
 - **Job do zelador** (`zelador.js` compõe; `zelador-agendador.js`, `zelador-job.js`,
-  `zelador-aplicacao.js`): a cada `ZELADOR_INTERVALO_MIN`, o projeto com play que teve a vez há mais
+  `zelador-aplicacao.js`; o gate em `zelador-gate.js`, F4b): a cada `ZELADOR_INTERVALO_MIN`, o projeto com play que teve a vez há mais
   tempo (pelo diário) — antes dele, o projeto elegível com PENDENTE e play desligado ou suspenso, num
   job que só fecha recibos, sem CLI nem consumo —, se a frota do zelador está ok e o provedor do bloco
-  é `claude` (o Codex sob sandbox só-leitura ainda lê o disco: recusado até a sandbox da F4b), sem
+  é `claude` (o Codex sob sandbox só-leitura lê o disco, e o bwrap da F4b embrulha só o executor), sem
   pausa de versão do bloco zelador nem do provedor, abaixo do teto diário (`ZELADOR_TETO_DIA`, contado
   do diário; job parado por CLI ou limite não conta), com consumo do provedor abaixo de 85% e leitura
   com menos de 6 h (`consumo.js`; sem leitura, não roda), sem sessão viva tocando o projeto nas
@@ -172,7 +172,7 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
   cada carta, relê o play e a ocupação por sessão. O que ele não toca (`zelador-politica.js`): carta
   fechada, não-folha, com gate, com aplicação pendente na mesa (`/api/decisao/pendentes`; diário da
   mesa ilegível = todas), que bloqueia carta com gate ou se relaciona com carta fora da leitura do
-  catálogo, com lease, tentativa ou comentário `[ORQ/v1` nas últimas 24 h, com atividade ou
+  catálogo, com lease, reservada por sessão viva (F4b; também conferido sob a trava, antes do PATCH), com tentativa ou comentário `[ORQ/v1` nas últimas 24 h, com atividade ou
   comentário de outro ator nas últimas 2 h, ou com leitura ilegível. Antes de escrever, tudo de novo
   ao vivo: a digital (estado, etiquetas, nome, descrição, comentários que não são do zelador), o "não
   desfazer ato humano" (nunca devolve um campo ao valor de onde um não-zelador o tirou — tirada de
@@ -183,7 +183,8 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
 - **Escrita** (`escritor-zelador-plane.js`, a identidade "Zelador (Hangar)"): chave lida de
   `~/.config/plane/zelador.token` (600, dono) uma vez por operação, nunca do `.env`; ator conferido em
   `/users/me` contra o UUID fixo; chave igual à Guest, a outra identidade do `.env` ou a um
-  `orquestrador-*.token`/`painel-admin.token` da mesma pasta (por hash) recusa; escopo (play ∩
+  `orquestrador-*.token`/`painel-admin.token` da mesma pasta (por hash) recusa, e desde a F4b também a
+  chave ou o ator de qualquer orquestrador do catálogo (`chavesEAtores`, de arquivo ou do `.env`); escopo (play ∩
   catálogo) conferido em cada escrita; a mudança é revalidada contra a lista fechada. Ordem: diário
   PENDENTE no índice fora da rotação → comentário `[ZELADOR/v1 veredito=… chave=…]` com
   `external_source: zelador-hangar-v1` e `external_id` = hash da mudança estruturada + digital de
@@ -217,7 +218,7 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
   tentativa o grava no lease (`marcarProcesso`); um filho órfão de uma queda segue ocupando.
 - **Recibo endurecido** (`protocolo-gate.js` `lerGatesDoCanal`, `recibo-gate.js`): `GATE/v1` só vale
   com o cabeçalho `[ORQ/v1 papel=decisao]`, autor aceito, `external_source` da lista fechada
-  (`FONTES_GATE`: `orquestrador-gate-v1` → origem `dono`) e sem `edited_at` (J54, J74); o resto fica
+  (`FONTES_GATE`: `orquestrador-gate-v1` → origem `dono`; `zelador-gate-v1` → `zelador`, F4b) e sem `edited_at` (J54, J74); o resto fica
   de fora e é contado no motivo, sem derrubar a leitura. A última atividade que pôs a etiqueta atual
   (`/activities/`, `field: labels`, `new_identifier` = id dela) tem de ser de autor aceito e posterior
   a um recibo válido; atividade ilegível ou ausente = inelegível (J55).
@@ -244,6 +245,38 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
   de uma CLI cujo pid é o da reserva; comenta `RESERVA/v1` pela identidade técnica do projeto e põe
   Backlog/Todo em In Progress (sem identidade: só o lease, com aviso). O droid do Hangar mostra a carta
   reservada (pelo `CLAUDE_CODE_SESSION_ID`; Codex pela pasta) antes da inferida; sem reserva, diz isso.
+
+**Puxar, F4b** (31/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md) § F4 feita).
+- **Sandbox** (J60, `sandbox-cli.js`): o executor embrulha as CLIs dos três papéis e o comando de aceite
+  no `bwrap` (`/usr/bin/bwrap`): `--bind / /` com `--dev /dev` próprio (sem ele o `claude`, Bun, aborta),
+  pid namespace e `/proc` novos (o `environ` do painel some), tmpfs sobre `~/.config/plane`,
+  `~/.local/state/painel-admin` (o worktree e os logs da tentativa voltam por re-bind), `~/.ssh`,
+  `~/.config/linear` e `~/.config/gh`, `/dev/null` sobre o `.env` do painel e de cada projeto do
+  catálogo que existe; `--unshare-net` só no aceite, salvo `redeNoAceite: true` no contrato;
+  `--die-with-parent` e o grupo de processos do bwrap (o timeout e a vigia de pgid seguem). O
+  controle de versão do painel (worktree, commit) e o `npm ci --ignore-scripts` ficam fora. A sonda (`true` sob as mesmas máscaras e sem
+  rede) vale 10 min; falha deixa o gate do zelador inelegível, com o motivo, e impede a tentativa
+  que nasceu dele.
+- **Gate do zelador** (J58, J59, J72; `zelador-gate.js`, escrita em `escritor-gate-zelador.js`): a CLI
+  propõe `PRONTA` (só proposta); o painel exige play, contrato válido, identidade técnica do projeto
+  e a sonda ok (`criarElegibilidadeGateZelador`, a mesma regra que a fila usa para aceitar o recibo
+  dele), relê a carta ao vivo (intocável nenhum), recusa ancestral com trava (BLOQUEIOS, `PRODUTO`,
+  marcador na descrição; pai fora da leitura = trava), recusa carta cuja trava o próprio zelador
+  levantou — etiqueta de trava tirada, marcador ou dependência tirados da descrição, relação removida,
+  dependência formal fechada por ele — até um `DECISAO/v1` da mesa posterior, e roda
+  `RegistroGate.validar` ao vivo (fila pela Guest, relações relidas). A chave é UUIDv5(carta | gate |
+  digital); o recibo sai de `codificarGate` com `external_source: zelador-gate-v1`, só READY TO DEV,
+  sem `remover`; sob a trava, com o fencing do lease, vão lease, tentativa, reserva, a releitura, o
+  POST, a releitura das etiquetas e o PATCH (6 s por chamada, 20 s no total); verificação que não
+  confere suspende o play. Na fila, o zelador é autor aceito só de READY TO DEV, só com a fonte dele e
+  só com a elegibilidade ok; o recibo vale para a etiqueta posta pelo MESMO autor (`recibo-gate.js`).
+  A tela do play mostra "Gate do zelador: elegível" ou o motivo.
+- **Despacho do Hangar inteiro** (item 6, `vigilia-varredura.js`): com `ORQ_AGENDADOR=true` e a frota ok,
+  cada passada lê o play, o teto diário global (`ORQ_TETO_DIA`, padrão 12, somado dos
+  `vigilia/<id>.jsonl` de todo o catálogo, sem as paradas da frota) e a fila uma vez; lease ativo em
+  qualquer projeto segura todos; a ordem é quem teve a última TENTATIVA há mais tempo (nunca =
+  primeiro; empate pela ordem do catálogo) e a passada para no primeiro projeto que reservou. Os
+  freios por projeto (contrato, 2 por carta, pausas, R1) seguem no passo.
 
 **Frota** (F2, 29/10/2026; plano em [plano-frota-do-hangar.md](plano-frota-do-hangar.md)).
 Uma configuração só, no lugar do perfil por carta: `frota-catalogo.js` (catálogo
@@ -1083,8 +1116,25 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   roda só o comando do contrato (inspeção estática e heurística do
   `scripts.test`/script: metacaracteres e tokens proibidos recusam — não prova
   que o conteúdo é seguro), mata o grupo de processos no timeout, capa a saída
-  e devolve `impedido` para qualquer falha de infraestrutura. O que ele não
-  garante: o comando de aceite roda sem sandbox, como o usuário do serviço.
+  e devolve `impedido` para qualquer falha de infraestrutura, sem retry. **Sandbox (F4b,
+  31/10/2026, J60):** as CLIs dos três papéis e o comando de aceite rodam sob `bwrap`
+  (`sandbox-cli.js`) com `~/.config/plane`, `~/.local/state/painel-admin` (só o worktree e os
+  logs da tentativa voltam), `~/.ssh`, `~/.config/linear` e `~/.config/gh` mascarados, o `.env`
+  do painel e o de cada projeto do catálogo por cima de `/dev/null`, `/dev` e `/proc` próprios
+  (pid namespace: o `environ` do painel some); o aceite roda sem rede, salvo `redeNoAceite: true`
+  no contrato. Sem bwrap funcional, o executor roda como antes, menos a tentativa de gate do
+  zelador, que é impedida. O que ele não garante: o resto do disco do usuário (fora das
+  máscaras, `/tmp` incluído) continua legível, e as CLIs têm rede.
+  **Regras que a linha 16 resume (F2–F4b):** modelos só da frota (SSO + duas ações), relida
+  sob a trava na reserva; frota ≠ ok para tudo; o contrato liga o projeto e cada provedor. Uma
+  tentativa por vez no Hangar inteiro, no disco (J51), vale para a vigília e o despacho manual;
+  gate só com recibo `GATE/v1` amarrado à etiqueta atual (J55), do mesmo autor que a pôs; o do
+  zelador vale só em READY TO DEV, só com a fonte `zelador-gate-v1`, só com a sandbox, play,
+  contrato e identidade do projeto, depois de `RegistroGate.validar` ao vivo, nunca em carta
+  cuja trava ele levantou sem o dono reconhecer (J58, J59); carta reservada por sessão viva
+  fica fora de despacho, mesa e zelador. Vigília e zelador só agendam com o play (SSO + duas
+  ações; com ele desligado, o zelador só fecha o recibo de um PENDENTE aberto) e
+  `ORQ_AGENDADOR=true`; o bloco zelador só aceita o provedor `claude`; nunca push nem merge.
   **Fechado antes do piloto (R3, 29/10/2026):** o que gasta crédito pago
   (`POST /api/tts` e a transcrição) exige a sessão SSO também no loopback, e o
   executor não tem o cookie. `/api/conversa` fica aberto por decisão do dono:

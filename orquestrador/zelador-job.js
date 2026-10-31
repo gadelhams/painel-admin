@@ -10,15 +10,20 @@ import { lerSaidaCli, validarVeredito } from './zelador-veredito.js';
 import { promptZelador } from './zelador-cli.js';
 import { nadaFazivel } from './zelador-fim.js';
 import { AplicacaoZelador } from './zelador-aplicacao.js';
+import { GateZelador } from './zelador-gate.js';
 import { todas } from './contrato-local.js';
 
 export class JobZelador {
+  // F4b: `servico` (RegistroGate.validar ao vivo), `elegibilidadeGate` e `cartaReservada` (item 9).
   constructor({ jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas,
-    consultar, comTrava, agora, ocupacao = async () => ({ ocupado: false, motivo: null }), aoFase = () => {} }) {
-    Object.assign(this, { jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas, consultar, comTrava, agora, ocupacao, aoFase });
+    consultar, comTrava, agora, ocupacao = async () => ({ ocupado: false, motivo: null }), aoFase = () => {},
+    servico = null, elegibilidadeGate = async () => ({ ok: false, motivo: 'gate do zelador não configurado' }), cartaReservada = null }) {
+    Object.assign(this, { jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas, consultar, comTrava, agora, ocupacao, aoFase,
+      servico, cartaReservada });
     this.renovacaoFalhou = false;
     this.estados = [];
     this.aplicacao = new AplicacaoZelador({ job: this });
+    this.gate = new GateZelador({ job: this, elegibilidade: elegibilidadeGate });
   }
 
   sobFencing(acao) {
@@ -105,7 +110,8 @@ export class JobZelador {
       const ocupado = await this.ocupacao({ projeto: this.projeto, cartas: new Set(this.r.cartas.map(c => c.id)) })
         .catch(e => ({ ocupado: true, motivo: `ocupação ilegível: ${e.message}` }));
       if (ocupado.ocupado) { await this.anotar({ tipo: 'OCUPADO', motivo: `${ocupado.motivo}; o job não começa outra carta` }); break; }
-      const r = await this.aplicacao.aplicar(v);
+      // PRONTA (F4b) vai ao portão do gate; o resto, à lista fechada da limpeza.
+      const r = v.veredito === 'PRONTA' ? await this.gate.aplicar(v) : await this.aplicacao.aplicar(v);
       await this.anotar({ tipo: 'VEREDITO', carta: v.identificador, veredito: v.veredito, resultado: r.resultado, ...(r.motivo ? { motivo: r.motivo } : {}) });
       if (r.resultado === 'APLICADO') contagem.aplicados += 1;
       else if (r.resultado === 'MANTER') contagem.recusados += 1;
