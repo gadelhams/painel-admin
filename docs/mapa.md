@@ -355,6 +355,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `consulta-c3po.test.js`
 - `contas.test.js` — Testes do módulo contas.js (aba Contas).
 - `correcoes-auditoria.test.js` — Correções da auditoria de 23-24/10/2026: cada teste pina um mecanismo que a auditoria mostrou furado (mutação nomeada no título do caso).
+- `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css.
 - `decisoes-c3po.test.js`
 - `despacho-controlado.test.js`
 - `diario-resumo.test.js`

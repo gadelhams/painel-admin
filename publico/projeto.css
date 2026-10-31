@@ -1,0 +1,338 @@
+/* Aba Projetos: sondas de produção, página do projeto, tira de telemetria,
+   painel focado e o palco (grade de três colunas e bloqueios). */
+
+.producao { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
+
+.sonda {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  padding: .6rem 1rem;
+}
+.sonda .luz { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.luz.ok { background: var(--ok); }
+.luz.falha { background: var(--falha); }
+.sonda a { color: var(--ui-hot); text-decoration: none; }
+.sonda a:hover { text-decoration: underline; }
+.sonda .detalhe { margin-left: auto; color: var(--ui-faint); font-size: .82rem; }
+
+#saida-ssh {
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: .75rem;
+  font-size: .82rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* ---------- página de projeto ---------- */
+
+.voltar { color: var(--ui-hot); text-decoration: none; font-size: .9rem; }
+.voltar:hover { text-decoration: underline; }
+
+#vista-projeto section { margin-bottom: 1.75rem; }
+#vista-projeto h2 { margin: 0 0 .6rem; }
+
+.stat-linha { font-size: .85rem; color: var(--ui-faint); padding: .1rem 0; }
+
+.doc-grupos { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
+.doc-grupo {
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  padding: .25rem .9rem;
+}
+.doc-grupo > summary { cursor: pointer; padding: .5rem 0; font-weight: 600; }
+.doc-caminho { color: var(--ui-faint); font-size: .8rem; font-weight: 400; margin: 1rem 0 .2rem; }
+
+.doc-lista { display: flex; flex-direction: column; gap: .2rem; }
+.doc-item { border-bottom: 1px solid var(--ui-line); }
+.link-doc {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--ui-hot);
+  font: inherit;
+  font-size: .85rem;
+  padding: .4rem .1rem;
+  cursor: pointer;
+}
+.link-doc:hover { text-decoration: underline; }
+.doc-conteudo { padding: .3rem .5rem 1rem 1.2rem; }
+
+.backlog-projeto-lista { display: flex; flex-direction: column; gap: .2rem; margin-bottom: 1rem; }
+.tag-sem-escopo-titulo { color: var(--ideia); }
+
+.trabalho-grupo { margin-bottom: 1rem; }
+.trabalho-grupo h3 { margin: 0 0 .35rem; font-size: .9rem; color: var(--ui-faint); font-weight: 600; }
+.diff-lista, .trabalho-grupo ul { list-style: none; margin: 0; padding: 0; font-size: .82rem; display: flex; flex-direction: column; gap: .2rem; }
+.diff-lista code { background: var(--ui-bg); border-radius: 4px; padding: 0 .3rem; font-size: .85em; }
+.trabalho-grupo ul li { padding: .1rem 0; }
+
+/* Markdown renderizado dos docs de projeto (renderizarMarkdown em app.js) */
+#vista-projeto .doc-grupo h3, #vista-projeto .doc-grupo h4, #vista-projeto .doc-grupo h5, #vista-projeto .doc-grupo h6,
+#vista-projeto .doc-conteudo h3, #vista-projeto .doc-conteudo h4, #vista-projeto .doc-conteudo h5, #vista-projeto .doc-conteudo h6 {
+  margin: 1rem 0 .4rem;
+  color: var(--ui-text);
+}
+#vista-projeto .doc-grupo p, #vista-projeto .doc-conteudo p { font-size: .88rem; line-height: 1.6; margin: .4rem 0; }
+#vista-projeto .doc-grupo ul, #vista-projeto .doc-grupo ol,
+#vista-projeto .doc-conteudo ul, #vista-projeto .doc-conteudo ol { font-size: .88rem; padding-left: 1.4rem; }
+#vista-projeto .doc-grupo pre, #vista-projeto .doc-conteudo pre {
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  overflow-x: auto;
+  font-size: .8rem;
+}
+/* mermaid.initialize usa theme: 'dark' (app.js) — o SVG já sai com cores
+   pensadas pra fundo escuro, por isso o container não força branco. */
+.doc-conteudo pre.mermaid, .moldura-arquitetura pre.mermaid {
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* ================================================================
+   Tela 3 — aba Projetos: tira de telemetria + painel focado
+   ================================================================ */
+
+.tira-telemetria {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
+  margin: calc(var(--space-5) * -1) calc(var(--space-6) * -1) var(--space-5);
+}
+.celula-telemetria {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--ui-line);
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  padding: 13.6px 13.6px 10.2px;
+  display: grid;
+  gap: 6.8px;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-heading);
+}
+.celula-telemetria:last-child { border-right: none; }
+.celula-telemetria:hover { background: var(--ui-hover); }
+.tt-nome { font-size: 15px; line-height: 1.1; color: var(--ui-dim); font-weight: 500; }
+.celula-telemetria.com-decisao .tt-nome { color: var(--ui-text); font-weight: 600; }
+.celula-telemetria.limpa .tt-nome { color: var(--ui-faint); font-weight: 500; }
+.tt-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+.celula-telemetria.selecionada { background: var(--ui-bg); border-bottom-color: var(--ui-hot); }
+.celula-telemetria.selecionada .tt-meta { color: var(--ui-hot); }
+
+.grid-projeto { display: grid; grid-template-columns: minmax(0, 1fr) 420px; align-items: start; }
+.painel-projeto-principal { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-6) var(--space-6) calc(var(--space-6) * 2.5); min-width: 0; }
+.painel-projeto-contexto {
+  border-left: 1px solid var(--ui-line);
+  background: var(--ui-panel);
+  padding: var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  align-self: stretch;
+}
+
+.cabecalho-projeto { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }
+.titulo-projeto { font-size: 38px; line-height: 1; margin: 0; color: var(--ui-text); }
+.sub-projeto { font-family: var(--font-mono); font-size: 12px; color: var(--ui-faint); margin: 6px 0 0; }
+.chips-resumo { display: flex; flex-wrap: wrap; gap: 6.8px; }
+.chip-resumo { font-family: var(--font-mono); font-size: 10px; padding: 3.4px 6.8px; border: 1px solid var(--ui-line); color: var(--ui-dim); cursor: pointer; }
+.chip-resumo:hover { border-color: var(--ui-hot); }
+.chip-resumo.hot { background: var(--ui-hot); color: var(--ui-onhot); border-color: var(--ui-hot); font-weight: 600; }
+/* Filtro ativo (21/08/2026): mesmo contorno que .filtro.ativa já usa na aba
+   Backlog — inclusive quando é a tag ASTARGNE (some o fundo hot, some o anel). */
+.chip-resumo.ativa { outline: 2px solid var(--ui-hot); outline-offset: 1px; }
+
+/* Outline do backlog no painel de projeto — <details> por feature */
+.outline-backlog { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; background: var(--ui-line); border: 1px solid var(--ui-line); }
+.feature-outline { background: var(--ui-bg); }
+.feature-outline-cab { list-style: none; cursor: pointer; padding: 13.6px 20.4px; display: flex; align-items: baseline; gap: 13.6px; }
+.feature-outline-cab::-webkit-details-marker { display: none; }
+.feature-outline-cab .chev { color: var(--ui-faint); display: inline-block; transition: transform .12s ease; }
+.feature-outline[open] > .feature-outline-cab .chev { transform: rotate(90deg); }
+.feature-outline-cab .feature-token { font-family: var(--font-mono); font-size: 12px; color: var(--ui-faint); }
+.feature-outline-titulo { font-family: var(--font-heading); font-weight: 600; font-size: 19px; color: var(--ui-text); flex: 1; }
+.feature-outline-cab .placar { margin-left: auto; }
+.feature-outline-corpo { padding: 0 20.4px 20.4px 47px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+
+/* Blocos da coluna de contexto — border-top em todos menos o primeiro */
+.bloco-contexto + .bloco-contexto { border-top: 1px solid var(--ui-line); padding-top: 20.4px; }
+.rotulo-bloco { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ui-faint); margin: 0 0 10.2px; }
+.rotulo-bloco-linha { display: flex; align-items: baseline; justify-content: space-between; }
+.rotulo-bloco-linha .rotulo-bloco { margin: 0 0 10.2px; }
+.contagem-bloco { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); }
+
+.moldura-arquitetura {
+  aspect-ratio: 16 / 11;
+  border: 1px solid var(--ui-line);
+  background: repeating-linear-gradient(135deg, transparent 0 7px, var(--ui-hatch) 7px 8px);
+  display: grid;
+  place-items: center;
+  margin-bottom: 10.2px;
+}
+.selo-arquitetura { font-family: var(--font-mono); font-size: 11px; padding: 4px 10px; background: var(--ui-panel); border: 1px solid var(--ui-line); color: var(--ui-dim); }
+.link-prosa { font-family: var(--font-mono); font-size: 11px; color: var(--ui-hot); text-decoration: none; }
+.link-prosa:hover { text-decoration: underline; }
+.lista-modeladores { margin-top: 10.2px; }
+
+.lista-decisoes { display: flex; flex-direction: column; gap: 6.8px; }
+.linha-decisao { display: flex; gap: 13.6px; padding: 10.2px; border: 1px solid var(--ui-line); cursor: pointer; }
+.linha-decisao:hover { border-color: var(--ui-hot); }
+.idade-decisao { font-family: var(--font-mono); font-size: 11px; flex: 0 0 32px; color: inherit; }
+.texto-decisao { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linha-decisao.hot { color: var(--ui-hot); }
+.linha-decisao.dim { color: var(--ui-dim); }
+.linha-decisao.faint { color: var(--ui-faint); }
+
+.linha-sonda-ctx { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: var(--ui-dim); }
+.linha-sonda-ctx .hot { color: var(--ui-hot); font-family: var(--font-mono); font-size: 11px; }
+.linha-sonda-ctx .faint { color: var(--ui-faint); font-family: var(--font-mono); font-size: 11px; }
+.botao-ssh-ctx { margin-top: 6.8px; font-family: var(--font-mono); font-size: 11px; background: none; }
+.saida-ssh-ctx { background: var(--ui-bg); border: 1px solid var(--ui-line); padding: 10.2px; margin-top: 10.2px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+
+/* Camada Protocolo (ex-protocolo.css). */
+.rotulo-bloco { color: var(--ui-hot); }
+/* Projetos: o catálogo é uma faixa de cartões navegável, não 9 colunas fixas. */
+.tira-telemetria {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 12px;
+  margin: 0 0 22px;
+  border: 0;
+  background: transparent;
+  scrollbar-color: var(--ui-line) var(--ui-bg);
+}
+.celula-telemetria {
+  flex: 0 0 168px;
+  min-height: 91px;
+  padding: 13px;
+  border: 1px solid var(--ui-line);
+  border-bottom: 3px solid var(--ui-line);
+  background: var(--ui-panel);
+}
+.celula-telemetria:last-child { border-right: 1px solid var(--ui-line); }
+.celula-telemetria.selecionada { background: var(--ui-hover); border-color: var(--ui-hot); }
+.tt-nome { color: var(--ui-text); }
+.tt-meta { color: var(--ui-faint); }
+.grid-projeto { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: 18px; }
+.painel-projeto-principal, .painel-projeto-contexto { border: 1px solid var(--ui-line); background: var(--ui-panel); padding: 23px; }
+.painel-projeto-contexto { border-left: 3px solid var(--ui-hot); }
+.outline-backlog { background: var(--ui-line); }
+.feature-outline { background: var(--ui-panel); }
+.feature-outline[open] { border-top: 2px solid var(--ui-hot); }
+.feature-outline-cab:hover { background: var(--ui-hover); }
+.chip-resumo { border-radius: 0; }
+.chip-resumo.hot { background: var(--ui-hot); color: var(--ui-onhot); }
+.feature-outline-cab .feature-token { color: var(--ui-hot); }
+
+@media (max-width: 1150px) {
+  .grid-projeto { grid-template-columns: 1fr; }
+  .painel-projeto-contexto { border-left: 1px solid var(--ui-line); border-top: 3px solid var(--ui-hot); }
+}
+@media (max-width: 800px) {
+  .titulo-projeto { font-size: 2rem; }
+}
+
+/* Palco de voz (aba Projetos): três colunas como o protocolo — projetos,
+   o C-3PO no centro, decisões paradas à direita. Sem percentual inventado. */
+.protocolo-grade {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) minmax(280px, 1fr) minmax(240px, 340px);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+.coluna-projetos h2, .coluna-bloqueios h2 {
+  margin: 0 0 12px;
+  font: 500 .72rem/1.3 var(--font-mono);
+  letter-spacing: .16em;
+  color: var(--ui-dim);
+}
+.coluna-bloqueios h2 { color: var(--falha); }
+.protocolo-grade .tira-telemetria {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+.protocolo-grade .celula-telemetria {
+  flex: none;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--ui-line);
+  border-bottom: 1px solid var(--ui-line);
+  border-radius: 16px;
+  background: var(--ui-panel);
+  text-align: left;
+}
+.protocolo-grade .celula-telemetria:hover { transform: translateY(-2px); }
+.protocolo-grade .celula-telemetria.selecionada { border-color: var(--ui-hot); background: var(--ui-hover); }
+.tt-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.protocolo-grade .tt-nome { font: 600 1.05rem/1.2 var(--font-heading); letter-spacing: .02em; }
+.tt-estado { flex: none; font: 600 .68rem/1 var(--font-mono); letter-spacing: .08em; }
+.tt-estado.decisao { color: var(--falha); }
+.tt-estado.no-ar, .tt-estado.em-dia { color: var(--ok); }
+.tt-estado.pausa { color: var(--ui-faint); }
+.protocolo-grade .tt-meta { color: var(--ui-dim); font-size: .82rem; }
+
+.bloqueio-destaque, .bloqueio-item {
+  width: 100%;
+  display: flex;
+  text-align: left;
+  border-radius: 16px;
+  margin-bottom: 10px;
+}
+.bloqueio-destaque {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--falha) 12%, var(--ui-panel));
+  border-color: color-mix(in srgb, var(--falha) 45%, var(--ui-line));
+}
+.bloqueio-meta, .bloqueio-indice {
+  font: 500 .68rem/1.2 var(--font-mono);
+  letter-spacing: .08em;
+  color: var(--falha);
+}
+.bloqueio-meta { display: flex; justify-content: space-between; gap: 8px; }
+.bloqueio-titulo { font: 600 1rem/1.3 var(--font-heading); color: var(--ui-text); }
+.bloqueio-item .bloqueio-titulo, .bloqueio-destaque .bloqueio-titulo {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bloqueio-item .bloqueio-titulo { -webkit-line-clamp: 2; }
+.bloqueio-destaque .bloqueio-titulo { font-size: 1.15rem; -webkit-line-clamp: 4; }
+.bloqueio-dica { color: var(--ui-dim); font-size: .82rem; font-weight: 500; }
+.bloqueio-item { align-items: flex-start; gap: 12px; padding: 14px 16px; }
+.bloqueio-corpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+@media (max-width: 1100px) {
+  .protocolo-grade { grid-template-columns: 1fr; }
+  #encaixe-voz { order: -1; }
+}

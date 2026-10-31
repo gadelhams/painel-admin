@@ -1,0 +1,229 @@
+/* Base do shell: reset, elementos globais, cabeçalho, barra de abas e
+   peças comuns a várias abas (.moldura, .discreto, .etiqueta, .kicker,
+   .titulo-secao, .pagina-intro). Em cada arquivo vem antes o trecho Industry
+   (ex-estilo.css) e depois a camada Protocolo (ex-protocolo.css) que o sobrepõe. */
+
+* { box-sizing: border-box; }
+
+::selection { background: #416180; color: #f5f5f8; }
+
+body {
+  margin: 0;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font: 15px/1.5 var(--font-body), system-ui, sans-serif;
+}
+
+:focus-visible { outline: 2px solid var(--ui-hot); outline-offset: 2px; }
+
+/* Marcas de registro (obrigatórias em todo elemento emoldurado, README —
+   "elemento emoldurado sem as marcas está errado"). Quatro <i> absolutos,
+   7×7px, deslocados -3px, duas bordas de 1px em --ui-hot cada. */
+.moldura { position: relative; }
+.moldura .canto { position: absolute; width: 7px; height: 7px; pointer-events: none; }
+.moldura .canto.tl { top: -3px; left: -3px; border-top: 1px solid var(--ui-hot); border-left: 1px solid var(--ui-hot); }
+.moldura .canto.tr { top: -3px; right: -3px; border-top: 1px solid var(--ui-hot); border-right: 1px solid var(--ui-hot); }
+.moldura .canto.bl { bottom: -3px; left: -3px; border-bottom: 1px solid var(--ui-hot); border-left: 1px solid var(--ui-hot); }
+.moldura .canto.br { bottom: -3px; right: -3px; border-bottom: 1px solid var(--ui-hot); border-right: 1px solid var(--ui-hot); }
+
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 700; }
+h2 { font-size: 1rem; color: var(--ui-faint); text-transform: uppercase; letter-spacing: .05em; }
+
+main { padding: var(--space-5) var(--space-6) calc(var(--space-6) * 2); }
+
+button {
+  background: var(--ui-panel);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  padding: .4rem .9rem;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover { border-color: var(--ui-hot); }
+button:disabled { opacity: .5; cursor: wait; }
+
+/* ---------- Tela 1 — cabeçalho (Industry HUD, 21/08/2026) ----------
+   Três células com borda vertical entre elas — não flex+justify-between
+   como a versão anterior; cada `.celula` tem seu próprio padding/borda. */
+.cabecalho {
+  display: flex;
+  align-items: stretch;
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
+}
+.cabecalho .celula { display: flex; align-items: center; padding: 13.6px 20.4px; }
+.sessao-sso { gap: 10px; border-left: 1px solid var(--ui-line); font-size: 12.5px; white-space: nowrap; }
+.sessao-sso .sessao-quem { color: var(--ui-ink-soft, inherit); }
+.sessao-sso[data-estado="dono"] .sessao-quem { color: var(--ok); }
+.sessao-sso[data-estado="outra-conta"] .sessao-quem, .sessao-sso[data-estado="expirada"] .sessao-quem { color: var(--alerta); }
+
+.marca {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ui-text);
+  border-right: 1px solid var(--ui-line);
+  white-space: nowrap;
+}
+
+.barra-comando {
+  flex: 1;
+  gap: 10.2px;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--ui-line);
+  border-radius: 0;
+  color: var(--ui-faint);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.barra-comando:hover { background: var(--ui-hover); color: var(--ui-text); border-color: var(--ui-line); }
+.barra-comando .chevron { color: var(--ui-hot); font-family: var(--font-body); }
+.barra-comando .comando-texto { flex: 1; }
+.barra-comando .selo-c3po {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--ui-line);
+  border-radius: 0;
+  color: var(--ui-faint);
+}
+
+.placar-tema { gap: 20.4px; }
+.placar { display: flex; flex-direction: column; gap: 2px; line-height: 1.1; }
+.placar-rotulo { font-family: var(--font-mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ui-faint); }
+.placar-valor { font-family: var(--font-heading); font-weight: 700; font-size: 20px; color: var(--ui-text); }
+
+.sincronia { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--ui-dim); white-space: nowrap; }
+.ponto-sync { width: 6px; height: 6px; background: var(--ui-hot); flex: none; }
+
+#toggle-tema {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 10.2px;
+  border-radius: 0;
+  border-color: var(--ui-line);
+  background: none;
+}
+
+/* ---------- Tela 2 — barra de abas ---------- */
+.barra-abas {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--ui-panel);
+  border-bottom: 1px solid var(--ui-line);
+  padding: 0 20.4px;
+}
+.barra-abas .aba {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 10.2px 20.4px;
+  color: var(--ui-faint);
+  display: flex;
+  align-items: center;
+  gap: 6.8px;
+}
+.barra-abas .aba.ativa { border-bottom-color: var(--ui-hot); color: var(--ui-text); }
+.barra-abas .aba:hover { color: var(--ui-text); }
+.selo-contagem { font-family: var(--font-mono); font-size: 11px; padding: 1px 5px; background: var(--ui-hot); color: var(--ui-onhot); font-weight: 400; letter-spacing: normal; text-transform: none; }
+.contrato-backlog { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); white-space: nowrap; }
+
+.discreto { color: var(--ui-faint); font-size: .85rem; }
+
+/* .etiqueta base — a grade de cards que usava as variantes .ok/.alerta/
+   .falha saiu no reskin (vira a tira de telemetria, app.js); os chips de
+   tag do backlog (.etiqueta.tag-*, backlog.js) continuam usando a base. */
+.etiqueta {
+  font-size: .75rem;
+  padding: .1rem .55rem;
+  border-radius: 999px;
+  border: 1px solid var(--ui-line);
+  color: var(--ui-faint);
+  white-space: nowrap;
+}
+
+.kicker { font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ui-faint); margin: 0 0 4px; }
+.titulo-secao { font-size: 34px; margin: 0; color: var(--ui-text); }
+
+/* Camada Protocolo (ex-protocolo.css), parte comum. */
+::selection { background: var(--ui-hot); color: var(--ui-onhot); }
+body { background: var(--ui-bg); }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(ellipse at 74% -12%, color-mix(in srgb, var(--ui-hot) 8%, transparent), transparent 49%);
+}
+[hidden], .console-scrim[hidden] { display: none !important; }
+button { border-radius: 0; }
+button, select, input { accent-color: var(--ui-hot); }
+a { color: var(--ui-hot); }
+
+/* Terminal de comando e navegação: presente em todas as abas. */
+.cabecalho {
+  border-top: 3px solid var(--ui-hot);
+  background: var(--ui-panel);
+  min-height: 74px;
+}
+.cabecalho .celula { padding: 13px 22px; }
+.cabecalho .marca {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 198px;
+  color: var(--ui-hot);
+  font: 700 1.35rem/1 var(--font-heading);
+  letter-spacing: .1em;
+}
+.cabecalho .marca span { font: 500 .58rem/1.2 var(--font-mono); letter-spacing: .12em; color: var(--ui-faint); }
+.barra-comando { margin: 8px; border: 1px solid var(--ui-line); min-height: 50px; color: var(--ui-dim); }
+.barra-comando .chevron { font-size: 1.55rem; line-height: 1; }
+.barra-comando .selo-c3po { border-color: var(--ui-hot); color: var(--ui-hot); }
+.placar-tema { gap: 16px; }
+.ponto-sync { border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-hot) 18%, transparent); }
+.barra-abas { gap: 6px; padding: 0 22px; background: var(--ui-bg); }
+.barra-abas .aba { padding: 16px 15px 13px; color: var(--ui-dim); text-transform: uppercase; letter-spacing: .06em; }
+.barra-abas .aba.ativa { color: var(--ui-hot); border-bottom-color: var(--ui-hot); background: color-mix(in srgb, var(--ui-hot) 7%, transparent); }
+.barra-abas .aba:hover { color: var(--ui-hot); }
+.contrato-backlog { color: var(--ui-faint); }
+main { max-width: 1660px; margin: 0 auto; padding: 24px 28px 60px; }
+.pagina-intro { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 6px 0 22px; margin-bottom: 16px; border-bottom: 1px solid var(--ui-line); }
+.pagina-intro p, .pagina-kicker { margin: 0 0 6px; font: 500 .72rem/1.3 var(--font-mono); letter-spacing: .16em; color: var(--ui-hot); }
+.pagina-intro h1 { margin: 0 0 3px; font: 700 2.3rem/1.05 var(--font-heading); }
+.pagina-intro span { color: var(--ui-dim); }
+.pagina-intro .pagina-intro-modo { flex: none; padding: 8px 11px; border: 1px solid var(--ui-line); color: var(--ui-hot); font: 500 .7rem/1.2 var(--font-mono); letter-spacing: .1em; }
+.kicker { color: var(--ui-hot); }
+.titulo-secao, .titulo-projeto, .orq-topo h1 { letter-spacing: .025em; }
+.discreto { color: var(--ui-dim); }
+.etiqueta { border-radius: 0; }
+
+@media (max-width: 1150px) {
+  .contrato-backlog, .placar-tema .placar { display: none; }
+}
+@media (max-width: 800px) {
+  .cabecalho { flex-wrap: wrap; }
+  .cabecalho .marca { min-width: 0; }
+  .barra-comando { order: 3; flex-basis: calc(100% - 16px); }
+  .placar-tema { margin-left: auto; }
+  .barra-abas { overflow-x: auto; padding: 0 10px; }
+  .barra-abas .aba { white-space: nowrap; }
+  main { padding: 16px; }
+  .titulo-secao { font-size: 2rem; }
+}

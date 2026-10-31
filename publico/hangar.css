@@ -1,34 +1,14 @@
 /* Hangar (28/10/2026): a entrada do painel. Sempre escuro (é o espaço), na
-   paleta cobre-âmbar do tema escuro de protocolo.css (os --hg-* repetem os
-   --ui-* de lá; as cores da cena 3D ficam em hangar/cena.js e estado.js), com
-   tokens próprios --hg-* e classes hg-* para não colidir com .chip/.tag/.bloco
-   das outras abas. Layout: droids à esquerda, palco 3D no centro com o C-3PO e
+   paleta cobre-âmbar do tema escuro da camada Protocolo (os tokens --hg-*,
+   desde 31/10/2026 em tokens.css, repetem os --ui-* de lá; as cores da cena 3D
+   ficam em hangar/cena.js e estado.js), com classes hg-* para não colidir com
+   .chip/.tag/.bloco das outras abas. Layout: droids à esquerda, palco 3D no centro com o C-3PO e
    os popups, projetos e diário à direita; abaixo de 1100px tudo empilha. */
 
 body.hg-ativo main { max-width: none; padding: 10px 14px 12px; }
 
 #aba-hangar {
   color-scheme: dark;
-  --hg-vacuo: #070504;
-  --hg-casco: #17130f;
-  --hg-casco-2: #201a13;
-  --hg-linha: #463826;
-  --hg-texto: #f4ead6;
-  --hg-apagado: #ac9b81;
-  --hg-realce: #ffd89a;
-  --hg-ok: #7fd6be;
-  --hg-pensa: #c084fc;
-  --hg-alerta: #ffcc4d;
-  --hg-falha: #ff795b;
-  --hg-ouro: #f4b446;
-  --hg-cartao: #e9d8b4;
-  --hg-editar: #ff9b54;
-  --hg-testar: #7fd6be;
-  --hg-oficina: #c9a9e8;
-  --hg-patio: #e3a86b;
-  --hg-f-titulo: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
-  --hg-f-corpo: 'Barlow', system-ui, sans-serif;
-  --hg-f-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
   height: calc(100vh - var(--hg-topo, 110px) - 12px);
   min-height: 600px;
   color: var(--hg-texto);

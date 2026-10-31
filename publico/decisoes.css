@@ -1,0 +1,75 @@
+/* Aba Decisões (os grupos por projeto também servem Chaves e Docs), o
+   toggle "todas / abertas" e o bloco Astargne. */
+
+/* ================================================================
+   Tela 5 — aba Decisões
+   ================================================================ */
+
+#aba-decisoes { max-width: 1180px; }
+.decisoes-cabecalho { margin-bottom: var(--space-6); }
+.decisoes-cabecalho .titulo-secao { margin-bottom: 4px; }
+.decisoes-cabecalho .kicker { text-transform: none; letter-spacing: normal; }
+
+.grupo-projeto-decisoes { border: 1px solid var(--ui-line); margin-bottom: 13.6px; }
+.grupo-projeto-cab {
+  list-style: none;
+  cursor: pointer;
+  background: var(--ui-panel);
+  padding: 13.6px 20.4px;
+  display: flex;
+  align-items: baseline;
+  gap: 13.6px;
+}
+.grupo-projeto-cab::-webkit-details-marker { display: none; }
+.grupo-projeto-cab .chev { color: var(--ui-faint); display: inline-block; transition: transform .12s ease; }
+.grupo-projeto-decisoes[open] > .grupo-projeto-cab .chev { transform: rotate(90deg); }
+.grupo-projeto-titulo { font-family: var(--font-heading); font-weight: 600; font-size: 19px; color: var(--ui-text); }
+.grupo-projeto-arquivo { margin: 0; }
+.grupo-projeto-cab .selo-contagem { margin-left: auto; }
+
+.lista-decisoes-tab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; background: var(--ui-line); }
+.linha-decisoes-tab { background: var(--ui-bg); padding: 13.6px 20.4px; display: flex; gap: 20.4px; cursor: pointer; align-items: baseline; }
+.linha-decisoes-tab:hover { background: var(--ui-hover); }
+.idade-decisoes-tab { font-family: var(--font-mono); font-size: 11px; color: var(--ui-faint); flex: 0 0 68px; }
+.texto-decisoes-tab { flex: 1; min-width: 0; }
+.texto-decisao-principal { color: var(--ui-text); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contexto-decisao { font-size: 12px; color: var(--ui-dim); margin-top: 2px; }
+
+/* ---------- toggle "todas / abertas" (21/08/2026) ---------- */
+.par-toggle-filtro { display: flex; border: 1px solid var(--ui-line); flex: none; }
+.toggle-filtro {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3.4px 10.2px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--ui-faint);
+}
+.toggle-filtro:first-child { border-right: 1px solid var(--ui-line); }
+.toggle-filtro.ativa { background: var(--ui-hot); color: var(--ui-onhot); }
+
+.linha-filtro-tags { display: flex; align-items: flex-start; gap: 13.6px; flex-wrap: wrap; }
+.linha-chips-resumo { display: flex; align-items: center; gap: 13.6px; flex-wrap: wrap; }
+.decisoes-cabecalho { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); flex-wrap: wrap; }
+
+/* Camada Protocolo (ex-protocolo.css). */
+.grupo-projeto-decisoes { background: var(--ui-panel); }
+.grupo-projeto-decisoes[open] { border-top: 2px solid var(--ui-hot); }
+.grupo-projeto-cab:hover { background: var(--ui-hover); }
+.toggle-filtro.ativa { background: var(--ui-hot); color: var(--ui-onhot); }
+#aba-decisoes { max-width: 1500px; margin: 0 auto; }
+.decisoes-cabecalho { padding: 3px 0 20px; border-bottom: 1px solid var(--ui-line); }
+.grupo-projeto-decisoes { box-shadow: 0 12px 32px rgba(0,0,0,.11); }
+.idade-decisoes-tab { color: var(--ui-hot); }
+.linha-decisoes-tab { border-left: 2px solid transparent; }
+.linha-decisoes-tab:hover { border-left-color: var(--ui-hot); background: var(--ui-hover); }
+
+/* Bloco Astargne (decisoes-astargne.js; ex-orquestrador.css). */
+.astargne-painel { border: 1px solid var(--acento, #e0a800); padding: .8rem 1rem; margin: .8rem 0 1.2rem; }
+.astargne-painel > summary.astargne-cab { cursor: pointer; display: flex; align-items: center; gap: .5rem; list-style: none; }
+.astargne-painel > summary.astargne-cab::-webkit-details-marker { display: none; }
+.astargne-painel[open] > summary .chev { transform: rotate(90deg); }
+.astargne-feitas { opacity: .7; }
+.astargne-painel h3 { margin: .6rem 0 .2rem; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
+.astargne-painel ul { margin: 0; padding-left: 1.1rem; }
