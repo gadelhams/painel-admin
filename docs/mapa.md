@@ -15,12 +15,13 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `contas.js` — Porta da aba Contas.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
 - `guarda.js` — O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão SSO do dono desde 29/10/2026 para Contas, antes para o resto.
+- `montagem.js` — Monta o painel inteiro (serviços, RoteadorPainel e o handler `(req, res)`) a partir do ambiente e das portas externas recebidas; não escuta porta, não lê `.env` e não liga laço nenhum até `iniciar()`.
 - `motor.js` — Conversa do C-3PO.
 - `plane.js` — Porta do Plane.
 - `producao-extra.js` — Sondas de produção que não pertencem a um projeto do catálogo.
 - `projetos.js` — Catálogo dos projetos da raiz.
 - `relacoes.js` — Relações estruturadas entre os projetos da raiz — espelho do que está em prosa em ../../RELACOES.md (era seção do CLAUDE.md da raiz até 30/09/2026).
-- `servidor.js` — Servidor único do painel-admin desde a fusão de 14/08/2026: dashboard na raiz (/), C-3PO em /c3po/, e toda a API na mesma porta 7777.
+- `servidor.js` — Servidor único do painel-admin desde a fusão de 14/08/2026: lê o ambiente, monta o painel com as dependências reais (montagem.js) e escuta em 127.0.0.1; não compõe serviço nem decide rota.
 
 ## alinhamento/
 
@@ -360,6 +361,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `diario-resumo.test.js`
 - `executor-cli.test.js` — Executor real com CLIs falsas: flags exatas, ambiente limpo, isolamento por worktree, timeout que mata o processo, e os três desfechos.
 - `fluxo-sse.test.js`
+- `fronteira-http.test.js` — Fronteira HTTP do painel MONTADO (PAINEL-17): o handler de produção de montagem.js atrás de um http.Server de verdade numa porta efêmera, atacado por requisição real.
 - `frota.test.js` — Frota (F2, 29/10/2026): catálogo fechado, dois blocos, estado explícito na leitura, troca por duas ações com versão-base e histórico só de acréscimo.
 - `gate-plane.test.js`
 - `guarda.test.js`
@@ -373,11 +375,12 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `orquestrador-sso.test.js`
 - `orquestrador-ui.test.js`
 - `orquestrador-v2.test.js`
+- `painel-falso.js` — Monta o painel REAL (montagem.js) com falsos em toda porta externa e um diretório de estado temporário; não sobe processo nem toca ssh, Plane, LLM, voz ou CLI de verdade.
 - `plane.test.js`
 - `politica-fala.test.js`
 - `protocolo-ui.test.js`
 - `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
-- `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo roteador REAL: guarda, famílias e APIs de duas ações de verdade; só os serviços no fim da linha são espiões.
+- `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo painel MONTADO de produção (montagem.js, PAINEL-17): guarda, famílias, autorizador SSO e APIs de duas ações de verdade; só as portas externas (ssh, Plane, SSO, LLM, voz, CLI, coletores) são espiões.
 - `sessao-painel.test.js` — Selo de sessão do cabeçalho (31/10/2026): diz de quem é a sessão SSO sem autorizar nada.
 - `sessao-voz.test.js`
 - `sonda-sso.test.js`

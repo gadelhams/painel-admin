@@ -39,7 +39,17 @@ em [`invariants.md`](invariants.md); como roda e a voz fora de casa em
 
 ### servidor.js
 
-O processo só compõe os serviços e escuta em `127.0.0.1`. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, jogo nativo, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+**Montar ≠ escutar** (PAINEL-17, 31/10/2026). `servidor.js` só carrega o `.env`, lê `PORTA`
+(padrão 7777), chama `montarPainel` com as dependências reais, liga os laços (`iniciar()`:
+reconciliação de leases, vigília, alinhamento) e escuta em `127.0.0.1`. `montagem.js` é a raiz de
+composição: constrói serviços, autorizadores, `RoteadorPainel` e devolve o handler `(req, res)`;
+toda porta externa entra por `externos` (`executarSsh`, `leituraSsh`, `sso`, `fetchPlane`,
+`consultarPlane`, `conversar`, `transcrever`, `fetchVoz`, `spawnCli`, `coletores`, `agora`,
+`diretorioCodex`) e o estado por `diretorioEstado`; ausente, cai no padrão do módulo, que é a
+produção. Os testes montam o mesmo painel com falsos (`test/painel-falso.js`):
+`test/fronteira-http.test.js` sobe um `http.Server` de porta efêmera e faz requisição real
+(guarda de Host e origem, sessão, estático), e a fronteira de `/api/contas/*` em
+`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, jogo nativo, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -56,8 +66,8 @@ motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 `simular`, `{frota,handoff,gates,despacho,vigilia,nativo}/{preparar,confirmar}`,
 `voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
-varre toda rota pelo roteador real com POST, PUT, PATCH e DELETE sem sessão — 401 ou 405 no próprio handler,
-sem ler corpo nem chamar serviço; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
+varre toda rota (literais de `http/` e de `montagem.js`) pelo painel montado com POST, PUT, PATCH e DELETE pela borda, sem sessão — 401 ou 405 no próprio handler,
+sem ler corpo, tocar porta externa nem gravar no estado; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
 ferramentas só de leitura, sem SSO por decisão do dono (29/10/2026); `/api/tts` e a transcrição pedem SSO desde a mesma data; as
 escritas da aba Contas exigem SSO desde 29/10/2026; handler só-leitura responde HEAD e o 405 leva `Allow`)
 e estáticos de `publico/` (dashboard na raiz, chat em `/c3po/`).
@@ -643,7 +653,7 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   `astargne.com` continua exigindo `validador-deploy` + validação de
   premissas, como para qualquer agente.
 - **Executor só atrás de todos os portões** (24/10/2026): `criarExecutorCli` só
-  é construído em `servidor.js` com `ORQ_EXECUCAO_HABILITADA=true`; mesmo
+  é construído em `montagem.js` com `ORQ_EXECUCAO_HABILITADA=true`; mesmo
   ligado, cada despacho exige identidade técnica do projeto, contrato válido,
   agente disponível, frota `ok` (sem padrão de reserva), sessão do Cadastro Único e
   confirmação em duas ações. O executor cria um worktree (`git worktree add -b
@@ -703,7 +713,7 @@ vivo tinha; provas e evidências ficaram em
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.
 - **Estáticos**: `GET /c3po` → 301 `/c3po/` (assets relativos dependem
   da barra); `/severino` e `/severino/` → 301 `/c3po/` (nome antigo); `..` em path-as-is → 404; método errado em `/api/tts` → 405.
-- **ElevenLabs** (`ProxyElevenLabs` em `orquestrador/voz-eleven.js`, rota em `servidor.js`): upstream
+- **ElevenLabs** (`ProxyElevenLabs` em `orquestrador/voz-eleven.js`, rota em `http/rotas-voz.js`, montada em `montagem.js`): upstream
   `POST api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream` (header
   `xi-api-key`), `output_format=mp3_44100_128`, modelo `eleven_v4` (o ajuste de clonagem do
   playground não existe no multilingual_v2); voice_id default `JBFqnCBsd6RMkjVDRZzb` ("George"),

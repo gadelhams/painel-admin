@@ -55,7 +55,7 @@ no settings do usuário). O gatilho
 | `PLANE_API_KEY` | leitura Guest "painel" (toda a fila) |
 | `ORQ_OWNER_USER_ID` | id estável do dono no Cadastro Único; sem ele **toda** escrita falha fechada (503) |
 | `PLANE_ORQ_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | identidade técnica do CKBL (chave distinta da Guest, projeto único, ator conferido na resposta) |
-| `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER; projeto novo exige a entrada em `servidor.js` na mesma entrega |
+| `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER; projeto novo exige a entrada em `montagem.js` (`identidadesDeEscrita`) na mesma entrega |
 | `XAI_API_KEY` | transcrição de voz (xAI); sem ela a rota responde 503 |
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
 | `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ligada em 24/10/2026** depois de REPROVADO (1ª) e APROVADO (2ª) do `validador-deploy`; remover a linha desliga a troca no servidor (o inventário continua) |

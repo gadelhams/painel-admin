@@ -38,6 +38,6 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Portão e repositório
 
-- `npm test`: 237 testes + `check-docs` 0 erros (31/10); Playwright 25/25.
+- `npm test`: 242 testes + `check-docs` 0 erros (31/10); Playwright 25/25.
 - Um módulo por responsabilidade; mapa em `mapa.md`, conferido no `npm test`.
 - `main` no GitHub.

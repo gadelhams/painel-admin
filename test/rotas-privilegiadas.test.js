@@ -1,35 +1,22 @@
-// Varre as rotas do próprio app (regra 6 do padrão geral) pelo roteador REAL: guarda,
-// famílias e APIs de duas ações de verdade; só os serviços no fim da linha são espiões.
-// Todo caminho /api/ citado em http/ e na tabela da aba Contas recebe POST, PUT, PATCH e
-// DELETE de mesma origem e sem sessão. Rota que muda estado responde 401 sem ler o corpo
-// nem chamar serviço; rota que não aceita o método responde 405 no próprio handler. O que
-// foge disso está na lista abaixo, rota a rota e com o motivo. Rota nova entra sozinha.
+// Varre as rotas do próprio app (regra 6 do padrão geral) pelo painel MONTADO de produção
+// (montagem.js, PAINEL-17): guarda, famílias, autorizador SSO e APIs de duas ações de verdade;
+// só as portas externas (ssh, Plane, SSO, LLM, voz, CLI, coletores) são espiões. Todo caminho
+// /api/ citado em http/, em montagem.js e na tabela da aba Contas recebe POST, PUT, PATCH e
+// DELETE pela borda, de mesma origem e sem sessão. Rota que muda estado responde 401 sem ler o
+// corpo, sem tocar porta externa e sem gravar no estado; rota que não aceita o método responde
+// 405 no próprio handler. O que foge disso está na lista abaixo, rota a rota e com o motivo.
+// Rota nova entra sozinha. Mutação nomeada: registrar na montagem uma rota POST sem autorizador
+// deixa vermelho "todo método de escrita…".
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { RoteadorPainel } from '../http/roteador.js';
-import { RespostaHttp } from '../http/resposta.js';
-import { ConversaHttp } from '../http/conversa.js';
-import { RotasPainel } from '../http/rotas-painel.js';
-import { RotasOrquestracao } from '../http/rotas-orquestracao.js';
-import { RotasChaves } from '../http/rotas-chaves.js';
-import { RotasVoz } from '../http/rotas-voz.js';
-import { RotasAlinhamento } from '../http/rotas-alinhamento.js';
-import { criarGuarda } from '../guarda.js';
-import { ErroAcesso } from '../orquestrador/sso.js';
-import { criarApiFrota, criarConfirmacoesFrota } from '../orquestrador/api-frota.js';
-import { criarApiHandoff, criarConfirmacoesHandoff } from '../orquestrador/api-handoff.js';
-import { criarApiGate, criarConfirmacoesGate } from '../orquestrador/api-gate.js';
-import { criarApiDespacho, criarConfirmacoesDespacho } from '../orquestrador/api-despacho.js';
-import { criarApiVigilia, criarConfirmacoesVigilia } from '../orquestrador/api-vigilia.js';
-import { criarApiNativo, criarConfirmacoesNativo } from '../orquestrador/api-nativo.js';
-import { criarApiVoz } from '../orquestrador/voz-xai.js';
-import { criarApiChaves, criarConfirmacoesChaves } from '../chaves.js';
-import { criarManipuladorContas, ROTAS_CONTAS } from '../contas.js';
+import { ROTAS_CONTAS } from '../contas.js';
+import { montarComFalsos, cabecalhosDaBorda } from './painel-falso.js';
 
-const HTTP = path.join(import.meta.dirname, '..', 'http');
+const RAIZ = path.join(import.meta.dirname, '..');
+const HTTP = path.join(RAIZ, 'http');
 const METODOS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 // Exceções, "MÉTODO caminho" → motivo. Desde a N5 (29/10/2026) as escritas da aba Contas
 // exigem SSO e não são mais exceção.
@@ -43,9 +30,10 @@ const exemplo = padrao => padrao.source.replace(/^\^\\\//, '/').replace(/\$$/, '
 
 async function caminhosDoCodigo() {
   const caminhos = new Set();
-  for (const nome of await fs.readdir(HTTP)) {
-    if (!nome.endsWith('.js')) continue;
-    const texto = await fs.readFile(path.join(HTTP, nome), 'utf8');
+  const arquivos = [...(await fs.readdir(HTTP)).filter(n => n.endsWith('.js')).map(n => path.join(HTTP, n)),
+    path.join(RAIZ, 'montagem.js'), path.join(RAIZ, 'servidor.js')];
+  for (const arquivo of arquivos) {
+    const texto = await fs.readFile(arquivo, 'utf8');
     // Literal que termina em '/' é prefixo (ex.: '/api/projetos/'): entra com um segmento
     // de exemplo e com cada sufixo `endsWith('/x')` do mesmo arquivo (…/<x>/docs, …/<x>/git).
     const sufixos = [...texto.matchAll(/endsWith\('(\/[a-z0-9-]+)'\)/g)].map(m => m[1]);
@@ -60,49 +48,27 @@ async function caminhosDoCodigo() {
   return [...caminhos].sort();
 }
 
-function montar() {
-  const chamadas = [];
-  // Qualquer acesso a um serviço é registrado: a recusa tem de vir antes dele.
-  const espiao = nome => new Proxy({}, { get: (_, prop) => (prop === 'then' ? undefined : (...a) => { chamadas.push(`${nome}.${String(prop)}`); return Promise.resolve({}); }) });
-  const negar = async () => { throw new ErroAcesso('entre no Cadastro Único para confirmar esta ação', 401); };
-  const orquestracao = espiao('orquestracao');
-  const resposta = new RespostaHttp({ publico: path.join(import.meta.dirname, '..', 'publico'), maxCorpo: 64 * 1024 });
-  let leituras = 0;
-  const corpoOriginal = resposta.corpo.bind(resposta);
-  resposta.corpo = req => { leituras++; return corpoOriginal(req); };
-  const roteador = new RoteadorPainel({
-    porta: 7777, recusa: criarGuarda(7777), resposta,
-    conversa: new ConversaHttp({ resposta, conversar: async () => { chamadas.push('conversar'); }, maxMensagem: 8000 }),
-    voz: new RotasVoz({ resposta, proxyEleven: espiao('eleven'), autorizarTts: negar }),
-    painel: new RotasPainel({ resposta, coletores: espiao('coletores'), ssh: espiao('ssh'), autorizarContas: negar, sessao: espiao('sessao'),
-      contas: criarManipuladorContas({ cliente: espiao('contas') }) }),
-    orquestracao: new RotasOrquestracao({ resposta, orquestracao, triagemDev: espiao('triagem'), lerConsumo: espiao('consumo'),
-      lerDiarioFrota: espiao('diario'), vigilia: espiao('vigilia'), liberacaoNativa: espiao('nativo'),
-      apiFrota: criarApiFrota({ autorizar: negar, confirmacoes: criarConfirmacoesFrota({ servico: orquestracao }) }),
-      apiHandoff: criarApiHandoff({ autorizar: negar, confirmacoes: criarConfirmacoesHandoff({ servico: orquestracao }) }),
-      apiGate: criarApiGate({ autorizar: negar, confirmacoes: criarConfirmacoesGate({ servico: orquestracao }) }),
-      apiDespacho: criarApiDespacho({ autorizar: negar, confirmacoes: criarConfirmacoesDespacho({ servico: orquestracao }) }),
-      apiVigilia: criarApiVigilia({ autorizar: negar, confirmacoes: criarConfirmacoesVigilia({ vigilia: espiao('vigilia') }) }),
-      apiNativo: criarApiNativo({ autorizar: negar, confirmacoes: criarConfirmacoesNativo({ liberacao: espiao('nativo') }) }),
-      apiVoz: criarApiVoz({ autorizar: negar, transcrever: async () => { chamadas.push('transcrever'); return {}; } }),
-      xai: () => false }),
-    alinhamento: new RotasAlinhamento({ resposta, alinhamento: espiao('alinhamento') }),
-    chaves: new RotasChaves({ resposta, chaves: espiao('chaves'), apiChaves: criarApiChaves({ autorizar: negar, confirmacoes: criarConfirmacoesChaves({ servico: espiao('chaves') }) }) }),
-  });
-  return { roteador, chamadas, leituras: () => leituras };
+// Um diretório vazio no começo; a recusa não pode deixar nada gravado nele.
+async function arvore(dir) {
+  const saida = [];
+  for (const e of await fs.readdir(dir, { withFileTypes: true, recursive: true })) saida.push(path.join(e.parentPath, e.name));
+  return saida.sort();
 }
 
-// Mesma origem e sem cookie: o pior caso que passa pela guarda.
-async function pedir(roteador, metodo, caminho) {
-  const req = Object.assign(Readable.from([Buffer.from('{}')]), { method: metodo, url: caminho,
-    headers: { host: '127.0.0.1:7777', origin: 'http://127.0.0.1:7777', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' } });
+// O pior caso que passa pela guarda e pela origem privilegiada: borda, mesma origem, tipo
+// certo (áudio na transcrição) e sem cookie. O corpo é um gerador: lê-lo deixa marca.
+async function pedir(painel, metodo, caminho, { sessao = false } = {}) {
+  let lido = false;
+  const tipo = caminho.endsWith('/voz/transcrever') ? 'audio/webm' : 'application/json';
+  const req = Object.assign(Readable.from((function* () { lido = true; yield Buffer.from('{}'); })()),
+    { method: metodo, url: caminho, headers: cabecalhosDaBorda({ tipo, sessao }) });
   const res = { status: null, cabecalhos: {}, headersSent: false, setHeader(k, v) { this.cabecalhos[k.toLowerCase()] = v; },
     writeHead(s) { this.status = s; this.headersSent = true; }, end() {} };
-  await roteador.atender(req, res);
-  return { status: res.status, allow: res.cabecalhos.allow ?? null };
+  await painel.atender(req, res);
+  return { status: res.status, allow: res.cabecalhos.allow ?? null, lido };
 }
 
-test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo nem chamar serviço', async () => {
+test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo, tocar porta externa nem gravar estado', async () => {
   const caminhos = await caminhosDoCodigo();
   for (const esperado of ['/api/orquestracao/frota/preparar', '/api/orquestracao/frota/confirmar', '/api/chaves/confirmar', '/api/hangar',
     '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites']) {
@@ -111,19 +77,24 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');
   for (const esperado of ['/api/projetos/x/docs', '/api/projetos/x/git']) assert.ok(caminhos.includes(esperado), `prefixo não expandido: ${esperado}`);
   const privilegiadas = [];
+  const { painel, chamadas, diretorio, limpar } = await montarComFalsos();
+  const estadoInicial = await arvore(diretorio);
+  try {
   for (const caminho of caminhos) {
     for (const metodo of METODOS) {
       if (EXCECOES.has(`${metodo} ${caminho}`)) continue;
-      const { roteador, chamadas, leituras } = montar();
-      const { status, allow } = await pedir(roteador, metodo, caminho);
+      chamadas.length = 0;
+      const { status, allow, lido } = await pedir(painel, metodo, caminho);
       const ok = caminho.startsWith('/api/contas/') ? [401, 404] : [401, 405];
       assert.ok(ok.includes(status), `${metodo} ${caminho} respondeu ${status} sem sessão`);
       if (status === 405) assert.ok(allow, `${metodo} ${caminho}: 405 sem cabeçalho Allow`);
-      assert.deepEqual(chamadas, [], `${metodo} ${caminho} chamou serviço antes da sessão`);
-      assert.equal(leituras(), 0, `${metodo} ${caminho} leu o corpo antes da sessão`);
+      assert.deepEqual(chamadas, [], `${metodo} ${caminho} tocou porta externa antes da sessão`);
+      assert.equal(lido, false, `${metodo} ${caminho} leu o corpo antes da sessão`);
       if (status === 401) privilegiadas.push(`${metodo} ${caminho}`);
     }
   }
+  assert.deepEqual(await arvore(diretorio), estadoInicial, 'a varredura sem sessão gravou no estado');
+  } finally { await limpar(); }
   // N5: toda escrita da aba Contas pede sessão (401), uma a uma, gerada da tabela fechada.
   for (const r of ROTAS_CONTAS.filter(x => x.metodo !== 'GET')) {
     assert.ok(privilegiadas.includes(`${r.metodo} ${exemplo(r.padrao)}`), `escrita de Contas sem SSO: ${r.metodo} ${exemplo(r.padrao)}`);
@@ -133,22 +104,30 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
 });
 
 test('HEAD continua 200 nos handlers só-leitura (a guarda trata HEAD como seguro)', async () => {
-  for (const caminho of ['/api/hangar', '/api/hangar/sessoes', '/api/projetos', '/api/projetos/x/docs', '/api/producao', '/api/backlog', '/api/decisoes', '/api/relacoes', '/api/alinhamento']) {
-    const { roteador } = montar();
-    assert.equal((await pedir(roteador, 'HEAD', caminho)).status, 200, caminho);
-  }
+  // A varredura de alinhamento é real: a semente do cache evita git e check-docs de verdade.
+  const { painel, limpar } = await montarComFalsos({ sementes: { 'alinhamento.json': { resultado: { projetos: [] }, fios: {} } } });
+  try {
+    for (const caminho of ['/api/hangar', '/api/hangar/sessoes', '/api/projetos', '/api/projetos/x/docs', '/api/producao', '/api/backlog', '/api/decisoes', '/api/relacoes', '/api/alinhamento']) {
+      assert.equal((await pedir(painel, 'HEAD', caminho)).status, 200, caminho);
+    }
+  } finally { await limpar(); }
 });
 
-test('N5: com sessão SSO a escrita de Contas segue para o CadastroUnico; sem ela, nem o corpo é lido', async () => {
-  const chamadas = [];
-  const resposta = new RespostaHttp({ publico: path.join(import.meta.dirname, '..', 'publico'), maxCorpo: 64 * 1024 });
-  const contas = criarManipuladorContas({ cliente: { chamar: async (operacao) => { chamadas.push(operacao); return { status: 200, corpo: { ok: true } }; } } });
-  const painel = (autorizarContas) => new RoteadorPainel({ porta: 7777, recusa: criarGuarda(7777), resposta,
-    conversa: { atender: async () => {} }, voz: { tentar: async () => false }, orquestracao: { tentar: async () => false },
-    alinhamento: { tentar: async () => false }, chaves: { tentar: async () => false },
-    painel: new RotasPainel({ resposta, coletores: {}, ssh: {}, contas, autorizarContas }) });
-  assert.equal((await pedir(painel(async () => ({ usuarioId: '1', sessaoHash: 'a'.repeat(64) })), 'POST', '/api/contas/usuarios/5/reativar')).status, 200);
-  assert.deepEqual(chamadas, ['reativarUsuario']);
-  assert.equal((await pedir(painel(undefined), 'POST', '/api/contas/usuarios/5/reativar')).status, 503, 'sem autorizador configurado falha fechada');
-  assert.deepEqual(chamadas, ['reativarUsuario']);
+test('N5: com sessão SSO a escrita de Contas segue para o CadastroUnico; sem ela, nem o corpo é lido; sem dono configurado, 503', async () => {
+  const ssh = [];
+  const executarSsh = async (args, stdin) => { ssh.push({ comando: args.at(-1), stdin }); return { codigo: 0, stdout: '{"ok":true}\n200', stderr: '' }; };
+  const montado = await montarComFalsos({ externos: { executarSsh } });
+  const semDono = await montarComFalsos({ ambiente: {}, externos: { executarSsh } });
+  try {
+    const semSessao = await pedir(montado.painel, 'POST', '/api/contas/usuarios/5/reativar');
+    assert.deepEqual({ status: semSessao.status, lido: semSessao.lido }, { status: 401, lido: false });
+    assert.deepEqual(ssh, []);
+    const comSessao = await pedir(montado.painel, 'POST', '/api/contas/usuarios/5/reativar', { sessao: true });
+    assert.deepEqual({ status: comSessao.status, lido: comSessao.lido }, { status: 200, lido: true });
+    assert.equal(ssh.length, 1);
+    assert.match(ssh[0].comando, / -X POST http:\/\/127\.0\.0\.1:8790\/interno\/usuarios\/5\/reativar /);
+    const fechado = await pedir(semDono.painel, 'POST', '/api/contas/usuarios/5/reativar', { sessao: true });
+    assert.deepEqual({ status: fechado.status, lido: fechado.lido }, { status: 503, lido: false }, 'sem ORQ_OWNER_USER_ID falha fechada');
+    assert.equal(ssh.length, 1);
+  } finally { await montado.limpar(); await semDono.limpar(); }
 });

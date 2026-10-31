@@ -4,7 +4,6 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -16,8 +15,8 @@ import {
   criarClienteContas,
   criarExecutorSsh,
   resolverRotaContas,
-  criarManipuladorContas,
 } from '../contas.js';
+import { servirComFalsos, cabecalhosDaBorda } from './painel-falso.js';
 
 const CHAVE = path.join(os.homedir(), '.ssh', 'paroquia-vultr');
 
@@ -323,28 +322,20 @@ describe('fronteira HTTP do painel (/api/contas/*)', () => {
     assert.equal(resolverRotaContas('GET', '/api/contas/'), null);
   });
 
-  // Servidor mínimo com o manipulador real, atacado por fetch de verdade:
-  // a asserção é sobre o status e o corpo que o navegador receberia.
+  // O handler REAL do painel (montagem.js) num http.Server de porta efêmera, atacado por
+  // requisição de verdade: a asserção é sobre o status e o corpo que o navegador receberia.
+  // Só o ssh e o SSO são falsos; escrita vai com a sessão do dono pela borda (N5).
   async function comServidor(saida, fn) {
     const { executar, chamadas } = executorFalso(saida);
-    const manipular = criarManipuladorContas({ cliente: criarClienteContas({ executar, log: () => {} }) });
-    const servidor = http.createServer(async (req, res) => {
-      const pedacos = [];
-      for await (const p of req) pedacos.push(p);
-      const { status, corpo } = await manipular(req.method, new URL(req.url, 'http://x').pathname, Buffer.concat(pedacos).toString('utf8'));
-      res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(corpo));
-    });
-    await new Promise((r) => servidor.listen(0, '127.0.0.1', r));
-    const base = `http://127.0.0.1:${servidor.address().port}`;
+    const painel = await servirComFalsos({ externos: { executarSsh: executar } });
     const pedir = async (metodo, caminho, corpo) => {
-      const r = await fetch(base + caminho, { method: metodo, headers: corpo !== undefined ? { 'content-type': 'application/json' } : {}, body: corpo });
-      return { status: r.status, corpo: await r.json() };
+      const r = await painel.pedir(metodo, caminho, { corpo, cabecalhos: metodo === 'GET' ? {} : cabecalhosDaBorda({ sessao: true }) });
+      return { status: r.status, corpo: r.corpo };
     };
     try {
       await fn({ pedir, chamadas });
     } finally {
-      await new Promise((r) => servidor.close(r));
+      await painel.fechar();
     }
   }
 

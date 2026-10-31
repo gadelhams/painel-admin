@@ -13,7 +13,7 @@ test('aba tem tópicos, canal Plane, frota por papel e confirmação separada', 
     assert.ok(i > cursor, nome);
     cursor = i;
   }
-  const servidor = await fs.readFile(new URL('../servidor.js', import.meta.url), 'utf8');
+  const servidor = await fs.readFile(new URL('../montagem.js', import.meta.url), 'utf8');
   const rotas = await fs.readFile(new URL('../http/rotas-orquestracao.js', import.meta.url), 'utf8');
   for (const id of ['aba-orquestracao', 'orq-cartas', 'orq-conversa', 'orq-frota-atual', 'orq-frota-executor', 'orq-frota-zelador', 'orq-consumo', 'orq-historico',
     'orq-frota-preparar', 'orq-frota-confirmacao', 'orq-triagem-carregar', 'orq-categoria']) {
