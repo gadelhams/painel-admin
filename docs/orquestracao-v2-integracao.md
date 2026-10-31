@@ -356,7 +356,7 @@ PAINEL-29/31/41, sem mudar estado ou gate. Nenhum despacho ou deploy.
 
 O C-3PO usa a mesma triagem e a mesma pré-checagem por carta da aba, via
 `fila_orquestracao` em modos `triagem_dev` e `prontidao`. A ferramenta MCP
-continua uma das quatro permitidas, só-leitura, com resposta limitada a
+continua uma das permitidas, só-leitura, com resposta limitada a
 30 cartas. Para discutir escopo e aceite, ele deve consultar os documentos
 modeladores do projeto, separar problema técnico, autorização e decisão real
 de produto e nunca assumir que `ASTARGNE` significa escolha de produto.

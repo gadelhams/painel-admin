@@ -64,8 +64,9 @@ da raiz (`padroes/fluxo.md`).
    capacidade própria, não duplicação.
 2. **Voz não fura o canon.** Qualquer ação futura que mude estado no
    `astargne.com` continua exigindo o ciclo normal de agente: `validador-deploy`
-   + `validar-premissas.sh`. Até a fase 3, o C-3PO **nem possui** ferramenta
-   de escrita — a limitação é estrutural, não comportamental.
+   + `validar-premissas.sh`. O C-3PO **não possui** ferramenta que execute ou
+   confirme: desde a fase 3 (31/10/2026) ele lê e, no máximo, **propõe**; quem
+   executa é o dono, pela UI — a limitação é estrutural, não comportamental.
 3. **Sem login, então porta fechada.** Escuta em `127.0.0.1` (porta **7777**
    desde a fusão; nasceu na 7778), sem autenticação. Desde 06/10/2026 a borda
    do tailnet publica `painel.vpn.astargne.com` só para o Windows do dono
@@ -260,6 +261,16 @@ real. Em ordem de risco:
 
 Toda ação da fase 3 — mesmo local — exige **confirmação explícita na UI**
 antes de executar e fica registrada em log local.
+
+**Feito em 31/10/2026 (PAINEL-2, PAINEL-3, PAINEL-4; épico PAINEL-1).** Decisão do
+dono: as **leituras** viram ferramentas só-leitura, sem portão — (a) `consulta_ssh`
+(a mesma classe e a mesma lista da rota `/api/producao/ssh`, fonte única) e a parte
+de leitura de (b), `git_projeto` (`status --short`, `diff --stat`, `log --oneline
+-n 15` de um projeto do catálogo; diff de conteúdo fica de fora). **Rodar a suíte**
+passa pelo portão: o C-3PO só propõe (`propor_acao`, comandos do contrato
+`.orquestrador.json`), o chat mostra um cartão, e o dono prepara e confirma com
+SSO + duas ações; uma ação por vez, saída filtrada, diário JSONL de todas as
+etapas. Mecanismo em `arquitetura.md` § motor.js. (c) continua fora.
 
 ## O que este projeto NÃO faz
 

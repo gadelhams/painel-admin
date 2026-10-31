@@ -1,8 +1,14 @@
-// Catálogo das seis ferramentas só de leitura. O portão é esta lista, não o texto da persona.
+// Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+//
+// Fase 3 (31/10/2026): consulta_ssh e git_projeto leem; propor_acao registra uma
+// proposta e nada mais — preparar, confirmar e executar são do dono, pela UI, com SSO.
 
 import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { estadoProjetos, estadoProducao, decisoesDoBacklog } from '../coletores.js';
+import { estadoProjetos, estadoProducao, decisoesDoBacklog, lerGitDoProjeto, LEITURAS_GIT } from '../coletores.js';
+import { LeituraSsh } from '../coletores.js';
+import { propostas } from '../acoes/propostas.js';
+import { PropostaAcao } from './acao-proposta.js';
 import { criarServicoOrquestracao } from '../orquestrador/fila.js';
 import { criarTriagemDev } from '../orquestrador/triagem.js';
 import { consultarOrquestracaoC3po } from '../orquestrador/consulta-c3po.js';
@@ -24,6 +30,8 @@ const chaves = criarServicoChaves();
 const alinhamento = criarAlinhamento();
 const envelope = new EnvelopeColetor();
 const docs = new DocProjeto();
+const ssh = new LeituraSsh();
+const proposta = new PropostaAcao({ propostas });
 
 export const ferramentas = createSdkMcpServer({
   name: 'c3po',
@@ -81,6 +89,32 @@ export const ferramentas = createSdkMcpServer({
       { projeto: z.string().optional().describe('Pasta exata de um projeto para restringir.') },
       entrada => envelope.consultar('alinhamento', async () => { const r = await alinhamento.ler(); return entrada?.projeto ? { ...r, projetos: r.projetos.filter(p => p.pasta === entrada.projeto) } : r; }),
       { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'consulta_ssh',
+      'Consulta SSH SÓ DE LEITURA no servidor astargne.com, a mesma do botão do painel e a mesma lista fixa (tempo no ar, estado dos serviços corre-do-tarado e caddy, containers, disco e memória). Não aceita comando. Use quando perguntarem de carga, disco, memória ou containers do servidor. Lenta (até 30 s): só quando a pergunta pedir.',
+      {},
+      () => envelope.consultar('consulta_ssh', () => ssh.consultar()),
+      { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'git_projeto',
+      'Leitura local de git de UM projeto do catálogo: status (status --short), diff_stat (diff --stat: só nomes e contagens, nunca o conteúdo) ou log (log --oneline -n 15). Só leitura.',
+      {
+        projeto: z.string().describe('Nome exato da pasta do projeto no catálogo (ex.: "painel-admin"). Descubra com estado_projetos.'),
+        leitura: z.enum(Object.keys(LEITURAS_GIT)).describe('status, diff_stat ou log.'),
+      },
+      entrada => envelope.consultar('git_projeto', () => lerGitDoProjeto(entrada)),
+      { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'propor_acao',
+      'PROPÕE ao Mestre rodar um comando do contrato .orquestrador.json de um projeto (hoje, a suíte de testes; o id costuma ser "testes"). NÃO executa: registra a proposta e um cartão aparece no chat para o Mestre preparar e confirmar com a sessão do Cadastro Único. Projeto sem contrato ou comando fora dele é recusado. Use só quando o Mestre pedir para rodar os testes.',
+      {
+        projeto: z.string().describe('Nome exato da pasta do projeto no catálogo (ex.: "painel-admin").'),
+        comandoId: z.string().describe('id do comando no contrato do projeto (ex.: "testes").'),
+      },
+      entrada => proposta.propor(entrada),
     ),
   ],
 });

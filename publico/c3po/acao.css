@@ -1,0 +1,16 @@
+/* Cartão "Ação proposta" do C-3PO (fase 3, 31/10/2026). Arquivo à parte de propósito:
+   serve /c3po/, o console e o popup do Hangar sem tocar no CSS de cada um, e herda a
+   cor de quem o hospeda (currentColor) em vez de repetir paleta. */
+.acao-cartao { align-self: stretch; display: grid; gap: .45rem; padding: .6rem .8rem; border: 1px dashed currentColor; border-radius: .5rem; font-size: .9rem; }
+.acao-cartao p { margin: 0; }
+.acao-titulo { font-weight: 600; }
+.acao-titulo code, .acao-lista dd { font-family: ui-monospace, monospace; }
+.acao-nota { opacity: .75; font-size: .82rem; }
+.acao-cartao button { justify-self: start; padding: .3rem .8rem; font: inherit; cursor: pointer; }
+.acao-cartao button:disabled { cursor: progress; opacity: .6; }
+.acao-lista { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .15rem .7rem; }
+.acao-lista dt { opacity: .75; }
+.acao-lista dd { margin: 0; overflow-wrap: anywhere; }
+.acao-estado.acao-erro { color: #f87171; }
+.acao-estado.acao-ok { color: #4ade80; }
+.acao-saida { max-height: 16rem; overflow: auto; padding: .5rem; background: rgba(0, 0, 0, .35); font: .78rem/1.35 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -49,7 +49,7 @@ toda porta externa entra por `externos` (`executarSsh`, `leituraSsh`, `sso`, `fe
 produção. Os testes montam o mesmo painel com falsos (`test/painel-falso.js`):
 `test/fronteira-http.test.js` sobe um `http.Server` de porta efêmera e faz requisição real
 (guarda de Host e origem, sessão, estático), e a fronteira de `/api/contas/*` em
-`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, jogo nativo, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE), `ssh-leitura.js` e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
+`test/contas.test.js` passa pelo mesmo handler. O despacho mora em `http/`: `roteador.js` depois da guarda, `rotas-painel.js` (projetos, produção, ssh, backlog, decisões, hangar, relações, contas e o redirecionamento do C-3PO, cada um no próprio arquivo), `rotas-orquestracao.js` (fila, triagem, canal, frota, handoff, gate, despacho, consumo, vigília, jogo nativo, legado e voz, cada um no próprio arquivo; a recusa genérica depois das rotas específicas), `rotas-voz.js`, `rotas-chaves.js`, `rotas-alinhamento.js`, `conversa.js` (SSE) e `resposta.js` (compõe `resposta-json.js`, `arquivo-publico.js` e `corpo-limitado.js`). HTTP único em `127.0.0.1:7777`: `/api/projetos`,
 `GET /api/projetos/:pasta/docs` (docs modeladores + curados de UM projeto;
 `?arquivo=` lê um modelador específico — página de projeto, 20/08/2026),
 `GET /api/projetos/:pasta/git` (diff --stat do working tree + commits não
@@ -64,11 +64,11 @@ motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 (aba Contas — abaixo), `/api/orquestracao*` (GET fila, `triagem-dev`,
 `prontidao`, `canal?carta&projeto`, `frota`, `consumo`, `legado`, `nativo`; POST
 `simular`, `{frota,handoff,gates,despacho,vigilia,nativo}/{preparar,confirmar}`,
-`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
+`voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md); `POST /api/acoes/{preparar,confirmar}` (ação proposta pelo C-3PO, § motor.js; `rotas-acoes.js`); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
 varre toda rota (literais de `http/` e de `montagem.js`) pelo painel montado com POST, PUT, PATCH e DELETE pela borda, sem sessão — 401 ou 405 no próprio handler,
 sem ler corpo, tocar porta externa nem gravar no estado; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
-ferramentas só de leitura, sem SSO por decisão do dono (29/10/2026); `/api/tts` e a transcrição pedem SSO desde a mesma data; as
+ferramentas de leitura (e, desde 31/10/2026, `propor_acao`, que só registra proposta), sem SSO por decisão do dono (29/10/2026); `/api/tts` e a transcrição pedem SSO desde a mesma data; as
 escritas da aba Contas exigem SSO desde 29/10/2026; handler só-leitura responde HEAD e o 405 leva `Allow`)
 e estáticos de `publico/` (dashboard na raiz, chat em `/c3po/`).
 
@@ -346,7 +346,7 @@ mesmas funções — o motor nunca faz HTTP para o próprio processo.
 
 ### motor.js
 
-Porta da conversa. O catálogo das seis ferramentas só-leitura mora em
+Porta da conversa. O catálogo das nove ferramentas (oito de leitura e `propor_acao`) mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
 aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
@@ -355,7 +355,7 @@ branca (`AMBIENTE_PERMITIDO`: o login em `~/.claude` e o básico; nenhum segredo
 Teste: `test/motor-ambiente.test.js`.
 
 Claude Agent SDK (`claude-sonnet-5` fixo), persona do
-C-3PO, quatro ferramentas **só-leitura**: `estado_projetos`,
+C-3PO, ferramentas **só-leitura** (a lista abaixo é de 01/10/2026; desde então entraram `decisoes`, `alinhamento`, `consulta_ssh`, `git_projeto` e `propor_acao`, abaixo): `estado_projetos`,
 `estado_producao` (coletores internos), `docs_projeto` (só `.md` da raiz,
 allowlist estrita — mecânica em `coletores.js`) e `fila_orquestracao`
 (projeção do Plane; ver [orquestracao-v2-integracao.md](orquestracao-v2-integracao.md)). Esta última
@@ -374,6 +374,37 @@ processo, `plane/cliente.js` limita a 6 os GETs abertos ao Plane e só conta o
 prazo de 15 s depois da espera (31/10/2026: em rajada, chamadas passavam do
 prazo e o C-3PO respondia "aborted due to timeout").
 
+
+**Fase 3 (31/10/2026, PAINEL-2/-3/-4; decisão do dono).** Duas leituras novas e uma
+ação com portão:
+- `consulta_ssh`: a mesma `LeituraSsh` e a mesma lista `CONSULTAS_SSH` da rota
+  `/api/producao/ssh` (fonte única; o teste falha se o texto de um comando aparecer
+  em outro módulo). Sem argumento.
+- `git_projeto`: `coletores/git-leitura.js`, só projeto do catálogo por `pasta` e só
+  três leituras fechadas (`status --short`, `diff --stat`, `log --oneline -n 15`);
+  `execFile` sem shell, `GIT_OPTIONAL_LOCKS=0`, ambiente por lista branca, 10 s,
+  6 000 caracteres, filtro de segredo. Diff de conteúdo fica de fora.
+- `propor_acao` {projeto, comandoId}: `acoes/propostas.js` confere catálogo e
+  contrato `.orquestrador.json` (`comandoPermitido`, a mesma lista fechada do
+  executor de cartas; sem contrato, recusa nomeada), guarda a proposta em memória
+  por 30 min e devolve o id. `motor.js` lê o resultado da ferramenta e emite o
+  evento SSE `proposta` (só se o registro conhece o id); o chat (`/c3po/`, console
+  e popup do Hangar) mostra o cartão de `publico/c3po/acao-proposta.js`.
+- O dono executa: `POST /api/acoes/preparar` {propostaId} relê o contrato e mostra
+  projeto, pasta, executável e argumentos; `POST /api/acoes/confirmar`
+  {confirmacaoId}, na mesma sessão, roda uma vez (`acoes/api-acoes.js` sobre
+  `criarDesafios` + `criarApiDuasAcoes`; desafio de 2 min). `acoes/executor-acoes.js`:
+  uma ação por vez (a segunda recebe 409, nem prepara), `ProcessoCli` (spawn sem
+  shell, grupo morto no tempo do contrato, 20 min), `ambienteLimpo`, saída capada
+  e passada por `acoes/filtro-segredo.js` (o `redigirSegredo` da aba Contas mais
+  atribuições `*KEY*=`, formatos de chave e o valor literal das variáveis de
+  segredo do painel). A proposta é de uso único. O que não garante: o comando
+  roda sem sandbox, como o usuário do serviço, no checkout principal do projeto
+  (não num worktree), e o filtro só pega o segredo que reconhece.
+- Diário: `~/.local/state/painel-admin/c3po/acoes.jsonl` (`anexarJsonl`), uma linha
+  por etapa — `proposta`/`proposta-recusada` (quem `c3po`), `preparo`,
+  `confirmacao` (antes de rodar; sem diário, não roda) e `resultado` (código,
+  sinal, duração, resumo de 500 caracteres filtrado), com o `usuarioId` da sessão.
 
 Ferramenta `decisoes` (24/10/2026, pedido do dono): `decisoes-c3po.js` dá ao
 C-3PO a mesma leitura da aba Decisões e do bloco "Astargne" — grupos
@@ -679,7 +710,9 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   que muda estado vindo de outro site (403, `Sec-Fetch-Site`/`Origin`, contra
   CSRF — que já valia para o loopback antes da borda). Abrir para mais
   aparelhos é mudar o `remote_ip` do Caddyfile, nunca tirar a restrição.
-- **SSH só-leitura** (`/api/producao/ssh`): apenas `uptime`,
+- **SSH só-leitura** (`/api/producao/ssh` e, desde 31/10/2026, a ferramenta
+  `consulta_ssh` do C-3PO, a mesma classe e a mesma lista `CONSULTAS_SSH` de
+  `coletores/ssh-leitura.js`, fonte única conferida em teste; saiu de `http/` em 31/10 para o motor alcançá-la pela porta `coletores.js`): apenas `uptime`,
   `systemctl is-active`, `docker ps`, `df`, `free`, com a chave
   `~/.ssh/paroquia-vultr`, só sob demanda (botão) — nunca no refresh
   automático. **Única exceção, delimitada** (13/09/2026, aba Contas): o
@@ -694,9 +727,14 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   ssh**, e o script remoto monta o cabeçalho lá dentro. Se um dia alguém
   propuser "copiar o token pro `.env` local pra simplificar", a resposta é
   não — é a arquitetura da fatia, não um detalhe.
-- **Ferramentas de IA só-leitura até a fase 3** (`docs/00_PLANO.md`): o motor
-  roda com `tools: []` + allowlist das quatro ferramentas MCP — limitação
-  **estrutural**, não promessa de comportamento.
+- **O motor lê e só propõe** (fase 3, 31/10/2026; até então "só-leitura até a
+  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das nove
+  ferramentas MCP — limitação **estrutural**, não promessa de comportamento. A
+  única que não é leitura, `propor_acao`, registra uma proposta e devolve o id
+  dela, nunca um id de confirmação; preparar, confirmar e executar são do dono,
+  pela UI, com SSO + duas ações. Nenhum módulo que o motor importa (fecho
+  transitivo) alcança `acoes/executor-acoes.js` nem `acoes/api-acoes.js`
+  (`test/acoes.test.js`).
 - **Voz não fura o canon de deploy**: qualquer ação futura que mude estado no
   `astargne.com` continua exigindo `validador-deploy` + validação de
   premissas, como para qualquer agente.
@@ -720,8 +758,9 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   **Fechado antes do piloto (R3, 29/10/2026):** o que gasta crédito pago
   (`POST /api/tts` e a transcrição) exige a sessão SSO também no loopback, e o
   executor não tem o cookie. `/api/conversa` fica aberto por decisão do dono:
-  roda pelo login da CLI, com as ferramentas só de leitura do C-3PO; o pior que
-  o executor faz por ali é gastar cota da assinatura.
+  roda pelo login da CLI, com as ferramentas do C-3PO (leitura e `propor_acao`); o pior que
+  o executor faz por ali é gastar cota da assinatura e deixar propostas que só o
+  dono, com SSO, confirma.
 - **Segredo só no `.env`** (`ELEVENLABS_API_KEY`, `PLANE_API_KEY` da identidade
   Guest de leitura e, se habilitado, `PLANE_ORQ_WRITE_KEY` de serviço distinta;
   coberto pelo `.gitignore`). A escrita de gate e handoff exige projeto único, SSO do
@@ -754,8 +793,8 @@ vivo tinha; provas e evidências ficaram em
 
 - **Autenticação do motor**: o login do Claude Code já existente na máquina;
   funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
-- **Só-leitura estrutural** (`motor.js`): `tools: []` + servidor MCP em
-  processo com só as seis ferramentas de leitura + `allowedTools` nelas +
+- **Só-leitura estrutural** (`motor.js`; desde 31/10/2026 "lê e só propõe", § motor.js): `tools: []` + servidor MCP em
+  processo com só as ferramentas do catálogo (nove desde 31/10/2026) + `allowedTools` nelas +
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.

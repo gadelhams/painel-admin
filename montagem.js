@@ -8,7 +8,7 @@
 
 import os from 'node:os';
 import path from 'node:path';
-import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes } from './coletores.js';
+import { estadoProjetos, estadoProducao, lerBacklog, docsProjeto, lerModeladorProjeto, gitDetalhado, catalogoRelacoes, decisoesDoBacklog, lerHangar, lerSessoes, LeituraSsh } from './coletores.js';
 import { conversar as conversarReal } from './motor.js';
 import { criarClienteContas, criarManipuladorContas } from './contas.js';
 import { criarGuarda } from './guarda.js';
@@ -40,12 +40,16 @@ import { criarClientePlane } from './plane.js';
 import { PROJETOS } from './projetos.js';
 import { RespostaHttp } from './http/resposta.js';
 import { ConversaHttp } from './http/conversa.js';
-import { LeituraSsh } from './http/ssh-leitura.js';
 import { RotasPainel } from './http/rotas-painel.js';
 import { RotasOrquestracao } from './http/rotas-orquestracao.js';
 import { RotasVoz } from './http/rotas-voz.js';
 import { RotasChaves } from './http/rotas-chaves.js';
 import { RotasAlinhamento } from './http/rotas-alinhamento.js';
+import { RotasAcoes } from './http/rotas-acoes.js';
+import { propostas } from './acoes/propostas.js';
+import { criarDiarioAcoes } from './acoes/diario-acoes.js';
+import { criarExecutorAcoes } from './acoes/executor-acoes.js';
+import { criarApiAcoes, criarConfirmacoesAcoes } from './acoes/api-acoes.js';
 import { RoteadorPainel } from './http/roteador.js';
 
 const PUBLICO = path.join(import.meta.dirname, 'publico');
@@ -139,6 +143,11 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   const apiVoz = criarApiVoz({ transcrever: transcrever ?? criarTranscritorXai(fetchVoz ? { fetchImpl: fetchVoz } : {}),
     autorizar: criarAutorizador({ verificar, proprietarioId, tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }) });
 
+  // Ações do C-3PO (fase 3): o motor só propõe em `propostas`; rodar a suíte de um projeto
+  // é do dono, por SSO + duas ações, uma por vez, com diário em <estado>/c3po/acoes.jsonl.
+  const apiAcoes = confirmar(criarApiAcoes, criarConfirmacoesAcoes, { propostas, executor: criarExecutorAcoes({ ambiente }),
+    diario: criarDiarioAcoes({ diretorio: path.join(diretorioEstado, 'c3po') }) });
+
   const resposta = new RespostaHttp({ publico, maxCorpo: MAX_CORPO });
   const roteador = new RoteadorPainel({
     porta,
@@ -172,6 +181,7 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     }),
     alinhamento: new RotasAlinhamento({ resposta, alinhamento }),
     chaves: new RotasChaves({ resposta, chaves, apiChaves: confirmar(criarApiChaves, criarConfirmacoesChaves, { servico: chaves }) }),
+    acoes: new RotasAcoes({ resposta, apiAcoes }),
   });
 
   return {

@@ -7,11 +7,15 @@ import { validarContrato } from './politica.js';
 export const RAIZ = path.resolve(import.meta.dirname, '../..');
 const REPOSITORIO = path.resolve(import.meta.dirname, '..');
 
+// A pasta onde o contrato mora é a mesma onde o comando dele roda (ações do C-3PO).
+export function pastaDoContrato(projeto, raiz) {
+  return raiz === RAIZ && projeto.pasta === 'painel-admin'
+    ? REPOSITORIO : path.join(raiz, projeto.pasta, projeto.subRepo ?? '');
+}
+
 export async function contratoDoProjeto(projeto, raiz) {
   if (!projeto || projeto.area !== 'ProjetosPessoais') return { contrato: null, erros: [] };
-  const pasta = raiz === RAIZ && projeto.pasta === 'painel-admin'
-    ? REPOSITORIO : path.join(raiz, projeto.pasta, projeto.subRepo ?? '');
-  const arquivo = path.join(pasta, '.orquestrador.json');
+  const arquivo = path.join(pastaDoContrato(projeto, raiz), '.orquestrador.json');
   try {
     const contrato = JSON.parse(await fs.readFile(arquivo, 'utf8'));
     return { contrato, erros: validarContrato(contrato, projeto.plane) };

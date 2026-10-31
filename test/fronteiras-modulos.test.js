@@ -13,8 +13,11 @@ const IGNORAR = new Set(['node_modules', 'vendor', 'docs', 'test', 'e2e', 'test-
 // Área = pasta X/ com a porta X.js na raiz, que só reexporta: quem é de fora importa a porta.
 const AREAS_COM_PORTA = ['alinhamento', 'chaves', 'coletores', 'contas', 'motor', 'plane'];
 // orquestrador/ não tem porta única: estes são os módulos que outra área pode importar.
+// As primitivas de execução (processo sem shell, ambiente por lista branca) e o contrato local
+// são portas desde a fase 3 do C-3PO (31/10/2026): acoes/ e a leitura de git as reusam em vez de duplicar.
 const PORTAS_ORQUESTRADOR = new Set(['sso.js', 'fila.js', 'triagem.js', 'consulta-c3po.js',
-  'api-duas-acoes.js', 'desafio-duas-acoes.js', 'leitor-jsonl.js', 'uuid.js']);
+  'api-duas-acoes.js', 'desafio-duas-acoes.js', 'leitor-jsonl.js', 'uuid.js',
+  'processo-cli.js', 'ambiente-cli.js', 'contrato-local.js', 'politica.js']);
 // Quem compõe (montagem.js) liga as peças internas de cada área — regra 7, "quem compõe não implementa".
 const COMPOSICAO = 'montagem.js';
 // O motor do C-3PO é só leitura até a fase 3 (invariante 4): nem o fecho dos seus imports alcança

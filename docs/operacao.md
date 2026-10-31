@@ -67,6 +67,11 @@ Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
 worktrees de tentativas ficam para revisão humana — `git -C <projeto> worktree
 remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 
+Ações do C-3PO (fase 3, 31/10/2026): diário de acréscimo em
+`~/.local/state/painel-admin/c3po/acoes.jsonl` — uma linha por etapa (proposta,
+preparo, confirmação, resultado), com quem, comando, código de saída, duração e
+resumo filtrado. Só cresce; apagar é decisão do dono.
+
 ## Microfone do C-3PO: dois motores (25/10/2026)
 
 - **Navegador** (Web Speech API): Chrome e Edge mandam o áudio ao serviço

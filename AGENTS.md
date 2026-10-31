@@ -23,7 +23,7 @@ Leitura comum, sempre: `docs/current.md` (estado real, datado) e
 | Aba Chaves (`chaves/`, `publico/chaves*.js`) e bloco "Astargne" (`publico/decisoes-astargne.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
 | Aba Docs e rotina de alinhamento (`alinhamento/`, `publico/docs*.js`) | `docs/arquitetura.md` § alinhamento.js; regra de compactação em `../../PADROES-BACKLOG.md` |
 | Aba Backlog — desenho e história | `docs/02_ABA_BACKLOG.md` |
-| Motor, persona ou voz do C-3PO (`motor.js`, `motor/`, `publico/c3po/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § C-3PO por voz |
+| Motor, persona ou voz do C-3PO (`motor.js`, `motor/`, `acoes/`, `publico/c3po/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § C-3PO por voz |
 | Subir, reiniciar, ver log | `docs/operacao.md` § Como roda |
 | Infra no `astargne.com` (o painel não faz deploy; só a aba Contas **muda estado** no servidor; `/api/producao/ssh` é só leitura) | `../../servidor/README.md` (índice; `validador-deploy` antes) |
 | Como este projeto se liga aos outros | `../../RELACOES.md` |
@@ -44,8 +44,8 @@ de forma genérica — a estrutura destes arquivos é também dado do produto.
   módulo, mapa em dia; `npm run mapa` regenera). Vermelho não sela.
 - **Nunca** (texto completo em `docs/invariants.md`): expor a 7777 fora da
   máquina; ssh que mude estado fora do banco do CadastroUnico; copiar o
-  `TOKEN_INTERNO` para o PC; dar ferramenta de escrita ao motor antes da fase
-  3; pular o `validador-deploy` por ser "modo voz"; segredo fora do `.env`;
+  `TOKEN_INTERNO` para o PC; deixar o motor executar ou confirmar; pular
+  o `validador-deploy` por ser "modo voz"; segredo fora do `.env`;
   chamar a API real do LLM, CLI paga ou ssh real em teste; ligar
   `ORQ_EXECUCAO_HABILITADA` sem o "vai" de Astargne para um piloto nomeado.
 - Backlog = projeto **PAINEL** no Plane (`../../PADROES-BACKLOG.md`); todo

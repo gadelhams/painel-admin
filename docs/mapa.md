@@ -23,6 +23,14 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `relacoes.js` — Relações estruturadas entre os projetos da raiz — espelho do que está em prosa em ../../RELACOES.md (era seção do CLAUDE.md da raiz até 30/09/2026).
 - `servidor.js` — Servidor único do painel-admin desde a fusão de 14/08/2026: lê o ambiente, monta o painel com as dependências reais (montagem.js) e escuta em 127.0.0.1; não compõe serviço nem decide rota.
 
+## acoes/
+
+- `api-acoes.js` — Duas ações das propostas do C-3PO: preparar mostra projeto, pasta e comando; confirmar, com a mesma sessão SSO do dono, roda uma vez e registra no diário. Não registra proposta.
+- `diario-acoes.js` — Diário de acréscimo das ações do C-3PO (proposta, preparo, confirmação, resultado). Só grava; não decide nem executa.
+- `executor-acoes.js` — Roda o comando de uma ação confirmada pelo dono: uma por vez, sem shell, ambiente por lista branca, tempo e saída limitados e saída filtrada. Não confere SSO, proposta nem contrato.
+- `filtro-segredo.js` — Tira segredo de texto que vai para o chat ou para o diário (saída de teste, git). Não decide o que mostrar.
+- `propostas.js` — Propostas de ação do C-3PO: registra {projeto, comandoId} conferido contra o contrato e devolve um id de proposta. Nunca executa nem emite confirmação.
+
 ## alinhamento/
 
 - `cache.js` — Cache da varredura em disco. Não decide sinal.
@@ -62,6 +70,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `decisoes.js` — Decisões derivadas do backlog. A idade do markdown vem de idade-linha.js; a do Plane, da criação do item.
 - `docs.js` — Docs de um projeto do catálogo, já dentro da raiz. A lista e o corte moram ao lado.
 - `estado-local.js` — Monta o resumo de cada projeto: existência, git e portas. Não sonda produção.
+- `git-leitura.js` — Três leituras de git (status curto, diff --stat, log de 15) de um projeto do catálogo; nunca diff de conteúdo, nunca caminho livre.
 - `git-local.js` — Git local de um projeto do catálogo. Não sonda porta.
 - `hangar.js` — Naves do Hangar: por projeto, peças (módulos) com a contagem de cartas, próximas fases e decisões. Só leitura sobre o backlog.
 - `idade-linha.js` — Idade de uma linha no git, pelo log -L. Não monta a decisão.
@@ -72,6 +81,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `sessoes.js` — Sessões de IA vivas na máquina (os droids do Hangar): /proc + cauda dos transcripts. Só leitura; nunca devolve prompt, resposta nem argumento.
 - `sonda-https.js` — Um GET HTTPS com teto de tempo. Não escolhe qual serviço sondar.
 - `sondas.js` — Quais endereços de produção sondar. O GET mora em sonda-https.js.
+- `ssh-leitura.js` — SSH somente leitura do servidor, sob demanda: a rota /api/producao/ssh e a ferramenta do C-3PO usam esta classe e esta lista, e nenhuma outra.
 - `transcript-cauda.js` — Lê só o fim de um transcript .jsonl e devolve as linhas que são JSON. Não interpreta o conteúdo.
 - `transcript-claude.js` — Uma sessão do Claude Code a partir da cauda do transcript: última atividade, cwd, fim de turno e ações. Não lê prompt nem resposta.
 - `transcript-codex.js` — Uma sessão do Codex a partir da cauda do rollout: última atividade, cwd, fim de turno e ações. Não lê prompt nem resposta.
@@ -95,6 +105,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## e2e/tests/
 
+- `c3po-acoes.spec.mjs`
 - `hangar.spec.mjs`
 - `orquestrador.spec.mjs`
 
@@ -106,6 +117,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `redirecionamento-c3po.js` — Leva /c3po à barra final e os endereços antigos /severino e /severino/ ao novo. Não atende a API.
 - `resposta-json.js` — Escreve JSON na resposta. Não lê arquivo nem o corpo do pedido.
 - `resposta.js` — Porta da resposta. JSON, arquivo estático e corpo com teto moram ao lado.
+- `rotas-acoes.js` — Preparar e confirmar uma ação proposta pelo C-3PO, pelas duas ações com SSO. Não há rota para propor: isso só o motor faz.
 - `rotas-alinhamento.js` — Varredura de alinhamento. `?agora=1` força uma passagem.
 - `rotas-backlog.js` — Backlog lido do Plane ou do markdown.
 - `rotas-chaves.js` — Inventário e troca de chaves. A recusa genérica vem depois das rotas específicas.
@@ -133,13 +145,13 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-ssh.js` — Consulta SSH só de leitura da produção.
 - `rotas-voz.js` — ElevenLabs, diagnóstico do navegador e presença da transcrição.
 - `roteador.js` — Despacha o pedido depois da guarda. Cada grupo devolve false quando a rota não é dele.
-- `ssh-leitura.js` — SSH somente leitura do servidor, sob demanda.
 
 ## motor/
 
+- `acao-proposta.js` — A ferramenta propor_acao e a leitura do seu resultado no fluxo da conversa. Só propõe: não prepara, não confirma, não executa.
 - `doc-projeto.js` — Lê ou lista um .md dentro da pasta do projeto. Não registra a ferramenta.
 - `envelope-coletor.js` — Embrulha a falha de um coletor interno. Não escolhe a ferramenta.
-- `ferramentas.js` — Catálogo das seis ferramentas só de leitura. O portão é esta lista, não o texto da persona.
+- `ferramentas.js` — Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
 - `leitura-pesada.js` — Leituras que varrem o Plane inteiro (fila, triagem, decisões: 15–35 s cada) para as ferramentas do C-3PO.
 - `persona.js` — Voz do C-3PO. Não é portão: a permissão mora em tools: [] e na lista de ferramentas.
 
@@ -182,7 +194,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `executor-cli.js` — Sequência da tentativa: isola, instala, pede os três papéis, roda o aceite e fecha o veredito.
 - `fila-leitura.js` — Junta as cartas do Plane com o contrato local. O julgamento mora em carta-da-fila.js.
 - `fila.js` — Porta da fila. A leitura, o despacho, o gate, o handoff, o perfil e o estado em disco moram nos módulos ao lado.
-- `fonte-consumo-claude.js` — Cota da assinatura do Claude. A única fonte documentada é o JSON que o Claude Code entrega à statusLine; o script ~/.claude/statusline-astargne.mjs grava só os limites neste arquivo.
+- `fonte-consumo-claude.js` — Cota da assinatura do Claude, de duas fontes locais: o arquivo que a statusLine grava (~/.claude/statusline-astargne.mjs, documentada) e o cache de uso que o próprio Claude Code guarda em ~/.claude.json, que a extensão do VS Code também atualiza; por janela, vale a mais nova.
 - `fonte-consumo-codex.js` — Cota da assinatura do Codex. O CLI grava `rate_limits` (percentual usado, janela e quando zera) em cada evento token_count da sessão; a amostra é a da sessão mais recente.
 - `frota-catalogo.js` — Catálogo fechado da frota (provedor → modelo → esforços) e os validadores dos dois blocos. Não lê nem grava arquivo.
 - `frota-pausas.js` — Pausas da frota: por provedor (limite de uso, com prazo) e da versão inteira (CLI ou modelo impedido). Não despacha.
@@ -291,6 +303,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## publico/c3po/
 
+- `acao-proposta.js` — Cartão "Ação proposta" do chat do C-3PO: Preparar mostra o comando exato, Confirmar roda com a sessão do dono e mostra o resultado. Não propõe nem decide.
 - `chat.js` — Liga o palco, o fluxo e os modos de voz. O console chama mandarMensagemC3po.
 - `escuta.js` — Microfone do C-3PO. Dois motores: Web Speech e gravação + transcrição xAI.
 - `fluxo-sse.js` — Fluxo da conversa: lê o SSE e manda o turno. A voz e o microfone ficam fora.
@@ -349,6 +362,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 ## test/
 
+- `acoes.test.js` — Fase 3 do C-3PO (PAINEL-2, -3, -4): leituras novas do motor e ações com portão. Nada de ssh real, LLM, Plane ou CLI paga: o ssh é um executor falso; os comandos são `node scripts/*.mjs` num projeto temporário.
 - `alinhamento.test.js` — Rotina de alinhamento com Plane, git e portão de docs FALSOS. Nada toca a rede nem repositórios reais.
 - `briefings.test.js` — Piloto PAINEL-34 (31/10/2026): o briefing dizia que os únicos comandos eram os do contrato e "não rode comando".
 - `caminhos.test.js`
@@ -356,7 +370,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `consulta-c3po.test.js`
 - `contas.test.js` — Testes do módulo contas.js (aba Contas). Nunca chamam ssh: o executor é injetado (I5) e captura args + stdin, devolvendo saída pré-gravada no formato que o script remoto produz (corpo JSON, "\n", status HTTP).
 - `correcoes-auditoria.test.js` — Correções da auditoria de 23-24/10/2026: cada teste pina um mecanismo que a auditoria mostrou furado (mutação nomeada no título do caso).
-- `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css.
+- `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css. Não confere cascata nem visual.
 - `decisoes-c3po.test.js`
 - `despacho-controlado.test.js`
 - `diario-resumo.test.js`
