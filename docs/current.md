@@ -23,7 +23,8 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Feito em 31/10 e o que falta
 
-- **Frota**: F2 e F3 feitas (play por nave, zelador de limpeza); falta a F4,
+- **Frota**: F2 e F3 feitas (play por nave, zelador de limpeza; F3 corrigida,
+  B1–B30, zelador só `claude`); falta a F4,
   puxar ([plano](plano-frota-do-hangar.md)). Piloto PAINEL-34 passou (PLAYER-38).
 - **C-3PO**: lê ssh e git e só propõe rodar a suíte (cartão, SSO); mesa de
   decisão grava como Painel Admin por SSO ([plano](plano-mesa-de-decisao.md)).

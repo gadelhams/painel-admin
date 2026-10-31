@@ -140,45 +140,69 @@ grupo `started`/`completed`, opcionalmente tirando uma etiqueta, com releitura).
   `vigilia/<id>.jsonl` fica, porque é a fonte do teto diário.
 - **Agendador** (`agendador-instancia.js`): vigília e zelador só agendam com `ORQ_AGENDADOR=true` (só
   na unit, `operacao.md`) e com o pid deste processo em `agendador.json`, conferido a cada volta;
-  pid vivo de outro recusa, pid morto ou arquivo ilegível é tomado sob a trava (J52).
+  pid vivo de outro recusa, pid morto ou arquivo ilegível é tomado sob a trava (J52). Quem não tomou
+  no arranque tenta de novo a cada 5 min (`tomarEVigiar`) e liga quando o dono antigo morre.
 - **Job do zelador** (`zelador.js` compõe; `zelador-agendador.js`, `zelador-job.js`,
   `zelador-aplicacao.js`): a cada `ZELADOR_INTERVALO_MIN`, o projeto com play que teve a vez há mais
-  tempo (pelo diário), se a frota do zelador está ok, sem pausa de versão do bloco zelador nem do
-  provedor, abaixo do teto diário (`ZELADOR_TETO_DIA`, contado do diário; job parado por CLI ou limite
-  não conta), com consumo do provedor abaixo de 85% e leitura com menos de 6 h (`consumo.js`; sem
-  leitura, não roda), sem sessão viva tocando o projeto nas últimas 2 h (`coletores/sessoes-estritas.js`,
-  erro = ocupado) e com os leases tomados (`zelador-lease.js`: global e por projeto, `jobId`, TTL
-  20 min renovado a cada 5, fencing sob a trava antes de cada escrita, ilegível = ocupado). No
-  arranque, job sem fim vira `JOB_INTERROMPIDO` e o lease dele é solto.
-- **Dentro do job**: confere a chave e o ator antes de gastar CLI; reconcilia o PENDENTE do
-  projeto; monta o retrato (`zelador-retrato.js`: cartas, comentários, atividades e relações pela
-  Guest, sem cache, pelo caminho do projeto; `zelador-git.js` com `GIT_OPTIONAL_LOCKS=0`); roda a CLI
-  do bloco zelador da frota (`zelador-cli.js`: diretório vazio novo, `--tools ""` sob `--restricted`
-  ou sandbox só-leitura, sem MCP nem sessão, retrato pela stdin, JSON estrito) fora da trava;
-  valida cada veredito (`zelador-veredito.js`: forma fechada, evidência conferida — commit ancestral
-  do ramo principal, `caminho:linha` com realpath dentro do repo e rastreado, carta existente —, prosa
-  sem segredo, sem HTML e sem `GATE/`, `HANDOFF/`, `ZELADOR/`, `DECISAO/`, `[ORQ/`, trecho sem
-  marcador `(DONO`/`(ASTARGNE` nem linha de dependência). O que ele não toca (`zelador-politica.js`):
-  carta fechada, não-folha, com gate, que bloqueia carta com gate, com lease, tentativa ou comentário
-  `[ORQ/v1` nas últimas 24 h, com atividade ou comentário de outro ator nas últimas 2 h, ou com
-  leitura ilegível. Antes de escrever, tudo de novo ao vivo: a digital (estado, etiquetas, nome,
-  descrição, comentários que não são do zelador), o "não desfazer ato humano" (nunca devolve um campo
-  ao valor de onde um não-zelador o tirou, nunca tira etiqueta que não foi ele que pôs; atividade sem
-  ator legível = humano) e a prontidão READY TO DEV de todas as cartas abertas e das que esperam por
-  esta (nenhuma outra pode mudar; a própria só ganha motivo).
+  tempo (pelo diário) — antes dele, o projeto elegível com PENDENTE e play desligado ou suspenso, num
+  job que só fecha recibos, sem CLI nem consumo —, se a frota do zelador está ok e o provedor do bloco
+  é `claude` (o Codex sob sandbox só-leitura ainda lê o disco: recusado até a sandbox da F4b), sem
+  pausa de versão do bloco zelador nem do provedor, abaixo do teto diário (`ZELADOR_TETO_DIA`, contado
+  do diário; job parado por CLI ou limite não conta), com consumo do provedor abaixo de 85% e leitura
+  com menos de 6 h (`consumo.js`; sem leitura, não roda), sem sessão viva tocando o projeto nas
+  últimas 2 h (`coletores/sessoes-estritas.js`, subagentes em `<sessão>/subagents/` incluídos; erro ou
+  transcript sem instante legível = ocupado) e com os leases tomados (`zelador-lease.js`: global e por
+  projeto, `jobId`, TTL 20 min renovado a cada 5, fencing sob a trava antes de cada escrita, ilegível
+  = ocupado). No arranque, job sem fim vira `JOB_INTERROMPIDO` e o lease dele é solto. O aviso do play
+  ("em curso") lê o job desta instância e o lease do zelador em disco.
+- **Dentro do job**: play desligado no começo sai `PLAY_DESLIGADO` (sem PENDENTE) ou só fecha
+  recibos; confere a chave e o ator antes de gastar CLI; reconcilia o PENDENTE do projeto; se a
+  reconciliação deixou o play suspenso, para antes do retrato e da CLI. Monta o retrato
+  (`zelador-retrato.js`: cartas, comentários, atividades e relações pela Guest, sem cache, pelo
+  caminho do projeto, com o universo das relações igual ao do juiz real — as cartas de todos os
+  projetos do catálogo; `zelador-git.js` com `GIT_OPTIONAL_LOCKS=0`); roda a CLI do bloco zelador da
+  frota (`zelador-cli.js`: diretório vazio novo, `--tools ""` sob `--restricted` — documentado no
+  `claude --help` da 2.1.284 como "desliga todas as ferramentas", não provado em execução real —, sem
+  MCP nem sessão, retrato pela stdin, JSON estrito) fora da trava; valida cada veredito
+  (`zelador-veredito.js`: forma fechada, evidência conferida — commit ancestral do ramo principal,
+  `caminho:linha` com realpath dentro do repo e rastreado, carta existente —, prosa sem segredo, sem
+  HTML e sem `GATE/`, `HANDOFF/`, `ZELADOR/`, `DECISAO/`, `[ORQ/`, trecho e texto novo sem marcador
+  humano — a lista do juiz, `(DONO`/`(ASTARGNE`/`(BLOQUEADA`, mais ASTARGNE/DONO/BLOQUEADA sem
+  parêntese — nem linha de dependência, e a descrição nova com as linhas marcadas intactas). Antes de
+  cada carta, relê o play e a ocupação por sessão. O que ele não toca (`zelador-politica.js`): carta
+  fechada, não-folha, com gate, com aplicação pendente na mesa (`/api/decisao/pendentes`; diário da
+  mesa ilegível = todas), que bloqueia carta com gate ou se relaciona com carta fora da leitura do
+  catálogo, com lease, tentativa ou comentário `[ORQ/v1` nas últimas 24 h, com atividade ou
+  comentário de outro ator nas últimas 2 h, ou com leitura ilegível. Antes de escrever, tudo de novo
+  ao vivo: a digital (estado, etiquetas, nome, descrição, comentários que não são do zelador), o "não
+  desfazer ato humano" (nunca devolve um campo ao valor de onde um não-zelador o tirou — tirada de
+  qualquer estado terminal impede todos —, nunca tira etiqueta que não foi ele que pôs, nunca repõe
+  `ASTARGNE` em carta com `DECISAO/v1`; atividade sem ator legível = humano) e a prontidão READY TO
+  DEV das cartas abertas do projeto e das que esperam por esta em qualquer projeto: a escrita nunca
+  deixa carta alguma mais elegível, e nas outras não muda nada; relação ilegível no universo aborta.
 - **Escrita** (`escritor-zelador-plane.js`, a identidade "Zelador (Hangar)"): chave lida de
   `~/.config/plane/zelador.token` (600, dono) uma vez por operação, nunca do `.env`; ator conferido em
-  `/users/me` contra o UUID fixo; chave igual à Guest ou a outra identidade recusa; escopo (play ∩
-  catálogo) conferido em cada escrita. Ordem: diário PENDENTE no índice fora da rotação → comentário
-  `[ZELADOR/v1 veredito=… chave=…]` com `external_source: zelador-hangar-v1` e `external_id` = hash
-  da mudança estruturada + digital de antes (409 só vale com o comentário existente do zelador e igual)
-  → a mudança da lista fechada (Done/Cancelled; trecho único ou parágrafo anexado; etiquetas de trava
-  por nome único no projeto, `PRODUTO` só com `ASTARGNE`, nunca tirada) sob a trava curta, sem lease
-  nem tentativa de despacho na carta e com a digital reconferida → verificação só dos campos escritos
-  → recibo `[ZELADOR/v1 recibo=APLICADO|ABORTADO|DIVERGENTE]` → RESOLVIDO. Divergência suspende o play
-  do projeto depois do recibo.
+  `/users/me` contra o UUID fixo; chave igual à Guest, a outra identidade do `.env` ou a um
+  `orquestrador-*.token`/`painel-admin.token` da mesma pasta (por hash) recusa; escopo (play ∩
+  catálogo) conferido em cada escrita; a mudança é revalidada contra a lista fechada. Ordem: diário
+  PENDENTE no índice fora da rotação → comentário `[ZELADOR/v1 veredito=… chave=…]` com
+  `external_source: zelador-hangar-v1` e `external_id` = hash da mudança estruturada + digital de
+  antes + uma tentativa nova por PENDENTE (409 só vale com o comentário existente do zelador, desta
+  origem e com o mesmo `external_id`: o Plane sanitiza o HTML com o `nh3`) → a mudança da lista
+  fechada (Done/Cancelled; trecho único ou parágrafo anexado; etiquetas de trava por nome único no
+  projeto, `PRODUTO` só com `ASTARGNE`, nunca tirada); sob a trava só o fencing, a ausência de lease
+  e de tentativa de despacho, a releitura da carta e dos comentários (digital) e o PATCH, 6 s por
+  chamada e 20 s no total — `/users/me`, catálogo e verificação ficam fora → verificação só dos
+  campos escritos (descrição como texto) → recibo `[ZELADOR/v1 recibo=APLICADO|ABORTADO|DIVERGENTE|
+  DESFEITO]` → RESOLVIDO. Verificação que não confere marca `DIVERGENTE` no índice e suspende o play
+  antes do recibo. O recibo de fechamento sai mesmo com o play desligado ou suspenso, só de
+  PENDENTE aberto no índice. Abortar porque a carta ficou intocável (lease, tentativa, ato alheio)
+  não escreve nela: fica só no diário. Na reconciliação: recibo pela chave exata (dois resultados =
+  erro), carta apagada ou arquivada resolve só no diário, mudança feita pelo zelador e desfeita por
+  outro ator ganha recibo `DESFEITO` e não é refeita, PENDENTE fora da lista fechada não escreve.
 - **Diário** (`zelador-diario.js`): `zelador/zelador-AAAA-MM-DD.jsonl` por dia (UTC), `anexarJsonl`,
-  só campos estruturados; `zelador/pendentes.jsonl` não roda. O fim do job (`zelador-fim.js`) mede do
+  só campos estruturados; `zelador/pendentes.jsonl` não roda e só ganha o RESOLVIDO depois da linha
+  do diário. O fim do job (`zelador-fim.js`) mede do
   Plane atual: feita (zero abertas), espera puxar (F4), tarefa do dono, decisão, espera outra carta e
   espera integração (ramos `orq/*` fora do principal); "só o dono" acende o destaque no Hangar.
   `GET /api/orquestracao/zelador` (job em curso, diário dos três últimos dias, fim por projeto); o
@@ -994,9 +1018,11 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   coberto pelo `.gitignore`). A escrita de gate e handoff exige projeto único, SSO do
   Cadastro Único e confirmação separada; não amplia as ferramentas do C-3PO. **Exceção
   delimitada (F3, 31/10/2026): o escritor do zelador** vale para vários projetos, mas só os que
-  têm o play ligado pelo dono (SSO + duas ações) e só a lista fechada da zeladoria; a chave dele
+  têm o play ligado pelo dono (SSO + duas ações) e só a lista fechada da zeladoria — com play
+  desligado ou suspenso, só o recibo de fechamento de um PENDENTE aberto no índice; a chave dele
   mora em `~/.config/plane/zelador.token` (600, dono conferidos a cada operação), nunca em
-  `process.env`, e o ator é conferido contra o UUID fixo da identidade "Zelador (Hangar)".
+  `process.env`, distinta das outras identidades (também das `orquestrador-*.token` e da
+  `painel-admin.token`), e o ator é conferido contra o UUID fixo da identidade "Zelador (Hangar)".
   **Exceção, delimitada** (31/10/2026, mesa de decisão): a chave do Painel Admin, ADMIN do
   workspace, mora fora do `.env`, em `~/.config/plane/painel-admin.token` (600), lida só pelo
   escritor da mesa a cada operação; do `.env` vem só o UUID do ator, `PLANE_ADMIN_ACTOR_ID`.

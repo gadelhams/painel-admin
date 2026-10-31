@@ -18,7 +18,11 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
   const comentarios = new Map();
   const atividades = new Map();
   const relacoes = new Map();
-  const falhas = { mudarDepoisDoComentario: false, verificacaoMente: false, antesDoPatch: null, depoisDoComentario: null, antesDoComentario: null };
+  // aoPedir: espia cada HTTP do escritor; sanitizar: imita o nh3 do Plane (decodifica o apóstrofo);
+  // relacoesFalham: ids cuja leitura de relações falha sempre.
+  const falhas = { mudarDepoisDoComentario: false, verificacaoMente: false, antesDoPatch: null, depoisDoComentario: null, antesDoComentario: null,
+    aoPedir: null, sanitizar: false, relacoesFalham: new Set() };
+  const nh3 = html => (falhas.sanitizar ? String(html).replaceAll('&#39;', "'") : html);
   const escritas = [];
   let seq = 0;
   const iso = (ms = agora()) => new Date(ms).toISOString();
@@ -49,15 +53,21 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
     if (caminho === `${pre}/work-items/`) return pagina([...cartas.values()].map(c => structuredClone(c)));
     if (caminho === `${pre}/states/`) return pagina(structuredClone(estados));
     const m = new RegExp(`^${pre}/work-items/([0-9a-f-]{36})/(comments|activities|relations)?/?$`).exec(caminho);
-    if (!m || !cartas.has(m[1])) throw new Error(`Plane falso: GET desconhecido ${url}`);
+    if (!m) throw new Error(`Plane falso: GET desconhecido ${url}`);
+    // Como o cliente real (plane/cliente.js): carta apagada responde 404.
+    if (!cartas.has(m[1])) throw new Error('Plane recusou a consulta (HTTP 404)');
     if (m[2] === 'comments') return pagina(structuredClone(comentarios.get(m[1])));
     if (m[2] === 'activities') return structuredClone(atividades.get(m[1]));
-    if (m[2] === 'relations') return structuredClone(relacoes.get(m[1]));
+    if (m[2] === 'relations') {
+      if (falhas.relacoesFalham.has(m[1])) throw new Error('Plane recusou a consulta (HTTP 502)');
+      return structuredClone(relacoes.get(m[1]));
+    }
     return structuredClone(cartas.get(m[1]));
   }
 
   async function fetchImpl(url, opcoes = {}) {
     const metodo = opcoes.method ?? 'GET';
+    if (falhas.aoPedir) await falhas.aoPedir(metodo, new URL(url).pathname);
     if (opcoes.headers?.['X-API-Key'] !== chave) return resposta(401, { erro: 'chave' });
     const caminho = new URL(url).pathname.replace(/^\/api\/v1/, '');
     if (caminho === '/users/me/') return resposta(200, { id: ator });
@@ -73,11 +83,12 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
       if (igual) return resposta(409, { id: igual.id, erro: 'external_id' });
       if (falhas.antesDoComentario) await falhas.antesDoComentario(carta, corpo);
       escritas.push(`comentario:${identificador(carta)}`);
-      const c = comentar(carta.id, { html: corpo.comment_html, autor: ator, externalSource: corpo.external_source, externalId: corpo.external_id });
+      const c = comentar(carta.id, { html: nh3(corpo.comment_html), autor: ator, externalSource: corpo.external_source, externalId: corpo.external_id });
       if (falhas.depoisDoComentario) await falhas.depoisDoComentario(carta);
       return resposta(201, structuredClone(c));
     }
     if (m[3]) { const c = comentarios.get(carta.id).find(x => x.id === m[3]); return c ? resposta(200, structuredClone(c)) : resposta(404, {}); }
+    if (m[2] && metodo === 'GET') return resposta(200, pagina(structuredClone(comentarios.get(carta.id))));
     if (metodo === 'PATCH') {
       if (falhas.mudarDepoisDoComentario) throw new Error('queda simulada entre a intenção e a mudança');
       if (falhas.antesDoPatch) await falhas.antesDoPatch(carta);
@@ -95,8 +106,8 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
         for (const n of antes.filter(x => !depois.includes(x))) atividade(carta.id, { field: 'labels', verb: 'updated', old_value: n, new_value: '', actor: ator });
       }
       if (corpo.description_html !== undefined) {
-        atividade(carta.id, { field: 'description', verb: 'updated', old_value: carta.description_html, new_value: corpo.description_html, actor: ator });
-        carta.description_html = corpo.description_html;
+        atividade(carta.id, { field: 'description', verb: 'updated', old_value: carta.description_html, new_value: nh3(corpo.description_html), actor: ator });
+        carta.description_html = nh3(corpo.description_html);
       }
       carta.updated_at = iso();
       escritas.push(`patch:${identificador(carta)}:${Object.keys(corpo).sort().join('+')}`);
@@ -107,6 +118,7 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
     return resposta(200, lida);
   }
 
+  const apagar = carta => { cartas.delete(carta.id); };
   return { consultar, fetchImpl, chave, estados, estado, labels, label, cartas, comentarios, atividades, relacoes, falhas, escritas,
-    novaCarta, identificador, atividade, comentar, relacionar };
+    novaCarta, identificador, atividade, comentar, relacionar, apagar, projetoId, sigla };
 }

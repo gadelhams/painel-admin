@@ -124,10 +124,17 @@ export class PlayHangar {
     });
   }
 
-  // Quem chama já segura a trava (o zelador, ao achar divergência na verificação).
+  elegivel(id) { return this.projetos.some(p => p.plane === id); }
+
+  // Quem chama já segura a trava (o zelador, ao achar divergência na verificação). Sem play
+  // (desligado ou ilegível) não há o que suspender, mas a tentativa fica no histórico (B24).
   async suspenderSobTrava(id, motivo) {
     const { legivel, registros } = await this.ler();
-    if (!legivel || !registros[id]) return false;
+    if (!legivel || !registros[id]) {
+      await this.anotar({ tipo: 'SUSPENSAO_SEM_PLAY', projetoId: id, play: legivel ? 'desligado' : 'ilegível', motivo: String(motivo).slice(0, 300) });
+      return false;
+    }
+    if (registros[id].suspenso) return true;
     await this.gravarSobTrava({ ...registros, [id]: { ...registros[id], suspenso: { desde: this.iso(), motivo: String(motivo).slice(0, 300) } } });
     await this.anotar({ tipo: 'SUSPENSO', projetoId: id, motivo: String(motivo).slice(0, 300) });
     return true;

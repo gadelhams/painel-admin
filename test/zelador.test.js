@@ -81,7 +81,8 @@ test('J57: reaberta por humano não fecha; etiqueta posta por humano não sai; p
   const estados = [{ id: 's-todo', name: 'Todo', group: 'unstarted' }, { id: 's-done', name: 'Done', group: 'completed' }];
   const reaberta = [{ field: 'state', old_value: 'Done', new_value: 'Todo', old_identifier: 's-done', actor: HUMANO }];
   assert.match(violaAtoHumano({}, { tipo: 'estado', grupo: 'completed' }, { atividades: reaberta, estados }), /tirou a carta de Done/);
-  assert.equal(violaAtoHumano({}, { tipo: 'estado', grupo: 'cancelled' }, { atividades: reaberta, estados }), null);
+  // B3 (correção da F3): tirada de QUALQUER estado terminal impede todo estado terminal.
+  assert.match(violaAtoHumano({}, { tipo: 'estado', grupo: 'cancelled' }, { atividades: reaberta, estados }), /não a põe em estado terminal/);
   const tirada = [{ field: 'labels', old_value: 'ASTARGNE', new_value: '', actor: HUMANO }];
   assert.match(violaAtoHumano({}, { tipo: 'labels', adicionar: ['ASTARGNE'], remover: [] }, { atividades: tirada }), /não repõe/);
   assert.match(violaAtoHumano({}, { tipo: 'labels', adicionar: [], remover: ['ASTARGNE'] }, { atividades: [{ field: 'labels', old_value: '', new_value: 'ASTARGNE', actor: { id: HUMANO } }] }), /não foi posta pelo zelador/);

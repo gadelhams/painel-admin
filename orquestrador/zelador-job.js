@@ -1,8 +1,11 @@
 // Um job do zelador num projeto: reconcilia o PENDENTE dele, monta o retrato, roda a CLI fora da trava, valida e aplica veredito por veredito, e fecha com o "nada fazível". O lease e a vez moram no agendador.
 //
-// O play é relido antes da sequência de cada carta, nunca no meio dela (J66). A CLI nunca roda
-// sob a trava global (J32). Toda escrita no Plane passa por `sobFencing`: a trava curta, o
-// lease conferido como deste job e não vencido, e nenhuma renovação falha desde o começo (J53).
+// O play é relido antes da sequência de cada carta, nunca no meio dela (J66), junto com a
+// ocupação do projeto por sessão de IA (B9). Play desligado no início sai PLAY_DESLIGADO (B23);
+// com PENDENTE de projeto sem play, o job só fecha recibos (B13); se a reconciliação deixou o
+// play desligado ou suspenso, o job para antes do retrato e da CLI (B26). A CLI nunca roda sob
+// a trava global (J32). Toda escrita no Plane passa por `sobFencing`: a trava curta, o lease
+// conferido como deste job e não vencido, e nenhuma renovação falha desde o começo (J53).
 import { lerSaidaCli, validarVeredito } from './zelador-veredito.js';
 import { promptZelador } from './zelador-cli.js';
 import { nadaFazivel } from './zelador-fim.js';
@@ -11,8 +14,8 @@ import { todas } from './contrato-local.js';
 
 export class JobZelador {
   constructor({ jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas,
-    consultar, comTrava, agora, aoFase = () => {} }) {
-    Object.assign(this, { jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas, consultar, comTrava, agora, aoFase });
+    consultar, comTrava, agora, ocupacao = async () => ({ ocupado: false, motivo: null }), aoFase = () => {} }) {
+    Object.assign(this, { jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas, consultar, comTrava, agora, ocupacao, aoFase });
     this.renovacaoFalhou = false;
     this.estados = [];
     this.aplicacao = new AplicacaoZelador({ job: this });
@@ -28,10 +31,9 @@ export class JobZelador {
 
   async anotar(evento) { return this.diario.anotar({ jobId: this.jobId, projetoId: this.projeto.plane, ...evento }); }
 
-  async reconciliar() {
-    const pendentes = (await this.diario.pendentes()).filter(p => p.projetoId === this.projeto.plane);
+  async reconciliar(pendentes, { soRecibos }) {
     for (const p of pendentes) {
-      const r = await this.aplicacao.reconciliar(p);
+      const r = await this.aplicacao.reconciliar(p, { soRecibos });
       await this.anotar({ tipo: 'RECONCILIADO', chave: p.chave, carta: p.carta, resultado: r.resultado, motivo: r.reconciliado });
     }
     return pendentes.length;
@@ -49,12 +51,19 @@ export class JobZelador {
   }
 
   async rodar() {
+    const pid = this.projeto.plane;
+    const pendentes = (await this.diario.pendentes()).filter(p => p.projetoId === pid);
+    const soRecibos = !(await this.play.ligado(pid));
+    if (soRecibos && !pendentes.length) return { resultado: 'PLAY_DESLIGADO', motivo: 'play desligado entre a escolha do projeto e o job' };
     this.aoFase('identidade');
-    try { await this.escritor.conferir(this.projeto.plane); }
+    try { await this.escritor.conferir(pid, { soRecibos }); }
     catch (erro) { return { resultado: 'SEM_IDENTIDADE', motivo: erro.message }; }
     this.aoFase('reconciliando');
-    this.estados = await todas(this.consultar, `/projects/${this.projeto.plane}/states/`);
-    const reconciliados = await this.reconciliar();
+    this.estados = await todas(this.consultar, `/projects/${pid}/states/`);
+    const reconciliados = await this.reconciliar(pendentes, { soRecibos });
+    if (!(await this.play.ligado(pid))) {
+      return { resultado: 'PLAY_DESLIGADO', reconciliados, motivo: soRecibos ? 'play desligado: só os recibos dos PENDENTES foram fechados' : 'play suspenso ou desligado na reconciliação; sem retrato nem CLI' };
+    }
     this.aoFase('retrato');
     this.r = await this.retrato.montar(this.projeto, this.pasta, this.agora());
     for (const i of this.r.intocaveis) await this.anotar({ tipo: 'INTOCAVEL', carta: i.carta, cartaId: i.cartaId, motivo: i.motivo });
@@ -91,8 +100,11 @@ export class JobZelador {
         await this.anotar({ tipo: 'VEREDITO', carta: v.identificador, veredito: 'MANTER', ...(v.proposto && v.proposto !== 'MANTER' ? { proposto: v.proposto } : {}), ...(v.recusado ? { motivo: v.recusado } : {}) });
         continue;
       }
-      // J66: o play é conferido antes de começar a sequência desta carta.
+      // J66: o play é conferido antes de começar a sequência desta carta; B9: a ocupação também.
       if (!(await this.play.ligado(this.projeto.plane))) { await this.anotar({ tipo: 'PLAY_DESLIGADO', motivo: 'play desligado ou suspenso; o job não começa outra carta' }); break; }
+      const ocupado = await this.ocupacao({ projeto: this.projeto, cartas: new Set(this.r.cartas.map(c => c.id)) })
+        .catch(e => ({ ocupado: true, motivo: `ocupação ilegível: ${e.message}` }));
+      if (ocupado.ocupado) { await this.anotar({ tipo: 'OCUPADO', motivo: `${ocupado.motivo}; o job não começa outra carta` }); break; }
       const r = await this.aplicacao.aplicar(v);
       await this.anotar({ tipo: 'VEREDITO', carta: v.identificador, veredito: v.veredito, resultado: r.resultado, ...(r.motivo ? { motivo: r.motivo } : {}) });
       if (r.resultado === 'APLICADO') contagem.aplicados += 1;

@@ -6,7 +6,8 @@
 // processo recusa; pid morto ou arquivo ilegível é tomado, sob a trava global. A cada volta
 // do relógio o dono do arquivo é conferido de novo; se não for este processo, não agenda.
 // Pid reaproveitado por outro programa conta como vivo: falha fechada (ninguém agenda até
-// alguém apagar o arquivo à mão).
+// alguém apagar o arquivo à mão). Quem não tomou no arranque tenta de novo de tempos em tempos
+// (`tomarEVigiar`, B21): o agendador volta sozinho quando o dono antigo morre.
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -56,6 +57,28 @@ export class InstanciaAgendador {
     const dono = await this.lerDono();
     return Boolean(dono && !dono.ilegivel && dono.pid === this.pid);
   }
+
+  // Toma agora ou tenta a cada `intervaloMs` até tomar; ao tomar, chama `aoTomar` uma vez.
+  async tomarEVigiar(aoTomar, intervaloMs = 5 * 60_000) {
+    let tentando = false;
+    const tentar = async () => {
+      if (tentando || this.tomada) return null;
+      tentando = true;
+      try {
+        const r = await this.tomar();
+        if (r.agenda) { this.pararVigia(); await aoTomar(r); }
+        return r;
+      } finally { tentando = false; }
+    };
+    const r = await tentar();
+    if (!r.agenda && this.habilitado) {
+      this.vigia = setInterval(() => { tentar().catch(() => {}); }, intervaloMs);
+      this.vigia.unref?.();
+    }
+    return r;
+  }
+
+  pararVigia() { if (this.vigia) clearInterval(this.vigia); this.vigia = null; }
 
   async soltar() {
     if (!this.tomada) return;

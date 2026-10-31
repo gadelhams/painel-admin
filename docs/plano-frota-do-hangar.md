@@ -1,6 +1,6 @@
 # Frota do Hangar — droids configurados no Hangar, zelador varrendo o Plane
 
-Plano de 28/10/2026 (PAINEL-54); a F2 foi feita em 29/10/2026 e a F3 em 31/10/2026 (seções abaixo); a F4 não. Pedido do dono: "os CLIs têm que ser
+Plano de 28/10/2026 (PAINEL-54); a F2 foi feita em 29/10/2026 e a F3 em 31/10/2026, corrigida no mesmo dia (seções abaixo); a F4 não. Pedido do dono: "os CLIs têm que ser
 configurados para o hangar e não por task. A ideia do hangar é ter um droid
 que valida o Plane procurando cards para serem feitos, seja limpeza do card
 (atualizar definições, diminuir pendências) ou puxar para desenvolver." O
@@ -165,14 +165,16 @@ autorizou uma prova mínima.
   - labels são resolvidas por nome dentro do projeto; se a label não existe,
     o veredito vira MANTER;
   - toda escrita é verificada, e divergência suspende o play.
-- **Elegibilidade (J29):** a escrita do zelador nunca pode mudar a
-  elegibilidade. A prontidão é calculada antes e depois, e ele não toca
-  carta com gate nem carta que bloqueia uma carta com gate.
+- **Elegibilidade (J29):** a escrita do zelador nunca deixa carta alguma
+  mais elegível; nas outras cartas, não muda nada (a própria pode perder
+  prontidão: fechar e travar só acrescentam motivo). A prontidão é calculada
+  antes e depois, e ele não toca carta com gate nem carta que bloqueia uma
+  carta com gate, em qualquer projeto do catálogo.
 - **Carta contestada (J30):** o zelador nunca desfaz um ato humano. Se o
   estado atual contraria o último recibo dele, a carta fica "contestada" e
   ele só pergunta. Uma `DECISAO/v1` impede repor `ASTARGNE`.
 - **Concorrência (J31–J34):**
-  - o zelador pula carta que está aberta na mesa;
+  - o zelador pula carta com aplicação pendente na mesa (a gaveta aberta não fica em disco: B2);
   - CLI nunca roda sob a trava global, e o tempo sob a trava é curto;
   - o diário marca `ZELADOR_PENDENTE`, grava o comentário de intenção e,
     depois, o recibo de aplicação;
@@ -335,13 +337,50 @@ que tocam o play e a limpeza.
 - **Ficam para a F4:** J51 (uma por vez no disco), J54 do lado do leitor (`gatesDoCanal` exigindo
   `papel=decisao` e `external_source`), J55, J56 restante (Member, não Admin; atores distintos dois a
   dois no boot; aposentados), J59, J60 (sandbox antes de o gate do zelador valer), J70 restante
-  (`origemDespacho`/`origemGate` no HANDOFF), J72 (cada escrita do zelador segura a trava durante um
-  HTTP de até 15 s, como o N11) e J74 (recibo editado depois não é conferido). Também a skill
+  (`origemDespacho`/`origemGate` no HANDOFF) e J74 (recibo editado depois não é conferido). A J72
+  fechou na correção (B19): sob a trava, 6 s por chamada e 20 s no total. Também a skill
   `zeladoria-de-cartas` rodada à mão com o play ligado (J67): ela ainda não toma o lease; até lá,
   rodar a skill num projeto com play ligado é decisão de quem a roda.
-- **Não verificado no real:** a chave do zelador não foi provisionada nesta entrega (o job para em
-  `SEM_IDENTIDADE` antes da CLI); a CLI do zelador nunca rodou de verdade (`--tools ""` e a saída
-  JSON do `claude -p` sem ferramentas); a linha `ORQ_AGENDADOR` não foi posta na unit.
+- **Não verificado no real:** a chave do zelador existe desde 31/10 (`~/.config/plane/zelador.token`,
+  ator `830e2631-de81-4871-95b7-ed9cc1774b32`), mas nenhum job real rodou; a CLI do zelador nunca rodou
+  de verdade (`--tools ""` está no `claude --help` da 2.1.284 como "desliga todas as ferramentas", não
+  provado em execução; nem a saída JSON do `claude -p` sem ferramentas); a linha `ORQ_AGENDADOR` não
+  foi posta na unit.
+
+## F3 corrigida (31/10/2026)
+
+A varredura pré-aceite do validador de invariantes (B1–B30, sobre `7def8ac`) deu NÃO RATIFICÁVEL. Cada
+correção tem teste vermelho antes e verde depois (`test/zelador-correcao-job.test.js` e
+`test/zelador-correcao-pecas.test.js`); as marcadas com † têm também mutação nomeada por cópia de arquivo.
+
+| B | Correção ou resíduo |
+|---|---|
+| B1 † | universo das relações = cartas de todos os projetos do catálogo (como o juiz); relação fora da leitura = intocável |
+| B2 | `DECISAO/v1` impede repor `ASTARGNE`; aplicação pendente da mesa = intocável (ilegível = todas). Resíduo: o preparo sem confirmar e a gaveta aberta não ficam em disco; o confirmar da mesa relê a digital e recusa se o zelador escreveu no meio |
+| B3 † | tirada de qualquer estado terminal por outro ator impede todo estado terminal |
+| B4 | abortar porque a carta ficou intocável fica só no diário local |
+| B5 | resíduo: filho novo, relação nova ou gate novo num dependente entre a reconferência e o PATCH (segundos); fechar exige reler o catálogo sob a trava, contra o teto da B19 |
+| B6 † | escritor e reconciliação revalidam a lista fechada (`mudancaNaListaFechada`) |
+| B7 † | marcador humano = lista do juiz + formas sem parêntese; a descrição nova guarda as linhas marcadas |
+| B8 | subagentes (profundidade 4) entram; transcript sem instante legível = ocupado |
+| B9 | ocupação por sessão relida antes de cada carta |
+| B10 † | relação ilegível no universo aborta (varredura: era o único `catch → null` em simulação antes/depois) |
+| B11 | enunciado corrigido acima (Elegibilidade) |
+| B13 † | recibo de fechamento sai com o play desligado ou suspenso (só de PENDENTE aberto); PENDENTE sem play é fechado num job só de recibos |
+| B14 † | carta apagada ou arquivada resolve o PENDENTE só no diário |
+| B15 † | a chave leva uma tentativa nova por PENDENTE; 409 por campos estruturados; recibo pela chave exata |
+| B16 | aplicada pelo zelador e desfeita por outro ator: recibo `DESFEITO`, sem refazer |
+| B17 | `DIVERGENTE` marcado no índice e play suspenso antes do recibo |
+| B18 | RESOLVIDO no índice só depois da linha do diário |
+| B19 † | sob a trava só fencing, releitura e PATCH (ou o POST): 6 s por chamada, 20 s no total |
+| B20 † | descrição e 409 comparados como texto/campos, não byte (o Plane sanitiza com `nh3`). A digital segue o HTML guardado: as duas leituras são do valor já sanitizado |
+| B21 | quem não tomou a trava do agendador tenta de novo a cada 5 min |
+| B22 | o aviso do play lê o lease do zelador em disco (a vigília só corre na instância que agenda) |
+| B23, B24, B26 | `PLAY_DESLIGADO` no começo do job; suspender sem play fica no histórico; suspensão na reconciliação para antes da CLI |
+| B27 | motivo de falha da CLI passa pelo filtro de segredo; bloco zelador só com `claude` até a sandbox da F4b |
+| B28 | chave distinta, por hash, dos `orquestrador-*.token` e do `painel-admin.token` |
+| B29 | documentado (`claude --help`), não provado |
+| B30 | a chave existe desde 31/10 (acima) |
 
 ## Mudanças nas regras (docs na mesma entrega)
 

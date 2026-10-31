@@ -3,16 +3,23 @@
 // A CLI só propõe (J21–J23): o painel confere cada evidência no git e no Plane, e a CLI nunca
 // escreve HTML. A prosa passa por dois filtros antes de ir ao comentário: segredo (J25) e
 // marcadores de protocolo (J54: `GATE/`, `HANDOFF/`, `ZELADOR/`, `DECISAO/`, `[ORQ/`) — um
-// texto de LLM com eles poderia forjar recibo. Trecho e texto novo nunca tocam marcador
-// `(DONO`/`(ASTARGNE` nem linha de dependência (J58). Veredito que cai em qualquer regra vira
-// MANTER, com o motivo, e nada é escrito.
+// texto de LLM com eles poderia forjar recibo. Trecho e texto novo nunca tocam marcador humano
+// (`(DONO`, `(ASTARGNE`, `(BLOQUEADA`, ou ASTARGNE/DONO/BLOQUEADA sem parêntese) nem linha de
+// dependência, e a descrição nova guarda intactas as linhas que os têm (J58, B7). Veredito que
+// cai em qualquer regra vira MANTER, com o motivo, e nada é escrito.
 import { createHash } from 'node:crypto';
+import { DECISAO_HUMANA_NA_DESCRICAO } from './marcas-carta.js';
+import { textoDeHtml } from '../decisao.js';
 
 const VEREDITOS = Object.freeze(['MANTER', 'ATUALIZAR', 'FECHAR', 'CANCELAR', 'IA_DECIDE', 'DONO']);
 const CAMPOS = new Set(['carta', 'veredito', 'evidencias', 'comentario', 'trecho', 'novoTrecho', 'labelsTrava']);
 const TRAVAS_PERMITIDAS = [['ASTARGNE'], ['ASTARGNE', 'PRODUTO'], ['TAREFA DONO'], ['BLOQUEADA']];
 const MARCADORES_PROIBIDOS = /GATE\/|HANDOFF\/|ZELADOR\/|DECISAO\/|\[ORQ\//i;
-const MARCADOR_HUMANO = /\((?:DONO|ASTARGNE)|depende\s+d[aeo]|depend[eê]ncias\s*:/i;
+// A lista do juiz (DECISAO_HUMANA_NA_DESCRICAO) mais as formas sem parêntese: "dono" minúsculo é
+// palavra comum, por isso só DONO/BLOQUEADA em maiúsculas; ASTARGNE é nome, em qualquer caixa.
+const MARCADORES_HUMANOS = [DECISAO_HUMANA_NA_DESCRICAO, /astargne/i, /\b(?:DONO|BLOQUEADA)\b/u, /depende\s+d[aeo]|depend[eê]ncias\s*:/i];
+const tocaMarcadorHumano = t => MARCADORES_HUMANOS.some(r => r.test(String(t ?? '')));
+export const RESULTADOS_RECIBO = Object.freeze(['APLICADO', 'ABORTADO', 'DIVERGENTE', 'DESFEITO']);
 // Formas de credencial conhecidas e blocos longos com maiúscula, minúscula e dígito (um sha
 // em hexadecimal não cai aqui): na dúvida, recusa.
 const SEGREDO = /(sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|github_pat_\w{20,}|xox[abprs]-[\w-]{10,}|AKIA[0-9A-Z]{16}|eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|plane_api_[A-Za-z0-9]{8,}|\b(?=[\w+/-]*[A-Z])(?=[\w+/-]*[a-z])(?=[\w+/-]*\d)[\w+/-]{32,}={0,2})/;
@@ -44,8 +51,31 @@ export function prosaRecusada(texto) {
   return null;
 }
 
-// `external_id` = hash da mudança estruturada + digital de antes (J62): nunca da prosa.
-export const chaveDaMudanca = (cartaId, mudanca, digitalAntes) => createHash('sha256').update(canonico({ cartaId, mudanca, digitalAntes })).digest('hex');
+// `external_id` = hash da mudança estruturada + digital de antes + a tentativa (J62, B15): nunca
+// da prosa; a tentativa (um UUID por PENDENTE) faz o mesmo veredito depois de um ABORTADO ganhar
+// chave nova em vez de bater no 409 da intenção antiga.
+export const chaveDaMudanca = (cartaId, mudanca, digitalAntes, tentativa) => createHash('sha256').update(canonico({ cartaId, mudanca, digitalAntes, tentativa })).digest('hex');
+
+// B6: a lista fechada, na forma exata que `mudancaDo` produz. O escritor e a reconciliação
+// conferem por aqui antes de escrever — um PENDENTE adulterado no disco não passa.
+export function mudancaNaListaFechada(m) {
+  const chaves = m && typeof m === 'object' && !Array.isArray(m) ? Object.keys(m).sort().join() : '';
+  const lista = v => Array.isArray(v) && v.every(x => typeof x === 'string');
+  if (m?.tipo === 'estado') return chaves === 'grupo,tipo' && ['completed', 'cancelled'].includes(m.grupo);
+  if (m?.tipo === 'labels') {
+    if (chaves !== 'adicionar,remover,tipo' || !lista(m.adicionar) || !lista(m.remover)) return false;
+    if (!m.adicionar.length) return m.remover.length === 1 && m.remover[0] === 'ASTARGNE';
+    return !m.remover.length && TRAVAS_PERMITIDAS.some(p => [...p].sort().join() === [...new Set(m.adicionar)].sort().join() && p.length === m.adicionar.length);
+  }
+  if (m?.tipo === 'anexar') return chaves === 'texto,tipo' && typeof m.texto === 'string' && !tocaMarcadorHumano(m.texto);
+  if (m?.tipo === 'trecho') return chaves === 'novoTrecho,tipo,trecho' && typeof m.trecho === 'string' && typeof m.novoTrecho === 'string' && !tocaMarcadorHumano(m.trecho) && !tocaMarcadorHumano(m.novoTrecho);
+  return false;
+}
+
+// HTML do Plane como texto (B20): o Plane passa o HTML pelo nh3, então byte a byte o que se
+// gravou não volta igual; a comparação é do texto decodificado com o espaço normalizado.
+export const textoDoHtml = html => textoDeHtml(html, Infinity).replace(/\s+/g, ' ').trim();
+export const mesmoTexto = (a, b) => textoDoHtml(a) === textoDoHtml(b);
 
 function mudancaDo(v) {
   switch (v.veredito) {
@@ -60,7 +90,7 @@ function mudancaDo(v) {
     case 'ATUALIZAR':
       if (typeof v.novoTrecho !== 'string' || !v.novoTrecho.trim() || v.novoTrecho.length > 2000) throw new Error('texto novo ausente ou longo demais');
       if (v.trecho !== undefined && (typeof v.trecho !== 'string' || v.trecho.length < 8 || v.trecho.length > 2000)) throw new Error('trecho inválido');
-      for (const t of [v.trecho, v.novoTrecho]) if (typeof t === 'string' && MARCADOR_HUMANO.test(t)) throw new Error('o trecho toca marcador de decisão ou linha de dependência');
+      for (const t of [v.trecho, v.novoTrecho]) if (typeof t === 'string' && tocaMarcadorHumano(t)) throw new Error('o trecho toca marcador de decisão ou linha de dependência');
       return v.trecho === undefined ? { tipo: 'anexar', texto: v.novoTrecho.trim() } : { tipo: 'trecho', trecho: v.trecho, novoTrecho: v.novoTrecho.trim() };
     default: return null;
   }
@@ -115,19 +145,31 @@ export function htmlIntencao({ veredito, chave, comentario, evidencias, mudanca 
     + `<p>Mudança: ${escapar(descreverMudanca(mudanca))}. Evidências conferidas pelo painel:</p><ul>${evidencias.map(e => `<li>${escapar(e.texto)}</li>`).join('')}</ul>`;
 }
 
+const TEXTO_RECIBO = {
+  APLICADO: () => 'Mudança aplicada e conferida em releitura.',
+  DESFEITO: () => 'Mudança aplicada e depois desfeita por outro ator; o zelador não a refaz.',
+};
+
 export function htmlRecibo({ chave, resultado, motivo }) {
-  return `<p>[ZELADOR/v1 recibo=${resultado} chave=${chave.slice(0, 16)}]</p><p>${resultado === 'APLICADO'
-    ? 'Mudança aplicada e conferida em releitura.' : `Mudança não aplicada: ${escapar(motivo ?? 'a carta mudou antes da escrita')}.`}</p>`;
+  const texto = TEXTO_RECIBO[resultado]?.() ?? `Mudança não aplicada: ${escapar(motivo ?? 'a carta mudou antes da escrita')}.`;
+  return `<p>[ZELADOR/v1 recibo=${resultado} chave=${chave.slice(0, 16)}]</p><p>${texto}</p>`;
 }
 
-// A descrição nova: o trecho tem de aparecer UMA vez (cru ou escapado); o texto novo entra escapado.
+// Linhas de texto da descrição que têm marcador humano ou de dependência (B7).
+const linhasMarcadas = html => textoDeHtml(html, Infinity).split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(tocaMarcadorHumano);
+
+// A descrição nova: o trecho tem de aparecer UMA vez (cru ou escapado); o texto novo entra
+// escapado; nenhuma linha com marcador humano muda, some ou nasce (B7).
 export function novaDescricao(html, mudanca) {
   const atual = String(html ?? '');
-  if (mudanca.tipo === 'anexar') return `${atual}<p>${escapar(mudanca.texto)}</p>`;
-  for (const forma of [mudanca.trecho, escapar(mudanca.trecho)]) {
+  let nova = null;
+  if (mudanca.tipo === 'anexar') nova = `${atual}<p>${escapar(mudanca.texto)}</p>`;
+  for (const forma of mudanca.tipo === 'trecho' ? [mudanca.trecho, escapar(mudanca.trecho)] : []) {
     const n = atual.split(forma).length - 1;
-    if (n === 1) return atual.replace(forma, () => escapar(mudanca.novoTrecho));
     if (n > 1) throw new Error('trecho aparece mais de uma vez na descrição');
+    if (n === 1) { nova = atual.replace(forma, () => escapar(mudanca.novoTrecho)); break; }
   }
-  throw new Error('trecho não achado na descrição');
+  if (nova === null) throw new Error('trecho não achado na descrição');
+  if (linhasMarcadas(atual).join('\n') !== linhasMarcadas(nova).join('\n')) throw new Error('a mudança tocaria linha com marcador humano ou de dependência');
+  return nova;
 }

@@ -5,7 +5,8 @@
 // sem MCP, sem slash command, sem transcript (`--no-session-persistence`/`--ephemeral` — a
 // CLI do zelador não aparece como sessão viva). A falha é classificada como no executor
 // (retrato-cli.js): `limite` pausa o provedor, `cli` pausa a versão no bloco zelador (J61),
-// `carta` é só deste job.
+// `carta` é só deste job. O Codex só-leitura ainda lê o disco: o agendador o recusa no bloco
+// zelador até a sandbox da F4b (B27); os argumentos dele ficam prontos para depois.
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
