@@ -23,7 +23,7 @@ Leitura comum, sempre: `docs/current.md` (estado real, datado) e
 | Aba Chaves (`chaves/`, `publico/chaves*.js`) e bloco "Astargne" (`publico/decisoes-astargne.js`) | `docs/arquitetura.md` § chaves.js; só nomes circulam; troca por SSO + duas ações; escrita no servidor só com `CHAVES_SERVIDOR_ESCRITA=true` após `validador-deploy` |
 | Aba Docs e rotina de alinhamento (`alinhamento/`, `publico/docs*.js`) | `docs/arquitetura.md` § alinhamento.js; regra de compactação em `../../PADROES-BACKLOG.md` |
 | Aba Backlog — desenho e história | `docs/02_ABA_BACKLOG.md` |
-| Motor, persona ou voz do C-3PO (`motor.js`, `motor/`, `acoes/`, `publico/c3po/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § C-3PO por voz |
+| Motor, persona, voz do C-3PO (`motor.js`, `motor/`, `acoes/`, `memoria/`, `publico/c3po/`) | `docs/00_PLANO.md` § Persona, § Princípios, § Voz da persona; `docs/arquitetura.md` § motor.js e § Fatos trazidos; `docs/operacao.md` § C-3PO por voz |
 | Subir, reiniciar, ver log | `docs/operacao.md` § Como roda |
 | Infra no `astargne.com` (o painel não faz deploy; só a aba Contas **muda estado** no servidor; `/api/producao/ssh` é só leitura) | `../../servidor/README.md` (índice; `validador-deploy` antes) |
 | Como este projeto se liga aos outros | `../../RELACOES.md` |

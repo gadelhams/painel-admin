@@ -24,7 +24,9 @@ const COMPOSICAO = 'montagem.js';
 // escritor do Plane ou o executor. Exceções do fecho na lista abaixo, com o caminho e o porquê.
 const PROIBIDOS_AO_MOTOR = ['orquestrador/escritor-handoff-plane.js', 'orquestrador/escritor-gate-plane.js',
   'orquestrador/estado-plane.js', 'orquestrador/executor-cli.js', 'orquestrador/api-despacho.js', 'orquestrador/api-gate.js',
-  'orquestrador/api-handoff.js', 'orquestrador/api-frota.js'];
+  'orquestrador/api-handoff.js', 'orquestrador/api-frota.js',
+  // Memória L1 (PAINEL-8/-9): o motor lê e propõe; gravar, aceitar e refletir ficam fora do fecho.
+  'memoria/escritor-memoria.js', 'memoria/api-memoria.js', 'memoria/pendente-memoria.js', 'memoria/reflexao.js'];
 const EXCECOES_MOTOR = new Map([
   ['orquestrador/escritor-handoff-plane.js', 'motor/ferramentas.js → fila.js → servico-orquestracao.js → canal-carta.js → handoff-plane.js, porta que reexporta o protocolo (leitura do canal) junto com a fábrica do escritor; o motor só lê, e o escritor só nasce com chave injetada pela montagem'],
   ['orquestrador/escritor-gate-plane.js', 'o mesmo caminho até canal-carta.js → gate-plane.js, mesma porta mista de protocolo e escritor; mesma razão'],
@@ -122,6 +124,7 @@ test('o motor do C-3PO não alcança escritor do Plane nem o executor, nem por t
   assert.ok(entradas.length > 3);
   const alcance = alcancaveis(arestas, entradas);
   assert.ok(alcance.has('orquestrador/fila.js'), 'o fecho precisa atravessar a porta da fila');
+  for (const lido of ['memoria/arquivo-memoria.js', 'memoria/propostas-memoria.js']) assert.ok(alcance.has(lido), `o motor lê e propõe por ${lido}`);
   assert.deepEqual(PROIBIDOS_AO_MOTOR.filter(p => alcance.has(p) && !EXCECOES_MOTOR.has(p)), []);
   for (const p of EXCECOES_MOTOR.keys()) assert.ok(alcance.has(p), `${p}: o motor não o alcança mais; tire de EXCECOES_MOTOR`);
 });

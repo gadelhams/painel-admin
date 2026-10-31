@@ -72,6 +72,34 @@ Ações do C-3PO (fase 3, 31/10/2026): diário de acréscimo em
 preparo, confirmação, resultado), com quem, comando, código de saída, duração e
 resumo filtrado. Só cresce; apagar é decisão do dono.
 
+## Memória do C-3PO e reflexão noturna (31/10/2026)
+
+Arquivos em `~/.local/state/painel-admin/c3po/`: `MEMORIES.md` (a memória L1, até
+8 KB), `memoria-historico.jsonl` (toda versão, com diff e os dois textos),
+`memoria-pendente.json` (proposta da reflexão que apagaria demais),
+`conversas.jsonl` (pergunta e resposta filtradas, 14 dias) e `reflexao.jsonl`
+(uma linha por noite). Editar pela tela: `/c3po/#memoria` (preparar → confirmar,
+com a sessão do Cadastro Único); desfazer é o botão de cada versão do histórico.
+Editar o arquivo à mão também vale: a próxima versão gravada pelo painel sai com
+`foraDoPainel: true`.
+
+A reflexão roda por **timer de usuário**, entregue em `deploy/` e não instalado
+pelo painel. Instalar (uma vez, na Omarchy):
+
+```sh
+mkdir -p ~/.config/systemd/user
+cp deploy/painel-reflexao.service deploy/painel-reflexao.timer ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now painel-reflexao.timer
+systemctl --user list-timers painel-reflexao.timer   # próxima: 03:30
+```
+
+Rodar já, para conferir: `systemctl --user start painel-reflexao.service` e
+`journalctl --user -u painel-reflexao` (uma linha `[reflexao] <data> <resultado>`);
+a segunda vez no mesmo dia responde `ja-rodou`. Pré-requisitos: frota gravada com o
+bloco zelador num modelo `claude` (aba Orquestração → Frota) e o `claude` logado na
+assinatura. Desligar: `systemctl --user disable --now painel-reflexao.timer`.
+
 ## Microfone do C-3PO: dois motores (25/10/2026)
 
 - **Navegador** (Web Speech API): Chrome e Edge mandam o áudio ao serviço

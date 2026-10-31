@@ -1,10 +1,12 @@
-// Conversa do C-3PO em SSE. Cada evento do motor sai na hora.
+// Conversa do C-3PO em SSE. Cada evento do motor sai na hora; no fim, o par pergunta/resposta vai ao diário de conversas, se houver.
 
 export class ConversaHttp {
-  constructor({ resposta, conversar, maxMensagem }) {
+  constructor({ resposta, conversar, maxMensagem, diarioConversas = null, log = console.error }) {
     this.resposta = resposta;
     this.conversar = conversar;
     this.maxMensagem = maxMensagem;
+    this.diarioConversas = diarioConversas;
+    this.log = log;
   }
 
   async atender(req, res) {
@@ -31,11 +33,15 @@ export class ConversaHttp {
 
     let clienteVivo = true;
     res.on('close', () => { clienteVivo = false; });
+    let falado = '';
+    let sessaoDoTurno = sessao ?? null;
 
     try {
       for await (const evento of this.conversar(mensagem, sessao)) {
         if (!clienteVivo) break;
         const { tipo, ...dados } = evento;
+        if (tipo === 'token' && typeof dados.texto === 'string') falado += dados.texto;
+        if ((tipo === 'inicio' || tipo === 'fim') && dados.sessao) sessaoDoTurno = dados.sessao;
         res.write(`event: ${tipo}\ndata: ${JSON.stringify(dados)}\n\n`);
       }
     } catch (erro) {
@@ -45,5 +51,10 @@ export class ConversaHttp {
       }
     }
     if (clienteVivo) res.end();
+    // Insumo da reflexão noturna; falhar aqui não derruba a conversa, só fica no log.
+    if (this.diarioConversas && falado.trim()) {
+      await this.diarioConversas.anotar({ pergunta: mensagem, resposta: falado, sessao: sessaoDoTurno })
+        .catch(e => this.log(`[conversa] diário de conversas indisponível: ${e.code ?? 'erro de escrita'}`));
+    }
   }
 }

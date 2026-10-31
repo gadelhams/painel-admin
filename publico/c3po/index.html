@@ -6,12 +6,28 @@
   <title>C-3PO — droid de protocolo</title>
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="acao.css">
+  <link rel="stylesheet" href="memoria.css">
 </head>
 <body>
   <header>
     <h1>C-3PO</h1>
     <p class="lema">droid de protocolo desta oficina — pergunte dos projetos, Mestre</p>
+    <button id="abrir-memoria" type="button" aria-expanded="false" aria-controls="memoria">Memória do C-3PO</button>
   </header>
+
+  <!-- Memória L1 (MEMORIES.md): o C-3PO lê em toda conversa; editar pede a sessão do dono. -->
+  <section id="memoria" class="memoria" hidden aria-label="Memória do C-3PO">
+    <h2>Memória do C-3PO</h2>
+    <p class="mem-nota">O que está aqui entra em toda conversa como dado, não como ordem. Preparar mostra o diff; confirmar grava com a sua sessão do Cadastro Único, e a versão anterior fica no histórico.</p>
+    <p class="mem-nota" id="mem-resumo">carregando…</p>
+    <textarea id="mem-texto" spellcheck="false" aria-label="Texto da memória do C-3PO"></textarea>
+    <div class="mem-linha"><button id="mem-preparar" type="button">Preparar edição</button><button id="mem-recarregar" type="button">Recarregar</button></div>
+    <div id="mem-confirmacao" hidden></div>
+    <p id="mem-estado" class="mem-estado" hidden></p>
+    <div id="mem-pendente" hidden></div>
+    <h3>Histórico</h3>
+    <ol id="mem-historico"></ol>
+  </section>
 
   <main id="historico" aria-live="polite"></main>
 
@@ -37,6 +53,8 @@
   <script src="escuta.js"></script>
   <script src="voz.js"></script>
   <script src="acao-proposta.js"></script>
+  <script src="memoria-proposta.js"></script>
+  <script src="memoria-painel.js"></script>
   <script src="palco.js"></script>
   <script src="fluxo-sse.js"></script>
   <script src="modos-voz.js"></script>

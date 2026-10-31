@@ -5,6 +5,10 @@ import { ferramentas } from './motor/ferramentas.js';
 import { PERSONA } from './motor/persona.js';
 import { FERRAMENTA_PROPOSTA, propostasDaMensagem } from './motor/acao-proposta.js';
 import { propostas } from './acoes/propostas.js';
+import { FERRAMENTA_MEMORIA, propostasMemoriaDaMensagem } from './motor/memoria-proposta.js';
+import { blocoMemoria } from './motor/memoria-l1.js';
+import { propostasMemoria } from './memoria/propostas-memoria.js';
+import { criarLeitorMemoria } from './memoria/arquivo-memoria.js';
 
 const MODELO = 'claude-sonnet-5';
 
@@ -21,10 +25,14 @@ export function ambienteDoModelo(ambiente = process.env) {
   return Object.fromEntries(AMBIENTE_PERMITIDO.filter((k) => ambiente[k] !== undefined).map((k) => [k, ambiente[k]]));
 }
 
-export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
+const leitorMemoria = criarLeitorMemoria();
+
+// A memória L1 entra a cada turno (o dono pode tê-la mudado entre um e outro), depois da
+// persona e como dado delimitado; `memoria` ausente = só a persona (testes antigos).
+export function opcoesDaConversa(sessaoAnterior, ambiente = process.env, memoria = undefined) {
   const opcoes = {
     model: MODELO,
-    systemPrompt: PERSONA,
+    systemPrompt: memoria === undefined ? PERSONA : `${PERSONA}\n\n${blocoMemoria(memoria)}`,
     tools: [],
     mcpServers: { c3po: ferramentas },
     allowedTools: [
@@ -37,6 +45,7 @@ export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
       'mcp__c3po__consulta_ssh',
       'mcp__c3po__git_projeto',
       FERRAMENTA_PROPOSTA,
+      FERRAMENTA_MEMORIA,
     ],
     permissionMode: 'dontAsk',
     includePartialMessages: true,
@@ -51,10 +60,12 @@ export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
   return opcoes;
 }
 
-export async function* conversar(mensagem, sessaoAnterior) {
-  const consulta = query({ prompt: mensagem, options: opcoesDaConversa(sessaoAnterior) });
+export async function* conversar(mensagem, sessaoAnterior, { lerMemoria = leitorMemoria.ler } = {}) {
+  const memoria = await lerMemoria().catch(e => ({ estado: 'ilegivel', motivo: e.code ?? 'erro de leitura' }));
+  const consulta = query({ prompt: mensagem, options: opcoesDaConversa(sessaoAnterior, process.env, memoria) });
   let concluida = false;
   const idsProposta = new Set();
+  const idsMemoria = new Set();
   try {
     for await (const m of consulta) {
       switch (m.type) {
@@ -72,6 +83,7 @@ export async function* conversar(mensagem, sessaoAnterior) {
           for (const bloco of m.message?.content ?? []) {
             if (bloco.type === 'tool_use') {
               if (bloco.name === FERRAMENTA_PROPOSTA) idsProposta.add(bloco.id);
+              if (bloco.name === FERRAMENTA_MEMORIA) idsMemoria.add(bloco.id);
               yield { tipo: 'ferramenta', nome: bloco.name.replace(/^mcp__c3po__/, '') };
             }
           }
@@ -79,6 +91,7 @@ export async function* conversar(mensagem, sessaoAnterior) {
         case 'user':
           // O cartão de ação do chat: leva id de proposta, nunca de confirmação.
           for (const p of propostasDaMensagem(m, idsProposta, propostas)) yield { tipo: 'proposta', ...p };
+          for (const p of propostasMemoriaDaMensagem(m, idsMemoria, propostasMemoria)) yield { tipo: 'proposta_memoria', ...p };
           break;
         case 'result':
           if (m.subtype === 'success') {

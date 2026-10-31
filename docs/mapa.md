@@ -106,13 +106,14 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 ## e2e/tests/
 
 - `c3po-acoes.spec.mjs`
+- `c3po-memoria.spec.mjs`
 - `hangar.spec.mjs`
 - `orquestrador.spec.mjs`
 
 ## http/
 
 - `arquivo-publico.js` — Serve um arquivo de publico/ sem sair da pasta.
-- `conversa.js` — Conversa do C-3PO em SSE. Cada evento do motor sai na hora.
+- `conversa.js` — Conversa do C-3PO em SSE. Cada evento do motor sai na hora; no fim, o par pergunta/resposta vai ao diário de conversas, se houver.
 - `corpo-limitado.js` — Lê o corpo do pedido até o teto. Acima disso corta a conexão.
 - `redirecionamento-c3po.js` — Leva /c3po à barra final e os endereços antigos /severino e /severino/ ao novo. Não atende a API.
 - `resposta-json.js` — Escreve JSON na resposta. Não lê arquivo nem o corpo do pedido.
@@ -124,6 +125,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-contas.js` — Repassa o Cadastro Único. Escrita só com sessão SSO; o corpo só é lido depois dela, e só quando a rota está na tabela fechada.
 - `rotas-decisoes.js` — Decisões paradas do backlog.
 - `rotas-hangar.js` — Naves e droids do Hangar. Só GET; o guard do roteador já rodou antes.
+- `rotas-memoria.js` — Memória L1 do C-3PO: GET lê texto, versão, histórico e a pendente da reflexão; preparar e confirmar mudam pelas duas ações com SSO. Não há rota para propor: isso só o motor faz.
 - `rotas-orq-canal.js` — Comentários do card. Não registra handoff.
 - `rotas-orq-consumo.js` — Cotas de assinatura. Gasto de API não entra aqui.
 - `rotas-orq-despacho.js` — Preparar e confirmar o despacho. Sem o portão, a API recusa antes de executar.
@@ -146,13 +148,26 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `rotas-voz.js` — ElevenLabs, diagnóstico do navegador e presença da transcrição.
 - `roteador.js` — Despacha o pedido depois da guarda. Cada grupo devolve false quando a rota não é dele.
 
+## memoria/
+
+- `api-memoria.js` — Duas ações da memória L1: preparar mostra o diff contra a versão-base; confirmar, com a mesma sessão SSO do dono, grava uma vez. Também monta a leitura da tela. Não registra proposta.
+- `arquivo-memoria.js` — Leitura da memória L1 do C-3PO (`c3po/MEMORIES.md`) e do seu histórico de versões. Não grava: escrever é de escritor-memoria.js, fora do alcance do motor.
+- `conversas.js` — Diário mínimo das conversas do C-3PO (`c3po/conversas.jsonl`): pergunta e resposta truncadas e filtradas de segredo, retidas 14 dias. É o insumo da reflexão noturna; não decide nada.
+- `diff.js` — Diff unificado curto, linha a linha, entre duas versões da memória L1, com a conta do que foi apagado. Não lê nem grava arquivo.
+- `escritor-memoria.js` — Única escrita da memória L1: confere a base sob trava, registra a versão no histórico e troca o arquivo de uma vez. Não confere SSO nem decide se a mudança é boa.
+- `pendente-memoria.js` — Proposta pendente da reflexão noturna (`c3po/memoria-pendente.json`): a versão que a reflexão não aplicou sozinha por apagar demais. Não grava a memória; o dono aceita pelo SSO.
+- `propostas-memoria.js` — Propostas de memória do C-3PO: monta a L1 nova (acrescentar ao fim ou trocar um trecho exato) contra a versão atual e guarda em memória com prazo. Nunca grava a memória.
+- `reflexao.js` — Reflexão noturna do C-3PO (PAINEL-9): junta as conversas do dia, pede ao Claude da assinatura a memória L1 nova e só a aplica se passar nos critérios; senão vira proposta pendente ou recusa. Uma por data, tudo no diário.
+
 ## motor/
 
 - `acao-proposta.js` — A ferramenta propor_acao e a leitura do seu resultado no fluxo da conversa. Só propõe: não prepara, não confirma, não executa.
 - `doc-projeto.js` — Lê ou lista um .md dentro da pasta do projeto. Não registra a ferramenta.
 - `envelope-coletor.js` — Embrulha a falha de um coletor interno. Não escolhe a ferramenta.
-- `ferramentas.js` — Catálogo das ferramentas do C-3PO: oito de leitura e uma que só propõe ação. O portão é esta lista, não o texto da persona.
+- `ferramentas.js` — Catálogo das ferramentas do C-3PO: oito de leitura, uma que só propõe ação e uma que só propõe mudança na memória. O portão é esta lista, não o texto da persona.
 - `leitura-pesada.js` — Leituras que varrem o Plane inteiro (fila, triagem, decisões: 15–35 s cada) para as ferramentas do C-3PO.
+- `memoria-l1.js` — Bloco da memória L1 no prompt de sistema do C-3PO: o arquivo entra como DADO delimitado, com o aviso de que é editável pelo dono. Não lê disco nem grava.
+- `memoria-proposta.js` — A ferramenta propor_memoria e a leitura do seu resultado no fluxo da conversa. Só propõe: não prepara, não confirma, não grava a memória.
 - `persona.js` — Voz do C-3PO. Não é portão: a permissão mora em tools: [] e na lista de ferramentas.
 
 ## orquestrador/
@@ -308,6 +323,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `escuta.js` — Microfone do C-3PO. Dois motores: Web Speech e gravação + transcrição xAI.
 - `fluxo-sse.js` — Fluxo da conversa: lê o SSE e manda o turno. A voz e o microfone ficam fora.
 - `locutor.js` — Alto-falante do C-3PO: ElevenLabs, e o Antônio quando ela cai.
+- `memoria-painel.js` — Painel "Memória do C-3PO" do /c3po/: mostra a L1, edita (preparar → confirmar com SSO), lista o histórico com desfazer e a proposta pendente da reflexão. Não grava nada sem a confirmação.
+- `memoria-proposta.js` — Cartão "Memória proposta" do chat do C-3PO e o passo comum preparar → confirmar da memória L1. Não propõe nem grava sozinho: confirmar pede a sessão do dono.
 - `modos-voz.js` — Microfone do C-3PO: push-to-talk, copiloto e ligação. Quem manda o texto é a conversa.
 - `palco.js` — Palco do C-3PO: o histórico e o texto do console. Não decide turno nem fala.
 - `politica-fala.js` — Política pura da voz do C-3PO. Sem DOM, sem fetch, sem chave.
@@ -359,6 +376,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 
 - `check-docs.mjs` — check-docs v1.5 (02/10/2026; v1 de 30/09) — portão de documentação do padrão de contexto por tarefa (~/Work/PADROES-CONTEXTO.md).
 - `mapa-modulos.mjs` — Gera docs/mapa.md a partir do cabeçalho de cada módulo e avisa módulo grande. Não edita módulo nenhum.
+- `reflexao-noturna.mjs` — Entrada do timer `painel-reflexao.timer` (03:30): liga a reflexão noturna do C-3PO à frota real e ao diretório de estado do painel, e sai 0 em todo resultado previsto. Não decide nada.
 
 ## test/
 
@@ -387,6 +405,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `leitura-pesada.test.js` — Leituras pesadas do C-3PO: uma de cada vez, a mesma em curso é compartilhada, vale 2 min e falha não fica guardada.
 - `liberacao-nativa.test.js` — Liberação do jogo nativo (PAINEL-59): prazo que vence sozinho, só projetos com jogo nativo no catálogo, arquivo estranho conta como desligado e a troca só por duas ações.
 - `mapa-modulos.test.js` — Autoteste do portão do mapa (padroes/testes.md, regra 4): a ferramenta tem de morder. Cada caso monta uma árvore temporária e confere o que reprova e o que só avisa, pela função e pela CLI.
+- `memoria.test.js` — Memória L1 do C-3PO (PAINEL-8): teto, histórico e desfazer, base mudou → recusa, injeção como dado, propor_memoria que não grava, rotas com SSO e o diário de conversas.
 - `motor-ambiente.test.js` — Prova que o processo do modelo do C-3PO não recebe segredo do .env nem config do disco (PAINEL-52).
 - `orquestrador-core-v2.test.js`
 - `orquestrador-sso.test.js`
@@ -397,6 +416,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `politica-fala.test.js`
 - `protocolo-ui.test.js`
 - `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
+- `reflexao.test.js` — Reflexão noturna (PAINEL-9) com CLI falsa: aplica com histórico; apagar demais vira pendente; segredo recusa; frota não ok recusa sem chamar a CLI; a segunda execução da mesma data não faz nada; sem insumo sai sem CLI.
 - `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo painel MONTADO de produção (montagem.js, PAINEL-17): guarda, famílias, autorizador SSO e APIs de duas ações de verdade; só as portas externas (ssh, Plane, SSO, LLM, voz, CLI, coletores) são espiões.
 - `sessao-painel.test.js` — Selo de sessão do cabeçalho (31/10/2026): diz de quem é a sessão SSO sem autorizar nada.
 - `sessao-voz.test.js`

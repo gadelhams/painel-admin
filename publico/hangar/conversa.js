@@ -5,6 +5,8 @@
 import '../c3po/fluxo-sse.js';
 // O cartão de ação proposta é o mesmo do /c3po/: Preparar → Confirmar com a sessão do dono.
 import '../c3po/acao-proposta.js';
+// E o cartão de memória proposta (PAINEL-8): o diff e o mesmo preparar → confirmar do /c3po/.
+import '../c3po/memoria-proposta.js';
 import { $ } from './util.js';
 
 const MAX_CONTEXTO = 400;
@@ -86,6 +88,10 @@ export async function perguntar(contexto, pergunta) {
         } else if (evento === 'proposta') {
           const r = $('hg-conversa-resp');
           r.append(globalThis.CartaoAcao.criar(dados));
+          r.scrollTop = r.scrollHeight;
+        } else if (evento === 'proposta_memoria') {
+          const r = $('hg-conversa-resp');
+          r.append(globalThis.CartaoMemoria.criar(dados));
           r.scrollTop = r.scrollHeight;
         } else if ((evento === 'inicio' || evento === 'fim') && dados.sessao) {
           gravarSessao(dados.sessao);
