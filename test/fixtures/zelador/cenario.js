@@ -12,11 +12,13 @@ import { gravarFrota, conteudoFrota, tupla } from '../frota/frota.js';
 import { criarPlaneFalso } from './plane-falso.js';
 
 export const PROJETO_FALSO = '0f0f0f0f-1111-4222-8333-444455556666';
+// Segundo projeto do catálogo, sem play: a relação entre projetos tem de entrar no universo (B1).
+export const PROJETO_OUTRO = '0e0e0e0e-1111-4222-8333-444455556666';
 
 const git = (pasta, ...args) => execFileSync('git', args, { cwd: pasta, env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' } }).toString().trim();
 
 export async function montarCenario({ inicio = Date.parse('2026-10-31T12:00:00Z'), responder = () => ({ vereditos: [] }), consumo = null,
-  ocupacao = async () => ({ ocupado: false, motivo: null }), playLigado = true } = {}) {
+  ocupacao = async () => ({ ocupado: false, motivo: null }), playLigado = true, pendenciasMesa = async () => [], tuplaZelador = tupla('claude', 'high') } = {}) {
   let tempo = inicio;
   const agora = () => tempo;
   const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'zelador-cenario-'));
@@ -35,25 +37,36 @@ export async function montarCenario({ inicio = Date.parse('2026-10-31T12:00:00Z'
   git(pasta, 'checkout', '-q', 'main');
 
   const diretorio = path.join(raiz, 'estado');
-  await gravarFrota(diretorio, conteudoFrota({ zelador: tupla('claude', 'high') }));
+  await gravarFrota(diretorio, conteudoFrota({ zelador: tuplaZelador }));
   const estado = criarEstadoOrquestracao({ diretorio, agora });
   const servico = criarServicoOrquestracao({ consultar: async () => { throw new Error('fila não usada'); }, raiz, estado, agora });
   const projeto = { pasta: 'proj-falso', area: 'ProjetosPessoais', titulo: 'Projeto Falso', plane: PROJETO_FALSO, sigla: 'FALSO' };
-  const play = new PlayHangar({ diretorio, comTrava: estado.comTrava, projetos: [projeto], agora });
+  const outro = { pasta: 'proj-outro', area: 'ProjetosPessoais', titulo: 'Outro Projeto', plane: PROJETO_OUTRO, sigla: 'OUTRO' };
+  const play = new PlayHangar({ diretorio, comTrava: estado.comTrava, projetos: [projeto, outro], agora });
   if (playLigado) await play.alternar(PROJETO_FALSO, true, '1');
   const plane = criarPlaneFalso({ projetoId: PROJETO_FALSO, sigla: 'FALSO', agora });
+  const planeOutro = criarPlaneFalso({ projetoId: PROJETO_OUTRO, sigla: 'OUTRO', agora });
+  // A Guest lê os dois projetos e a lista de projetos, como o cliente real.
+  const consultar = async url => {
+    if (url.split('?')[0] === '/projects/') return { results: [plane, planeOutro].map(p => ({ id: p.projetoId, identifier: p.sigla, name: p.sigla })), next_page_results: false };
+    return (url.startsWith(`/projects/${PROJETO_OUTRO}/`) ? planeOutro : plane).consultar(url);
+  };
+  const relacoesDe = id => plane.relacoes.get(id) ?? planeOutro.relacoes.get(id);
+  const relacionarCruzado = (bloqueada, bloqueadora) => { relacoesDe(bloqueada.id).blocked_by.push(bloqueadora.id); relacoesDe(bloqueadora.id).blocking.push(bloqueada.id); };
   const chaves = path.join(raiz, 'chaves');
   await fs.mkdir(chaves);
   const arquivoChave = path.join(chaves, 'zelador.token');
   await fs.writeFile(arquivoChave, `${plane.chave}\n`, { mode: 0o600 });
-  const escritor = criarEscritorZelador({ escopoPermitido: id => play.ligado(id), arquivoChave, fetchImpl: plane.fetchImpl, apiBase: 'http://plane.falso' });
+  let zelador = null;
+  const escritor = criarEscritorZelador({ escopoPermitido: id => play.ligado(id), escopoRecibo: (id, chave) => zelador.escopoRecibo(id, chave),
+    arquivoChave, fetchImpl: plane.fetchImpl, apiBase: 'http://plane.falso' });
   const pedidos = [];
   const cli = { rodar: async (t, entrada) => { pedidos.push({ tupla: t, entrada }); const r = await responder(entrada, { plane, commitFeito }); return r?.ok === false ? r : { ok: true, texto: JSON.stringify(r), uso: { duracaoMs: 1, custoUsd: 0.01 } }; } };
   const lerConsumo = async () => consumo ?? { claude: { disponivel: true, tipo: 'assinatura', janelas: [{ percentual: 20, janela: '5h', atualizadoEm: new Date(tempo - 60_000).toISOString() }] } };
-  const zelador = criarZelador({ servico, estado, play, escritor, diretorio, consultar: plane.consultar, lerConsumo, ocupacao, cli, raiz, agora });
-  // O agendador usa o catálogo do play; o cenário só tem o projeto falso.
+  zelador = criarZelador({ servico, estado, play, escritor, diretorio, consultar, lerConsumo, ocupacao, cli, raiz, agora, projetos: [projeto, outro], pendenciasMesa });
+  // O catálogo do cenário tem os dois projetos; só o falso nasce com play.
   const lerDiario = async () => (await zelador.diario.linhas({ janelaMs: 7 * 86_400_000 })).linhas;
-  return { raiz, pasta, diretorio, estado, servico, play, plane, escritor, zelador, cli, pedidos, projeto, commitFeito, commitForaDoPrincipal,
+  return { raiz, pasta, diretorio, estado, servico, play, plane, planeOutro, relacionarCruzado, escritor, zelador, cli, pedidos, projeto, commitFeito, commitForaDoPrincipal,
     arquivoChave, lerDiario, avancar: ms => { tempo += ms; }, agora, git: (...a) => git(pasta, ...a),
     limpar: () => fs.rm(raiz, { recursive: true, force: true }) };
 }

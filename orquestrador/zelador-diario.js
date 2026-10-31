@@ -5,7 +5,9 @@
 //   linha cortada no fim é tolerada e avisada, corrupção no meio falha fechada;
 // - rotação diária (UTC); quem lê pede uma janela e recebe os dias que a cobrem;
 // - `pendentes.jsonl` não roda: uma intenção PENDENTE sem RESOLVIDO sobrevive à virada do dia
-//   e é reconciliada no início do próximo job (J62);
+//   e é reconciliada no início do próximo job (J62); a verificação que não conferiu fica marcada
+//   (DIVERGENTE) antes do recibo, para a reconciliação não a perder (B17); o RESOLVIDO entra no
+//   índice só depois da linha do diário (B18);
 // - o teto diário e a vez de cada projeto (round-robin) contam daqui, nunca da memória (J52, J73).
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -101,10 +103,14 @@ export class DiarioZelador {
       carta: registro.carta, veredito: registro.veredito, jobId: registro.jobId });
   }
 
-  async resolver(chave, resultado, extra = {}) {
+  async marcarDivergente(chave) {
     await fs.mkdir(this.pasta, { recursive: true });
-    await anexarJsonl(this.indice, { quando: this.iso(), tipo: 'RESOLVIDO', chave, resultado });
+    await anexarJsonl(this.indice, { quando: this.iso(), tipo: 'DIVERGENTE', chave });
+  }
+
+  async resolver(chave, resultado, extra = {}) {
     await this.anotar({ tipo: `ZELADOR_${resultado}`, chave, ...extra });
+    await anexarJsonl(this.indice, { quando: this.iso(), tipo: 'RESOLVIDO', chave, resultado });
   }
 
   // PENDENTE sem RESOLVIDO, em qualquer data. O índice ilegível no meio lança: sem saber o que
@@ -114,6 +120,7 @@ export class DiarioZelador {
     const abertos = new Map();
     for (const l of linhas) {
       if (l.tipo === 'PENDENTE') abertos.set(l.chave, l);
+      if (l.tipo === 'DIVERGENTE' && abertos.has(l.chave)) abertos.set(l.chave, { ...abertos.get(l.chave), divergente: true });
       if (l.tipo === 'RESOLVIDO') abertos.delete(l.chave);
     }
     return [...abertos.values()];

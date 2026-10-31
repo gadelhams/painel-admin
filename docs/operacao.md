@@ -61,7 +61,7 @@ no settings do usuário). O gatilho
 | `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), lida uma vez por operação (aberta sem seguir elo); antes de escrever, `/users/me` tem de devolver este UUID |
 | `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ligada em 24/10/2026** depois de REPROVADO (1ª) e APROVADO (2ª) do `validador-deploy`; remover a linha desliga a troca no servidor (o inventário continua) |
 | `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada, a **vigília** de um projeto com o **play da nave** ligado (Hangar, SSO + confirmação) passa a despachar sozinha dentro dos freios do contrato |
-| `ORQ_AGENDADOR` | `true` deixa ESTA instância agendar a vigília e o zelador (trava em `agendador.json`, pid conferido a cada volta). **Só na unit systemd, nunca no `.env`**: o smoke na 7787 lê o mesmo `.env` e o mesmo estado, e dois agendadores despachariam duas vezes. Linha a acrescentar em `~/.config/systemd/user/painel-admin.service`, seção `[Service]`: `Environment=ORQ_AGENDADOR=true` (depois `systemctl --user daemon-reload` e `restart`) |
+| `ORQ_AGENDADOR` | `true` deixa ESTA instância agendar a vigília e o zelador (trava em `agendador.json`, pid conferido a cada volta). **Só na unit systemd, nunca no `.env`**: o smoke na 7787 lê o mesmo `.env` e o mesmo estado, e dois agendadores despachariam duas vezes. Linha a acrescentar em `~/.config/systemd/user/painel-admin.service`, seção `[Service]`: `Environment=ORQ_AGENDADOR=true` (depois `systemctl --user daemon-reload` e `restart`). Quem não tomou a trava no arranque tenta de novo a cada 5 min e liga sozinho quando o dono antigo morre |
 | `ZELADOR_INTERVALO_MIN` / `ZELADOR_TETO_DIA` | intervalo entre jobs do zelador (5–1440, padrão 30) e teto de jobs em 24 h (1–100, padrão 12); valor fora da faixa cai no padrão |
 
 Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
@@ -70,10 +70,14 @@ Estado operacional do Orquestrador: `~/.local/state/painel-admin/orquestracao/`
 `vigilia/<projeto>.json` foi renomeado para `.migrado-<data>` na F3 —, `play.json` (play por
 nave), `play-historico.jsonl` (quem ligou, só acréscimo), `play-migracao.json` (marca da
 migração), `agendador.json` (pid da instância que agenda) e `zelador/` — `zelador-AAAA-MM-DD.jsonl`
-(diário por dia), `pendentes.jsonl` (índice fora da rotação), `lease-global.json` e
-`lease-<projeto>.json`). Lease do zelador ilegível trava o zelador até ser apagado à mão. A chave
-do zelador fica em `~/.config/plane/zelador.token` (600; nunca no `.env`); sem ela o job para antes
-da CLI com `SEM_IDENTIDADE` no diário. Os
+(diário por dia), `pendentes.jsonl` (índice fora da rotação, com a marca `DIVERGENTE` antes do
+recibo), `lease-global.json` e `lease-<projeto>.json`). Lease do zelador ilegível trava o zelador
+até ser apagado à mão. A chave do zelador existe desde 31/10 em `~/.config/plane/zelador.token`
+(600; nunca no `.env`; ator `830e2631-de81-4871-95b7-ed9cc1774b32`); igual a um
+`orquestrador-*.token` ou ao `painel-admin.token` da mesma pasta, ou sem ela, o job para antes da
+CLI com `SEM_IDENTIDADE` no diário. O bloco zelador da frota só roda com provedor `claude` até a
+sandbox da F4b (Codex é recusado pelo nome). PENDENTE de projeto com o play desligado ou suspenso
+é fechado num job sem CLI, só com o recibo. Os
 worktrees de tentativas ficam para revisão humana — `git -C <projeto> worktree
 remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 

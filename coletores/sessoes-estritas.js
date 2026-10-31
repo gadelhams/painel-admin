@@ -5,6 +5,8 @@
 // trabalha (J16–J19 do plano da frota). Aqui é o contrário: pasta que não se lê, arquivo
 // recente que não se lê ou que não tem uma linha legível contam como ocupado. Sem portão por
 // /proc (o processo pode ter caído e a sessão voltar): basta o transcript ter evento na janela.
+// Os subagentes do Claude moram em `<projeto>/<sessão>/subagents/agent-*.jsonl` (profundidade 4,
+// B8) e contam; transcript recente sem instante legível conta como ocupado.
 // A CLI do próprio zelador roda sem persistência de sessão e não aparece aqui; a do executor
 // também não — por isso a guarda real é a janela de atividade do Plane (J67, zelador-ocupacao.js).
 
@@ -60,13 +62,14 @@ export async function ocupacaoPorSessoes({ projeto, cartas = new Set(), raiz = R
   const desde = agora - janelaMs;
   const contexto = { dir, projeto, cartas, desde };
   try {
-    for (const [ia, raizIa, profundidade] of [['claude', raizClaude, 3], ['codex', raizCodex, 4]]) {
+    for (const [ia, raizIa, profundidade] of [['claude', raizClaude, 4], ['codex', raizCodex, 4]]) {
       for (const arquivo of await arquivosRecentes(raizIa, desde, profundidade)) {
         const objetos = await lerCauda(arquivo);
         if (!objetos.length) return { ocupado: true, motivo: `transcript recente sem linha legível (${ia})` };
         const meta = ia === 'codex' ? await lerCabeca(arquivo) : null;
         const bruta = ia === 'claude' ? sessaoClaude(objetos, { siglas }) : sessaoCodex([meta, ...objetos].filter(Boolean), { raiz, siglas });
-        if (!bruta.ultimoEm || dentro(bruta.cwd, exitlag)) continue;
+        if (dentro(bruta.cwd, exitlag)) continue;
+        if (!Number.isFinite(Date.parse(bruta.ultimoEm))) return { ocupado: true, motivo: `transcript recente sem instante legível (${ia})` };
         if (tocaProjeto(bruta, contexto)) return { ocupado: true, motivo: `sessão ${ia} tocou o projeto nas últimas ${Math.round(janelaMs / 60_000)} min` };
       }
     }

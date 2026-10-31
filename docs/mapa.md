@@ -13,7 +13,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `chaves.js` — Porta da tela Chaves. Catálogo, troca, confirmação e HTTP moram em chaves/.
 - `coletores.js` — Porta única dos coletores. Rotas e ferramentas do C-3PO importam daqui.
 - `contas.js` — Porta da aba Contas. A tabela, o ssh e a fronteira HTTP moram em contas/.
-- `decisao.js` — Porta da mesa de decisão para quem só LÊ (o motor do C-3PO): a leitura da carta e a forma de texto dela. O escritor, a aplicação e as duas ações ficam fora daqui de propósito — só a montagem os liga.
+- `decisao.js` — Porta da mesa de decisão para quem só LÊ (o motor do C-3PO e o zelador): a leitura da carta, a forma de texto dela e a marca do DECISAO/v1. O escritor, a aplicação e as duas ações ficam fora daqui de propósito — só a montagem os liga.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
 - `encomendas.js` — Porta das encomendas de nave, só o lado de leitura. O registro e as duas ações moram em encomendas/ e só a montagem os liga.
 - `guarda.js` — O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão SSO do dono desde 29/10/2026 para Contas, antes para o resto.
@@ -304,7 +304,7 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `zelador-git.js` — Git só-leitura do zelador: o retrato do repositório e a conferência das evidências (commit no ramo principal, arquivo rastreado). Sem shell, sem trava do git.
 - `zelador-job.js` — Um job do zelador num projeto: reconcilia o PENDENTE dele, monta o retrato, roda a CLI fora da trava, valida e aplica veredito por veredito, e fecha com o "nada fazível". O lease e a vez moram no agendador.
 - `zelador-lease.js` — Leases do zelador em disco: um global (um job por vez no Hangar) e um por projeto, com jobId e prazo. Toda operação sob a trava global; não chama CLI nem Plane.
-- `zelador-politica.js` — Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode mudar (J58). Funções puras: não lê disco nem Plane.
+- `zelador-politica.js` — Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode melhorar em carta alguma nem mudar nas outras (J58). Funções puras: não lê disco nem Plane.
 - `zelador-retrato.js` — Retrato só-leitura de um projeto para o zelador: cartas, comentários, atividades e relações pela chave Guest (sem cache, pelo caminho do projeto) e o git. Não escreve nada.
 - `zelador-veredito.js` — Do JSON da CLI do zelador à mudança estruturada: forma fechada, evidências conferidas pelo painel, prosa filtrada e o HTML montado aqui. Não escreve no Plane.
 - `zelador.js` — Composição do zelador do Hangar: diário, leases, git, retrato, CLI, escritor e agendador ligados num objeto. Não implementa regra nenhuma.
@@ -477,6 +477,8 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - `vigilia.test.js` — Vigília com Plane, escritores e executor falsos: freios, avanço de gate/estado e, desde a F3, o play por nave no lugar do toggle (J11–J14, J66).
 - `voz-eleven.test.js`
 - `voz-xai.test.js`
+- `zelador-correcao-job.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B1–B26): cada teste fecha um achado no job do zelador, pelas portas reais, com Plane, CLI, sessões e relógio falsos.
+- `zelador-correcao-pecas.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B6–B28): peças do zelador uma a uma — escritor, trava, sessões, diário, agendador, CLI e o play pela HTTP. Sem rede, sem CLI real.
 - `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.
 - `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.
 - `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.

@@ -2,6 +2,10 @@
 
 import fs from 'node:fs/promises';
 import { cortar } from './briefing-papel.js';
+import { filtrarSegredo } from '../acoes/filtro-segredo.js';
+
+// B27: o motivo de falha leva saída crua da CLI ao diário, à tela e ao C-3PO; o segredo sai antes do corte.
+const trecho = t => cortar(filtrarSegredo(String(t ?? '').trim()), 200);
 
 const LIMITE_DE_USO = /(usage limit|rate limit|hit your .{0,20}limit|limit reached|reached your .{0,20}limit|quota|too many requests|\b429\b)/i;
 // Infra da CLI ou do modelo: a CLI recusou o modelo/flag na partida ou não autenticou.
@@ -58,7 +62,7 @@ export class RetratoCli {
     // `subtype` diferente de `success` (error_max_turns, error_during_execution…) é falha mesmo
     // sem `is_error` e com `result` presente: o texto pode ser um "APROVADO" pela metade (R2).
     if (!dados || typeof dados.result !== 'string' || dados.is_error || (dados.subtype && dados.subtype !== 'success')) {
-      return { ...retrato, impedimento: `CLI claude do papel ${papel} não devolveu resultado (código ${r.codigo}): ${cortar(r.stderr.trim() || r.stdout.trim(), 200)}` };
+      return { ...retrato, impedimento: `CLI claude do papel ${papel} não devolveu resultado (código ${r.codigo}): ${trecho(r.stderr.trim() || r.stdout)}` };
     }
     return { ...retrato, texto: dados.result, custoUsd: Number.isFinite(dados.total_cost_usd) ? dados.total_cost_usd : null, turnos: dados.num_turns ?? null };
   }
@@ -66,7 +70,7 @@ export class RetratoCli {
   static async codex(retrato, r, papel, ultimaMensagem) {
     let texto = '';
     try { texto = (await fs.readFile(ultimaMensagem, 'utf8')).trim(); } catch { texto = ''; }
-    if (r.codigo !== 0 || !texto) return { ...retrato, impedimento: `CLI codex do papel ${papel} terminou sem resposta (código ${r.codigo}): ${cortar(r.stderr.trim(), 200)}` };
+    if (r.codigo !== 0 || !texto) return { ...retrato, impedimento: `CLI codex do papel ${papel} terminou sem resposta (código ${r.codigo}): ${trecho(r.stderr)}` };
     return { ...retrato, texto };
   }
 }

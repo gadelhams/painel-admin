@@ -157,19 +157,24 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
     openai: criarFonteCodex(diretorioCodex ? { raiz: diretorioCodex } : {}) } });
   const consultarGuest = consultarPlane ?? (ambiente.PLANE_API_KEY?.trim() ? criarClientePlane({ chave: ambiente.PLANE_API_KEY.trim(), ...(fetchPlane ? { fetchImpl: fetchPlane } : {}) })
     : async () => { throw new Error('PLANE_API_KEY de leitura ausente'); });
-  // A chave do zelador mora em arquivo 600, nunca no .env; igual a outra identidade, recusa (J56).
+  // A chave do zelador mora em arquivo 600, nunca no .env; igual a outra identidade (do .env ou
+  // dos arquivos `orquestrador-*.token`/`painel-admin.token` vizinhos), recusa (J56, B28).
   const chavesProibidas = new Set(['PLANE_API_KEY', 'PLANE_ORQ_WRITE_KEY', 'PLANE_ORQ_PLAYER_WRITE_KEY'].map(k => ambiente[k]?.trim()).filter(Boolean));
+  // A mesa entra mais abaixo; o zelador só a lê quando roda (B2: carta com aplicação pendente é intocável).
+  let mesa = null;
   const zelador = criarZelador({ servico: orquestracao, estado: estadoOrquestracao, play, diretorio: diretorioOrquestracao, consultar: consultarGuest,
-    escritor: criarEscritorZelador({ escopoPermitido: id => play.ligado(id), chavesProibidas, ...(fetchPlane ? { fetchImpl: fetchPlane } : {}),
-      ...(arquivoChaveZelador ? { arquivoChave: arquivoChaveZelador } : {}) }),
+    escritor: criarEscritorZelador({ escopoPermitido: id => play.ligado(id), escopoRecibo: (id, chave) => zelador.escopoRecibo(id, chave),
+      chavesProibidas, ...(fetchPlane ? { fetchImpl: fetchPlane } : {}), ...(arquivoChaveZelador ? { arquivoChave: arquivoChaveZelador } : {}) }),
+    pendenciasMesa: () => mesa.servico.pendentes(),
     spawn: spawnCli ?? spawnReal, lerConsumo, ocupacao: ocupacaoSessoes, executarGit, cli: cliZelador ?? null, agora, registrarLog: log,
     intervaloMs: inteiroEntre(ambiente.ZELADOR_INTERVALO_MIN, 5, 1440, 30) * 60_000, tetoDia: inteiroEntre(ambiente.ZELADOR_TETO_DIA, 1, 100, 12) });
   const instancia = new InstanciaAgendador({ diretorio: diretorioOrquestracao, comTrava: estadoOrquestracao.comTrava,
     habilitado: ambiente.ORQ_AGENDADOR?.trim() === 'true', agora });
-  // O que está rodando num projeto, para a tela do play dizer antes de desligar (J66).
+  // O que está rodando num projeto, para a tela do play dizer antes de desligar (J66); o job do
+  // zelador vem também do lease em disco (B22). A vigília só corre na instância que agenda.
   const atividade = async (projetoId) => {
-    const a = zelador.atual();
-    if (a?.projetoId === projetoId) return `job do zelador (${a.fase})`;
+    const z = await zelador.atividade(projetoId);
+    if (z) return z;
     const v = vigilia.situacao(projetoId);
     return v.varrendo && v.proximaCarta ? `despacho da vigília (${v.proximaCarta})` : null;
   };
@@ -201,7 +206,7 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   const encomendas = criarRegistroEncomendas({ diretorio: diretorioEstado, agora });
   // Mesa de decisão (PAINEL-53): grava a decisão do dono no Plane com a identidade Painel Admin,
   // só a lista fechada, só por SSO + duas ações, sob a mesma trava global da orquestração.
-  const mesa = criarMesaDecisao({ ambiente, fetchPlane, diretorio: path.join(diretorioEstado, 'c3po'), estado: estadoOrquestracao,
+  mesa = criarMesaDecisao({ ambiente, fetchPlane, diretorio: path.join(diretorioEstado, 'c3po'), estado: estadoOrquestracao,
     agora, arquivoChave: arquivoChaveAdmin, limparCache: limparCachePlane, log });
   // Memória L1 do C-3PO (PAINEL-8): o motor lê e propõe em `propostasMemoria`; gravar é do
   // dono por SSO + duas ações (ou da reflexão noturna, fora deste processo), com histórico.
@@ -263,16 +268,17 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       // (só metadado local; lease ainda válido de outro processo nunca é tomado).
       orquestracao.recuperarInterrupcoes().catch(e => log('[orquestracao] reconciliação no arranque falhou:', e.message));
       // A migração do toggle antigo vem antes de qualquer agendamento (resposta à P2).
+      // B21: quem não tomou a trava do agendador no arranque tenta de novo a cada 5 min.
+      const ligarAgendador = async ({ motivo }) => {
+        if (motivo) log(`[agendador] ${motivo}`);
+        await zelador.recuperar().catch(e => log('[zelador] recuperação no arranque falhou:', e.message));
+        const podeAgendar = () => instancia.podeAgendar();
+        vigilia.iniciar(podeAgendar);
+        zelador.iniciar(podeAgendar);
+      };
       play.migrar().catch(e => log('[play] migração do toggle da vigília falhou:', e.message))
-        .then(() => instancia.tomar())
-        .then(async ({ agenda, motivo }) => {
-          if (motivo) log(`[agendador] ${motivo}`);
-          if (!agenda) return;
-          await zelador.recuperar().catch(e => log('[zelador] recuperação no arranque falhou:', e.message));
-          const podeAgendar = () => instancia.podeAgendar();
-          vigilia.iniciar(podeAgendar);
-          zelador.iniciar(podeAgendar);
-        })
+        .then(() => instancia.tomarEVigiar(ligarAgendador))
+        .then(({ agenda, motivo }) => { if (!agenda && motivo) log(`[agendador] ${motivo}`); })
         .catch(e => log('[agendador] não iniciou:', e.message));
       alinhamento.iniciar();
     },

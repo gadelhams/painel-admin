@@ -1,4 +1,4 @@
-// Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode mudar (J58). Funções puras: não lê disco nem Plane.
+// Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode melhorar em carta alguma nem mudar nas outras (J58). Funções puras: não lê disco nem Plane.
 //
 // Taxonomia de atores (J65): zelador = o UUID fixo do PROVISION_RESULT (J56); qualquer outro
 // ator, inclusive as identidades técnicas orquestrador-* e o bot "agentes" do MCP, é
@@ -6,6 +6,8 @@
 import { createHash } from 'node:crypto';
 import { avaliarProntidaoGate } from './politica.js';
 import { dependenciasDaCarta } from './fila.js';
+import { CABECALHO_DECISAO, FONTE_DECISAO } from '../decisao.js';
+import { textoDoHtml as textoNormal } from './zelador-veredito.js';
 
 export const ZELADOR_ATOR = '830e2631-de81-4871-95b7-ed9cc1774b32';
 const GATES_ZELADOR = Object.freeze(['READY TO DEV', 'READY TO TEST']);
@@ -13,6 +15,7 @@ const JANELA_OUTRO_ATOR_MS = 2 * 60 * 60_000;
 const DIA_MS = 24 * 60 * 60_000;
 
 const sha = t => createHash('sha256').update(String(t)).digest('hex');
+const TERMINAIS = Object.freeze(['completed', 'cancelled', 'canceled']);
 const id = v => (typeof v === 'string' ? v : typeof v?.id === 'string' ? v.id : null);
 export const atorDe = x => id(x?.actor) ?? id(x?.actor_detail) ?? id(x?.created_by) ?? null;
 export const ehZelador = (x, ator = ZELADOR_ATOR) => atorDe(x) === ator;
@@ -29,21 +32,28 @@ export function digitalDaCarta(carta, comentarios, ator = ZELADOR_ATOR) {
 }
 
 const recente = (quando, agoraMs, janela) => Number.isFinite(Date.parse(quando)) && agoraMs - Date.parse(quando) < janela;
+// B2: comentário da mesa (fonte ou cabeçalho DECISAO/v1, de qualquer ator: na dúvida, conta).
+const ehDecisaoDaMesa = c => c?.external_source === FONTE_DECISAO || textoNormal(c?.comment_html).includes(CABECALHO_DECISAO);
+
 // Relações inversas: as cartas que ESTA bloqueia ou que esperam por ela.
 export const reversas = relacoes => ['blocking', 'start_before', 'finish_before'].flatMap(t => (Array.isArray(relacoes?.[t]) ? relacoes[t] : []))
   .map(r => (typeof r === 'string' ? r : r?.id ?? r?.issue_id ?? r?.work_item_id ?? r?.related_work_item ?? r?.related_issue ?? null)).filter(Boolean);
 
 /**
- * Motivo para o zelador não tocar a carta, ou null (J29, J31, J34, J35, J37, J67).
- * ctx: { porId, relacoes, comentarios, atividades, lease, historico, agoraMs }
- * `relacoes`/`atividades`/`comentarios` null = ilegíveis = intocável (falha fechada).
+ * Motivo para o zelador não tocar a carta, ou null (J29, J31, J34, J35, J37, J67, B1, B2).
+ * ctx: { porId (todo o catálogo), relacoes, comentarios, atividades, lease, historico, agoraMs, mesaPendente }
+ * `relacoes`/`atividades`/`comentarios` null = ilegíveis = intocável (falha fechada); carta
+ * relacionada fora da leitura do catálogo também; `mesaPendente` null = diário da mesa ilegível.
  */
-export function motivoIntocavel(carta, { porId, relacoes, comentarios, atividades, lease, historico = [], agoraMs, ator = ZELADOR_ATOR }) {
-  if (['completed', 'cancelled', 'canceled'].includes(grupoDe(carta))) return 'carta fechada';
+export function motivoIntocavel(carta, { porId, relacoes, comentarios, atividades, lease, historico = [], agoraMs, mesaPendente = false, ator = ZELADOR_ATOR }) {
+  if (TERMINAIS.includes(grupoDe(carta))) return 'carta fechada';
   if (carta.filhos?.length) return 'não é folha';
   if (nomesDe(carta).some(n => GATES_ZELADOR.includes(n))) return 'carta com gate (portão próprio)';
+  if (mesaPendente === null) return 'pendências da mesa ilegíveis';
+  if (mesaPendente) return 'aplicação da mesa pendente na carta';
   if (!relacoes) return 'relações ilegíveis';
-  if (reversas(relacoes).some(r => nomesDe(porId.get(r) ?? {}).some(n => GATES_ZELADOR.includes(n)))) return 'bloqueia carta com gate';
+  if (reversas(relacoes).some(r => !porId.has(r))) return 'carta relacionada fora da leitura do catálogo';
+  if (reversas(relacoes).some(r => nomesDe(porId.get(r)).some(n => GATES_ZELADOR.includes(n)))) return 'bloqueia carta com gate';
   if (lease) return 'lease de despacho na carta';
   if (!historico) return 'touchpoints do despacho ilegíveis';
   if (historico.some(e => e.tipo === 'TENTATIVA' && recente(e.quando ?? e.criadoEm, agoraMs, DIA_MS))) return 'tentativa de despacho nas últimas 24 h';
@@ -58,9 +68,15 @@ export function motivoIntocavel(carta, { porId, relacoes, comentarios, atividade
  * J57: nunca devolve um campo ao valor de onde um ator não-zelador o tirou, nem remove etiqueta
  * posta por não-zelador. Devolve o motivo da recusa ou null.
  * `estados`: os estados do projeto (id → grupo) para ler o "de onde" de uma atividade de estado.
+ * B3: quem tirou a carta de QUALQUER estado terminal impede o zelador de pô-la em qualquer um.
+ * B2: carta com DECISAO/v1 da mesa nunca recebe ASTARGNE do zelador (`comentarios`).
  */
-export function violaAtoHumano(carta, mudanca, { atividades, estados = [], novaDescricao = null, ator = ZELADOR_ATOR }) {
+export function violaAtoHumano(carta, mudanca, { atividades, estados = [], novaDescricao = null, comentarios = [], ator = ZELADOR_ATOR }) {
   if (!atividades) return 'atividades ilegíveis';
+  if (mudanca.tipo === 'labels' && mudanca.adicionar.includes('ASTARGNE')) {
+    if (!comentarios) return 'comentários ilegíveis';
+    if (comentarios.some(ehDecisaoDaMesa)) return 'o dono já decidiu na mesa (DECISAO/v1); o zelador não repõe ASTARGNE';
+  }
   const alheias = atividades.filter(a => !ehZelador(a, ator));
   const grupoPorId = new Map(estados.map(e => [e.id, e.group]));
   const grupoPorNome = new Map(estados.map(e => [e.name, e.group]));
@@ -68,8 +84,7 @@ export function violaAtoHumano(carta, mudanca, { atividades, estados = [], novaD
     for (const a of alheias.filter(x => x.field === 'state')) {
       const de = grupoPorId.get(a.old_identifier) ?? grupoPorNome.get(a.old_value);
       if (!de) return 'atividade de estado ilegível por outro ator';
-      const alvo = mudanca.grupo === 'completed' ? ['completed'] : ['cancelled', 'canceled'];
-      if (alvo.includes(de)) return `outro ator tirou a carta de ${a.old_value ?? mudanca.grupo}; o zelador não devolve`;
+      if (TERMINAIS.includes(de)) return `outro ator tirou a carta de ${a.old_value ?? de}; o zelador não a põe em estado terminal`;
     }
   }
   if (mudanca.tipo === 'labels') {
@@ -88,8 +103,10 @@ export function violaAtoHumano(carta, mudanca, { atividades, estados = [], novaD
     const texto = mudanca.tipo === 'trecho' ? mudanca.novoTrecho : mudanca.texto;
     for (const a of alheias.filter(x => x.field === 'description')) {
       if (typeof a.old_value !== 'string') return 'atividade de descrição ilegível por outro ator';
-      if (novaDescricao !== null && novaDescricao === a.old_value) return 'a descrição voltaria ao texto que outro ator trocou';
-      if (texto && a.old_value.includes(texto) && !String(a.new_value ?? '').includes(texto)) return 'o texto novo é o que outro ator tirou da descrição';
+      // B20: o Plane sanitiza o HTML; compara-se o texto, não o byte.
+      if (novaDescricao !== null && textoNormal(novaDescricao) === textoNormal(a.old_value)) return 'a descrição voltaria ao texto que outro ator trocou';
+      const normal = textoNormal(texto);
+      if (normal && textoNormal(a.old_value).includes(normal) && !textoNormal(a.new_value).includes(normal)) return 'o texto novo é o que outro ator tirou da descrição';
     }
   }
   return null;
