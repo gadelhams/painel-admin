@@ -1,7 +1,7 @@
 // Despacha o pedido depois da guarda. Cada grupo devolve false quando a rota não é dele.
 
 export class RoteadorPainel {
-  constructor({ porta, recusa, resposta, conversa, voz, painel, orquestracao, alinhamento, chaves }) {
+  constructor({ porta, recusa, resposta, conversa, voz, painel, orquestracao, alinhamento, chaves, acoes }) {
     this.porta = porta;
     this.recusa = recusa;
     this.resposta = resposta;
@@ -11,6 +11,7 @@ export class RoteadorPainel {
     this.orquestracao = orquestracao;
     this.alinhamento = alinhamento;
     this.chaves = chaves;
+    this.acoes = acoes;
   }
 
   async atender(req, res) {
@@ -39,6 +40,7 @@ export class RoteadorPainel {
       if (await this.orquestracao.tentar(req, res, url)) return;
       if (await this.alinhamento.tentar(req, res, url)) return;
       if (await this.chaves.tentar(req, res, url)) return;
+      if (await this.acoes.tentar(req, res, url)) return;
       if (req.method === 'GET') {
         await this.resposta.estatico(res, url.pathname);
         return;

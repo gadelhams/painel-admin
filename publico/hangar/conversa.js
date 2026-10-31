@@ -3,6 +3,8 @@
 
 // O parser de SSE é o mesmo da tela /c3po/; o arquivo clássico também roda como módulo e se pendura no globalThis.
 import '../c3po/fluxo-sse.js';
+// O cartão de ação proposta é o mesmo do /c3po/: Preparar → Confirmar com a sessão do dono.
+import '../c3po/acao-proposta.js';
 import { $ } from './util.js';
 
 const MAX_CONTEXTO = 400;
@@ -81,6 +83,10 @@ export async function perguntar(contexto, pergunta) {
         if (evento === 'token') {
           if (!recebeu) { fala.textContent = ''; fala.classList.remove('hg-pensando'); recebeu = true; }
           fala.textContent += dados.texto;
+        } else if (evento === 'proposta') {
+          const r = $('hg-conversa-resp');
+          r.append(globalThis.CartaoAcao.criar(dados));
+          r.scrollTop = r.scrollHeight;
         } else if ((evento === 'inicio' || evento === 'fim') && dados.sessao) {
           gravarSessao(dados.sessao);
         } else if (evento === 'erro') {

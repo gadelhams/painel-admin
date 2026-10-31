@@ -3,6 +3,8 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { ferramentas } from './motor/ferramentas.js';
 import { PERSONA } from './motor/persona.js';
+import { FERRAMENTA_PROPOSTA, propostasDaMensagem } from './motor/acao-proposta.js';
+import { propostas } from './acoes/propostas.js';
 
 const MODELO = 'claude-sonnet-5';
 
@@ -32,6 +34,9 @@ export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
       'mcp__c3po__fila_orquestracao',
       'mcp__c3po__decisoes',
       'mcp__c3po__alinhamento',
+      'mcp__c3po__consulta_ssh',
+      'mcp__c3po__git_projeto',
+      FERRAMENTA_PROPOSTA,
     ],
     permissionMode: 'dontAsk',
     includePartialMessages: true,
@@ -49,6 +54,7 @@ export function opcoesDaConversa(sessaoAnterior, ambiente = process.env) {
 export async function* conversar(mensagem, sessaoAnterior) {
   const consulta = query({ prompt: mensagem, options: opcoesDaConversa(sessaoAnterior) });
   let concluida = false;
+  const idsProposta = new Set();
   try {
     for await (const m of consulta) {
       switch (m.type) {
@@ -65,9 +71,14 @@ export async function* conversar(mensagem, sessaoAnterior) {
         case 'assistant':
           for (const bloco of m.message?.content ?? []) {
             if (bloco.type === 'tool_use') {
+              if (bloco.name === FERRAMENTA_PROPOSTA) idsProposta.add(bloco.id);
               yield { tipo: 'ferramenta', nome: bloco.name.replace(/^mcp__c3po__/, '') };
             }
           }
+          break;
+        case 'user':
+          // O cartão de ação do chat: leva id de proposta, nunca de confirmação.
+          for (const p of propostasDaMensagem(m, idsProposta, propostas)) yield { tipo: 'proposta', ...p };
           break;
         case 'result':
           if (m.subtype === 'success') {

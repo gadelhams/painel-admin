@@ -4,6 +4,7 @@ export {
   RAIZ, AREAS, dirDoProjeto, trechosDoNome, resolverDentroDaRaiz,
 } from './coletores/caminhos.js';
 export { gitDetalhado } from './coletores/git-local.js';
+export { LEITURAS_GIT, lerGitDoProjeto } from './coletores/git-leitura.js';
 export { estadoProjetos } from './coletores/estado-local.js';
 export { MAX_CHARS_ARQUIVO, lerArquivoMd } from './coletores/leitura-md.js';
 export { listarModeladores } from './coletores/modeladores.js';

@@ -106,6 +106,8 @@ class ConversaC3po {
             locutor.alimentar(dados.texto);
           } else if (evento === 'ferramenta') {
             this.palco.nota('ferramenta', `consultando ${dados.nome}`);
+          } else if (evento === 'proposta') {
+            this.palco.proposta(dados);
           } else if (evento === 'inicio' || evento === 'fim') {
             if (dados.sessao) {
               this.sessao = dados.sessao;

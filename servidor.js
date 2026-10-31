@@ -45,6 +45,11 @@ import { RotasOrquestracao } from './http/rotas-orquestracao.js';
 import { RotasVoz } from './http/rotas-voz.js';
 import { RotasChaves } from './http/rotas-chaves.js';
 import { RotasAlinhamento } from './http/rotas-alinhamento.js';
+import { RotasAcoes } from './http/rotas-acoes.js';
+import { propostas } from './acoes/propostas.js';
+import { criarDiarioAcoes } from './acoes/diario-acoes.js';
+import { criarExecutorAcoes } from './acoes/executor-acoes.js';
+import { criarApiAcoes, criarConfirmacoesAcoes } from './acoes/api-acoes.js';
 import { RoteadorPainel } from './http/roteador.js';
 
 // Aba Contas (13/09/2026): /api/contas/* — administração do CadastroUnico.
@@ -65,7 +70,6 @@ try {
 
 const PORTA = Number(process.env.PORTA ?? 7777);
 const PUBLICO = path.join(import.meta.dirname, 'publico');
-const CHAVE_SSH = path.join(os.homedir(), '.ssh', 'paroquia-vultr');
 const MAX_CORPO = 64 * 1024;
 const MAX_MENSAGEM = 8_000;
 const proxyEleven = new ProxyElevenLabs();
@@ -143,7 +147,10 @@ const apiDespacho = criarApiDespacho({ autorizar: autorizarPrivilegiado,
 // rodando nesta máquina, "quem alcança a porta é o dono" deixou de ser verdade (R3, PAINEL-34).
 const apiVoz = criarApiVoz({ autorizar: criarAutorizador({ verificar: criarVerificadorCadastro(), proprietarioId,
   tiposConteudo: /^audio\/(?:webm|ogg|mp4|mpeg|wav|x-wav)(?:\s*;|$)/i }) });
-
+// Ações do C-3PO (fase 3): o motor só propõe em `propostas`; rodar a suíte de um projeto
+// é do dono, por SSO + duas ações, uma por vez, com diário em ~/.local/state/painel-admin/c3po/.
+const apiAcoes = criarApiAcoes({ autorizar: autorizarPrivilegiado,
+  confirmacoes: criarConfirmacoesAcoes({ propostas, executor: criarExecutorAcoes(), diario: criarDiarioAcoes() }) });
 
 const resposta = new RespostaHttp({ publico: PUBLICO, maxCorpo: MAX_CORPO });
 const roteador = new RoteadorPainel({
@@ -159,7 +166,7 @@ const roteador = new RoteadorPainel({
     // Escritas da aba Contas: o mesmo autorizador SSO das ações privilegiadas (N5).
     autorizarContas: autorizarPrivilegiado,
     sessao: sessaoPainel,
-    ssh: new LeituraSsh({ chave: CHAVE_SSH }),
+    ssh: new LeituraSsh(),
   }),
   orquestracao: new RotasOrquestracao({
     resposta, orquestracao, triagemDev, lerConsumo: lerConsumoIas,
@@ -169,6 +176,7 @@ const roteador = new RoteadorPainel({
   }),
   alinhamento: new RotasAlinhamento({ resposta, alinhamento }),
   chaves: new RotasChaves({ resposta, chaves, apiChaves }),
+  acoes: new RotasAcoes({ resposta, apiAcoes }),
 });
 
 const servidor = http.createServer((req, res) => roteador.atender(req, res));

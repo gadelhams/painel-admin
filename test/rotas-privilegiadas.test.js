@@ -28,6 +28,8 @@ import { criarApiNativo, criarConfirmacoesNativo } from '../orquestrador/api-nat
 import { criarApiVoz } from '../orquestrador/voz-xai.js';
 import { criarApiChaves, criarConfirmacoesChaves } from '../chaves.js';
 import { criarManipuladorContas, ROTAS_CONTAS } from '../contas.js';
+import { RotasAcoes } from '../http/rotas-acoes.js';
+import { criarApiAcoes, criarConfirmacoesAcoes } from '../acoes/api-acoes.js';
 
 const HTTP = path.join(import.meta.dirname, '..', 'http');
 const METODOS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -35,7 +37,7 @@ const METODOS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 // exigem SSO e não são mais exceção.
 const EXCECOES = new Map([
   ['POST /api/orquestracao/simular', 'prévia sem lease, processo ou escrita no Plane'],
-  ['POST /api/conversa', 'roda pelo login da CLI (assinatura) com ferramentas só de leitura; aberto por decisão do dono (29/10/2026)'],
+  ['POST /api/conversa', 'roda pelo login da CLI (assinatura) com ferramentas de leitura e propor_acao, que só registra proposta (executar é /api/acoes/*, com SSO); aberto por decisão do dono (29/10/2026)'],
   ['POST /api/diagnostico/voz', 'telemetria do microfone no log local; não muda estado nem gasta API'],
 ]);
 
@@ -88,6 +90,8 @@ function montar() {
       xai: () => false }),
     alinhamento: new RotasAlinhamento({ resposta, alinhamento: espiao('alinhamento') }),
     chaves: new RotasChaves({ resposta, chaves: espiao('chaves'), apiChaves: criarApiChaves({ autorizar: negar, confirmacoes: criarConfirmacoesChaves({ servico: espiao('chaves') }) }) }),
+    acoes: new RotasAcoes({ resposta, apiAcoes: criarApiAcoes({ autorizar: negar,
+      confirmacoes: criarConfirmacoesAcoes({ propostas: espiao('propostas'), executor: espiao('executorAcoes'), diario: espiao('diarioAcoes') }) }) }),
   });
   return { roteador, chamadas, leituras: () => leituras };
 }
@@ -105,7 +109,8 @@ async function pedir(roteador, metodo, caminho) {
 test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo nem chamar serviço', async () => {
   const caminhos = await caminhosDoCodigo();
   for (const esperado of ['/api/orquestracao/frota/preparar', '/api/orquestracao/frota/confirmar', '/api/chaves/confirmar', '/api/hangar',
-    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites']) {
+    '/api/orquestracao/despacho/confirmar', '/api/orquestracao/vigilia/confirmar', '/api/orquestracao/nativo/preparar', '/api/orquestracao/nativo/confirmar', '/api/orquestracao/voz/transcrever', '/api/contas/convites',
+    '/api/acoes/preparar', '/api/acoes/confirmar']) {
     assert.ok(caminhos.includes(esperado), `a varredura precisa achar ${esperado}`);
   }
   assert.ok(!caminhos.some(c => c.startsWith('/api/orquestracao/modelos')), 'o perfil por carta saiu na F2');
@@ -128,6 +133,8 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
   for (const r of ROTAS_CONTAS.filter(x => x.metodo !== 'GET')) {
     assert.ok(privilegiadas.includes(`${r.metodo} ${exemplo(r.padrao)}`), `escrita de Contas sem SSO: ${r.metodo} ${exemplo(r.padrao)}`);
   }
+  // Fase 3: rodar a suíte de um projeto é do dono; as duas pontas chegam à sessão e param nela.
+  for (const p of ['POST /api/acoes/preparar', 'POST /api/acoes/confirmar']) assert.ok(privilegiadas.includes(p), `${p} sem SSO`);
   assert.ok(privilegiadas.length >= 20, `rotas privilegiadas varridas: ${privilegiadas.join(', ')}`);
   assert.ok(privilegiadas.filter(p => !p.includes('/api/contas/')).every(p => p.startsWith('POST ')), 'fora de Contas só POST chega à sessão');
 });
@@ -145,7 +152,7 @@ test('N5: com sessão SSO a escrita de Contas segue para o CadastroUnico; sem el
   const contas = criarManipuladorContas({ cliente: { chamar: async (operacao) => { chamadas.push(operacao); return { status: 200, corpo: { ok: true } }; } } });
   const painel = (autorizarContas) => new RoteadorPainel({ porta: 7777, recusa: criarGuarda(7777), resposta,
     conversa: { atender: async () => {} }, voz: { tentar: async () => false }, orquestracao: { tentar: async () => false },
-    alinhamento: { tentar: async () => false }, chaves: { tentar: async () => false },
+    alinhamento: { tentar: async () => false }, chaves: { tentar: async () => false }, acoes: { tentar: async () => false },
     painel: new RotasPainel({ resposta, coletores: {}, ssh: {}, contas, autorizarContas }) });
   assert.equal((await pedir(painel(async () => ({ usuarioId: '1', sessaoHash: 'a'.repeat(64) })), 'POST', '/api/contas/usuarios/5/reativar')).status, 200);
   assert.deepEqual(chamadas, ['reativarUsuario']);
