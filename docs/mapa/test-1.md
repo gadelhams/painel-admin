@@ -27,6 +27,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `frota-f4a.test.js` — F4a da frota (PAINEL-54): uma tentativa por vez no disco (J51), recibo GATE/v1 endurecido (J54, J55, J74), origem no HANDOFF (J70), `instalarEm` (item 7) e a reserva de carta vista pela vigília e pelo despacho (item 9).
 - `frota-f4b-simulacao.test.js` — F4b da frota (PAINEL-54): simulação ponta a ponta com Plane, CLIs e executor falsos — o zelador marca PRONTA, a vigília do Hangar despacha, o despacho manual simultâneo é recusado, o gate recolocado à mão e o recibo forjado em prosa ficam inelegíveis e a carta reservada por sessão viva é pulada pelo zelador e pela vigília.
 - `frota-f4b.test.js` — F4b da frota (PAINEL-54): gate do zelador (J58, J59, J72), sandbox bwrap (J60), despacho do Hangar inteiro em round-robin com teto global (item 6) e a reserva de carta respeitada pelo zelador (item 9).
+- `frota-preparo.test.js` — PAINEL-62: o preparo do PRONTA — o zelador tira a carta do Backlog e declara "Dependências: nenhuma" antes do gate, só pelo juiz real e só quando nada no texto, nos comentários ou nas relações fala de dependência.
 - `frota.test.js` — Frota (F2, 29/10/2026): catálogo fechado, dois blocos, estado explícito na leitura, troca por duas ações com versão-base e histórico só de acréscimo.
 - `gate-plane.test.js`
 - `guarda.test.js`
@@ -73,14 +74,3 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 ## test/fixtures/canal-legado/
 
 - `leitor-falso.mjs` — Dublê do scripts/estado_canal.py: o roteiro vem do nome do config pedido.
-
-## test/fixtures/executor-cli/
-
-- `claude-falso.mjs` — CLI claude falsa: grava argv, stdin, env e cwd ao lado de si mesma e responde como `claude -p --output-format json`.
-- `codex-falso.mjs` — CLI codex falsa: grava o retrato ao lado de si mesma e escreve a última mensagem em -o.
-- `dormente.mjs` — Dorme 5 s; se sobreviver, deixa um marcador ao lado de si mesmo (o timeout deve impedir).
-- `npm-falso.mjs` — npm falso: só registra os argumentos (npm ci nunca roda de verdade em teste).
-
-## test/fixtures/frota/
-
-- `frota.js` — Frota de teste gravada pelo mesmo caminho da troca real (ArquivoFrota.gravar), nunca escrita à mão.

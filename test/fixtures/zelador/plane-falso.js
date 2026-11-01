@@ -1,15 +1,20 @@
-// Plane falso para o zelador: leitura Guest (`consultar`) e o fetch do escritor (chave, /users/me, comentários com external_id e 409, PATCH com atividade). Nada de rede.
+// Plane falso para o zelador: leitura Guest (`consultar`) e o fetch do escritor (chave, /users/me, comentários com external_id e 409, relações, PATCH com atividade). Nada de rede.
+//
+// Forma do Plane v1 (PAINEL-62, D15, conferida em 01/11/2026): o Backlog é o estado default (grupo
+// backlog), cada estado tem `sequence` (Backlog 15000, Todo 25000) e as relações vêm com as oito listas.
 import { randomUUID } from 'node:crypto';
 import { ZELADOR_ATOR } from '../../../orquestrador/zelador-politica.js';
 
 export const HUMANO = 'cd43e869-ed51-419e-b23b-0b10aea66231';
 
+const TIPOS_RELACAO = ['blocking', 'blocked_by', 'duplicate', 'relates_to', 'start_after', 'start_before', 'finish_after', 'finish_before'];
 const resposta = (status, corpo) => ({ status, ok: status >= 200 && status < 300, json: async () => corpo });
 
 export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zelador-de-teste-123', ator = ZELADOR_ATOR }) {
   const estados = [
-    { id: randomUUID(), name: 'Todo', group: 'unstarted' }, { id: randomUUID(), name: 'In Progress', group: 'started' },
-    { id: randomUUID(), name: 'Done', group: 'completed' }, { id: randomUUID(), name: 'Cancelled', group: 'cancelled' },
+    { id: randomUUID(), name: 'Backlog', group: 'backlog', sequence: 15000, default: true },
+    { id: randomUUID(), name: 'Todo', group: 'unstarted', sequence: 25000, default: false }, { id: randomUUID(), name: 'In Progress', group: 'started', sequence: 35000, default: false },
+    { id: randomUUID(), name: 'Done', group: 'completed', sequence: 45000, default: false }, { id: randomUUID(), name: 'Cancelled', group: 'cancelled', sequence: 55000, default: false },
   ];
   const estado = nome => estados.find(e => e.name === nome);
   const labels = ['ASTARGNE', 'PRODUTO', 'BLOQUEADA', 'TAREFA DONO', 'READY TO DEV', 'READY TO TEST'].map(name => ({ id: randomUUID(), name }));
@@ -31,7 +36,7 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
     const id = randomUUID();
     const c = { id, sequence_id: ++seq, name: nome, state: { ...estado(estadoNome) }, labels: etiquetas.map(n => ({ ...label(n) })),
       description_html: descricao, parent, updated_at: iso(agora() - 5 * 86_400_000), created_at: iso(agora() - 9 * 86_400_000) };
-    cartas.set(id, c); comentarios.set(id, []); atividades.set(id, []); relacoes.set(id, { blocked_by: [], blocking: [] });
+    cartas.set(id, c); comentarios.set(id, []); atividades.set(id, []); relacoes.set(id, Object.fromEntries(TIPOS_RELACAO.map(t => [t, []])));
     return c;
   }
   const identificador = c => `${sigla}-${c.sequence_id}`;
@@ -74,9 +79,10 @@ export function criarPlaneFalso({ projetoId, sigla, agora, chave = 'chave-do-zel
     const pre = `/workspaces/astargne/projects/${projetoId}`;
     if (caminho === `${pre}/states/`) return resposta(200, pagina(structuredClone(estados)));
     if (caminho === `${pre}/labels/`) return resposta(200, pagina(structuredClone(labels)));
-    const m = new RegExp(`^${pre}/work-items/([0-9a-f-]{36})/(comments/(?:([0-9a-f-]{36})/)?)?$`).exec(caminho);
+    const m = new RegExp(`^${pre}/work-items/([0-9a-f-]{36})/(comments/(?:([0-9a-f-]{36})/)?|relations/)?$`).exec(caminho);
     if (!m || !cartas.has(m[1])) return resposta(404, {});
     const carta = cartas.get(m[1]);
+    if (m[2] === 'relations/') return falhas.relacoesFalham.has(carta.id) ? resposta(502, {}) : resposta(200, structuredClone(relacoes.get(carta.id)));
     if (m[2] && metodo === 'POST') {
       const corpo = JSON.parse(opcoes.body);
       const igual = comentarios.get(carta.id).find(c => c.external_source === corpo.external_source && c.external_id === corpo.external_id);

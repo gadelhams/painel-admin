@@ -72,7 +72,7 @@ export class JobZelador {
     this.aoFase('retrato');
     this.r = await this.retrato.montar(this.projeto, this.pasta, this.agora());
     for (const i of this.r.intocaveis) await this.anotar({ tipo: 'INTOCAVEL', carta: i.carta, cartaId: i.cartaId, motivo: i.motivo });
-    const contagem = { MANTER: 0, aplicados: 0, recusados: 0, abortados: 0 };
+    const contagem = { MANTER: 0, aplicados: 0, recusados: 0, abortados: 0, preparadosSemGate: 0 };
     if (this.r.candidatas.length) {
       this.aoFase('cli');
       const falha = await this.consultarCli(contagem);
@@ -115,6 +115,8 @@ export class JobZelador {
       await this.anotar({ tipo: 'VEREDITO', carta: v.identificador, veredito: v.veredito, resultado: r.resultado, ...(r.motivo ? { motivo: r.motivo } : {}) });
       if (r.resultado === 'APLICADO') contagem.aplicados += 1;
       else if (r.resultado === 'MANTER') contagem.recusados += 1;
+      // D12 (PAINEL-62): escreveu o preparo e o gate não saiu — nem MANTER nem abortado.
+      else if (r.resultado === 'PREPARADO_SEM_GATE') contagem.preparadosSemGate += 1;
       else contagem.abortados += 1;
       if (r.resultado === 'DIVERGENTE') break;
     }

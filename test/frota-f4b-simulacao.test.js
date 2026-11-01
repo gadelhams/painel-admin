@@ -1,6 +1,6 @@
 // F4b da frota (PAINEL-54): simulação ponta a ponta com Plane, CLIs e executor falsos — o zelador marca PRONTA, a vigília do Hangar
 // despacha, o despacho manual simultâneo é recusado, o gate recolocado à mão e o recibo forjado em prosa ficam inelegíveis e a carta
-// reservada por sessão viva é pulada pelo zelador e pela vigília.
+// reservada por sessão viva é pulada pelo zelador e pela vigília. PAINEL-62: a carta nascida em Backlog sem declaração sai preparada, com gate, e é despachada.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ZELADOR_ATOR } from '../orquestrador/zelador-politica.js';
@@ -92,5 +92,41 @@ test('simulação F4b: PRONTA do zelador → vigília do Hangar despacha → man
     const [r] = await varrendo;
     assert.equal(r.tentou, true);
     assert.equal(cenario.executados.length, 1, 'uma tentativa por vez: a passada parou na primeira');
+  } finally { cenario.soltar(); await cenario.limpar(); }
+});
+
+test('simulação PAINEL-62: carta nascida em Backlog sem declaração → preparo (Todo + linha) → READY TO DEV do zelador → despacho do Hangar', async () => {
+  const cenario = await montarF4b({
+    comCad: false,
+    responder: (entrada, { plane }) => ({ vereditos: [...plane.cartas.values()].filter(c => c.name.startsWith('Backlog')).map(c => ({
+      carta: `PAINEL-${c.sequence_id}`, veredito: 'PRONTA', comentario: 'Escopo e aceite escritos; nenhuma dependência no retrato.',
+      evidencias: [{ tipo: 'arquivo', caminho: 'docs/current.md', linha: 3 }] })) }),
+  });
+  const { plane } = cenario;
+  try {
+    await cenario.play.alternar(PAINEL.plane, true, '1');
+    const g = plane.novaCarta({ nome: 'Backlog G', estadoNome: 'Backlog', descricao: '<p>Escopo: exportar CSV. Aceite: suíte verde.</p>' });
+    assert.equal((await cenario.servico.fila()).itens.find(x => x.id === g.id).elegivel, false, 'em Backlog e sem declaração a fila não despacha');
+    cenario.avancar(3 * 60 * 60_000);
+
+    const job = await cenario.zelador.rodarUmaVez();
+    assert.equal(job.resultado, 'CONCLUIDO', JSON.stringify(job));
+    const v = (await cenario.lerDiario()).find(l => l.tipo === 'VEREDITO' && l.carta === `PAINEL-${g.sequence_id}`);
+    assert.equal(v.resultado, 'APLICADO', JSON.stringify(v));
+    assert.equal(g.state.group, 'unstarted');
+    assert.equal(g.state.name, 'Todo');
+    assert.match(g.description_html, /<p>Dependências: nenhuma \(declarada pelo zelador do Hangar em 31\/10\/2026\)<\/p>$/);
+    assert.deepEqual(g.labels.map(l => l.name), ['READY TO DEV']);
+
+    const item = (await cenario.servico.fila()).itens.find(x => x.id === g.id);
+    assert.equal(item.elegivel, true, item.motivos.join('; '));
+    assert.equal(item.origemGate, 'zelador');
+    const varrendo = cenario.vigilia.varrer();
+    while (!cenario.executados.length) await new Promise(r => setTimeout(r, 5));
+    assert.equal(cenario.executados[0].carta, `PAINEL-${g.sequence_id}`);
+    assert.equal(cenario.executados[0].origemGate, 'zelador');
+    cenario.soltar();
+    const [r] = await varrendo;
+    assert.equal(r.tentou, true);
   } finally { cenario.soltar(); await cenario.limpar(); }
 });

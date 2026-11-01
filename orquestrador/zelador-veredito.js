@@ -6,10 +6,12 @@
 // texto de LLM com eles poderia forjar recibo. Trecho e texto novo nunca tocam marcador humano
 // (`(DONO`, `(ASTARGNE`, `(BLOQUEADA`, ou ASTARGNE/DONO/BLOQUEADA sem parêntese) nem linha de
 // dependência, e a descrição nova guarda intactas as linhas que os têm (J58, B7). Veredito que
-// cai em qualquer regra vira MANTER, com o motivo, e nada é escrito.
+// cai em qualquer regra vira MANTER, com o motivo, e nada é escrito. O `preparo` do PRONTA
+// (PAINEL-62) está na lista fechada do escritor, mas nenhum JSON da CLI o produz: só o painel o monta.
 import { createHash } from 'node:crypto';
 import { DECISAO_HUMANA_NA_DESCRICAO } from './marcas-carta.js';
 import { textoDeHtml } from '../decisao.js';
+import { linhaDoZelador } from './texto-dependencia.js';
 
 // PRONTA (F4b, J59): o zelador PROPÕE o READY TO DEV; quem confere e marca é zelador-gate.js.
 const VEREDITOS = Object.freeze(['MANTER', 'ATUALIZAR', 'FECHAR', 'CANCELAR', 'IA_DECIDE', 'DONO', 'PRONTA']);
@@ -69,6 +71,7 @@ export function mudancaNaListaFechada(m) {
     return !m.remover.length && TRAVAS_PERMITIDAS.some(p => [...p].sort().join() === [...new Set(m.adicionar)].sort().join() && p.length === m.adicionar.length);
   }
   if (m?.tipo === 'anexar') return chaves === 'texto,tipo' && typeof m.texto === 'string' && !tocaMarcadorHumano(m.texto);
+  if (m?.tipo === 'preparo') return chaves === 'declarar,estado,tipo' && typeof m.estado === 'boolean' && typeof m.declarar === 'boolean' && (m.estado || m.declarar);
   if (m?.tipo === 'trecho') return chaves === 'novoTrecho,tipo,trecho' && typeof m.trecho === 'string' && typeof m.novoTrecho === 'string' && !tocaMarcadorHumano(m.trecho) && !tocaMarcadorHumano(m.novoTrecho);
   return false;
 }
@@ -142,6 +145,7 @@ const DESCRICAO_MUDANCA = {
   gate: m => `marcar ${m.gate}`,
   trecho: () => 'trocar um trecho da descrição',
   anexar: () => 'anexar um parágrafo à descrição',
+  preparo: m => [m.estado && 'estado → o primeiro de "não começada" (sai do Backlog)', m.declarar && 'declarar "Dependências: nenhuma" na descrição'].filter(Boolean).join('; '),
 };
 const descreverMudanca = m => DESCRICAO_MUDANCA[m.tipo](m);
 
@@ -165,9 +169,17 @@ export function htmlRecibo({ chave, resultado, motivo }) {
 const linhasMarcadas = html => textoDeHtml(html, Infinity).split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(tocaMarcadorHumano);
 
 // A descrição nova: o trecho tem de aparecer UMA vez (cru ou escapado); o texto novo entra
-// escapado; nenhuma linha com marcador humano muda, some ou nasce (B7).
-export function novaDescricao(html, mudanca) {
+// escapado; nenhuma linha com marcador humano muda, some ou nasce (B7). No preparo (D3), as
+// linhas marcadas depois são as de antes mais exatamente a linha fixa do zelador.
+export function novaDescricao(html, mudanca, { agoraMs } = {}) {
   const atual = String(html ?? '');
+  if (mudanca.tipo === 'preparo') {
+    if (!mudanca.declarar) throw new Error('preparo sem declaração não muda a descrição');
+    const linha = linhaDoZelador(agoraMs);
+    const preparada = `${atual}<p>${escapar(linha)}</p>`;
+    if (JSON.stringify(linhasMarcadas(preparada)) !== JSON.stringify([...linhasMarcadas(atual), linha])) throw new Error('o preparo tocaria outra linha com marcador humano ou de dependência');
+    return preparada;
+  }
   let nova = null;
   if (mudanca.tipo === 'anexar') nova = `${atual}<p>${escapar(mudanca.texto)}</p>`;
   for (const forma of mudanca.tipo === 'trecho' ? [mudanca.trecho, escapar(mudanca.trecho)] : []) {

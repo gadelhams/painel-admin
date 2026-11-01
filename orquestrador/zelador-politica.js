@@ -1,4 +1,4 @@
-// Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode melhorar em carta alguma nem mudar nas outras (J58). Funções puras: não lê disco nem Plane.
+// Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode melhorar em carta alguma nem mudar nas outras (J58), salvo o preparo do PRONTA (PAINEL-62). Funções puras: não lê disco nem Plane.
 //
 // Taxonomia de atores (J65): zelador = o UUID fixo do PROVISION_RESULT (J56); qualquer outro
 // ator, inclusive as identidades técnicas orquestrador-* e o bot "agentes" do MCP, é
@@ -7,12 +7,18 @@ import { createHash } from 'node:crypto';
 import { avaliarProntidaoGate } from './politica.js';
 import { dependenciasDaCarta } from './fila.js';
 import { CABECALHO_DECISAO, FONTE_DECISAO } from '../decisao.js';
-import { textoDoHtml as textoNormal } from './zelador-veredito.js';
+import { textoDoHtml as textoNormal, tocaMarcadorHumano } from './zelador-veredito.js';
+import { TextoDependencia, linhaDeclaraSem } from './texto-dependencia.js';
 
 export const ZELADOR_ATOR = '830e2631-de81-4871-95b7-ed9cc1774b32';
 const GATES_ZELADOR = Object.freeze(['READY TO DEV', 'READY TO TEST']);
 const JANELA_OUTRO_ATOR_MS = 2 * 60 * 60_000;
 const DIA_MS = 24 * 60 * 60_000;
+// PAINEL-62: os dois únicos motivos do juiz (prontidao-gate.js, dependencias-carta.js) que o
+// preparo do PRONTA pode tirar da própria carta: o Backlog e a declaração ausente.
+export const MOTIVO_ESTADO = 'estado inadequado para desenvolvimento';
+export const MOTIVO_DECLARACAO = 'dependência declaração: ausência de dependências não declarada na carta';
+export const MOTIVOS_DO_PREPARO = Object.freeze([MOTIVO_ESTADO, MOTIVO_DECLARACAO]);
 
 const sha = t => createHash('sha256').update(String(t)).digest('hex');
 const TERMINAIS = Object.freeze(['completed', 'cancelled', 'canceled']);
@@ -101,6 +107,10 @@ export function violaAtoHumano(carta, mudanca, { atividades, estados = [], novaD
       if (!quemPos || !ehZelador(quemPos, ator)) return `${nome} não foi posta pelo zelador; ele não tira`;
     }
   }
+  if (mudanca.tipo === 'preparo') {
+    const recusa = violaAtoHumanoNoPreparo(mudanca, alheias, grupoPorId, grupoPorNome);
+    if (recusa) return recusa;
+  }
   if (mudanca.tipo === 'trecho' || mudanca.tipo === 'anexar') {
     const texto = mudanca.tipo === 'trecho' ? mudanca.novoTrecho : mudanca.texto;
     for (const a of alheias.filter(x => x.field === 'description')) {
@@ -109,6 +119,33 @@ export function violaAtoHumano(carta, mudanca, { atividades, estados = [], novaD
       if (novaDescricao !== null && textoNormal(novaDescricao) === textoNormal(a.old_value)) return 'a descrição voltaria ao texto que outro ator trocou';
       const normal = textoNormal(texto);
       if (normal && textoNormal(a.old_value).includes(normal) && !textoNormal(a.new_value).includes(normal)) return 'o texto novo é o que outro ator tirou da descrição';
+    }
+  }
+  return null;
+}
+
+// As linhas visíveis da descrição que declaram "sem dependências" ou tocam marcador (D9).
+const leitorTexto = new TextoDependencia();
+const linhasDeDeclaracao = html => leitorTexto.visivel(html).split('\n').map(l => l.replace(/\s+/g, ' ').trim())
+  .filter(l => linhaDeclaraSem(l) || tocaMarcadorHumano(l));
+
+// J57 do preparo (D8, D9): o zelador não tira do Backlog a carta que um não-zelador pôs lá vinda
+// de Todo/In Progress, nem declara "nenhuma" onde um não-zelador tirou uma declaração ou um
+// marcador (qualquer data na linha do zelador: a comparação é pela forma, não pelo texto exato).
+function violaAtoHumanoNoPreparo(mudanca, alheias, grupoPorId, grupoPorNome) {
+  if (mudanca.estado) {
+    for (const a of alheias.filter(x => x.field === 'state')) {
+      const de = grupoPorId.get(a.old_identifier) ?? grupoPorNome.get(a.old_value);
+      const para = grupoPorId.get(a.new_identifier) ?? grupoPorNome.get(a.new_value);
+      if (!de || !para) return 'atividade de estado ilegível por outro ator';
+      if (para === 'backlog' && ['unstarted', 'started'].includes(de)) return `outro ator pôs a carta no Backlog vinda de ${a.old_value ?? de}; o zelador não a tira de lá`;
+    }
+  }
+  if (mudanca.declarar) {
+    for (const a of alheias.filter(x => x.field === 'description')) {
+      if (typeof a.old_value !== 'string' || (a.new_value != null && typeof a.new_value !== 'string')) return 'atividade de descrição ilegível por outro ator';
+      const depois = new Set(linhasDeDeclaracao(a.new_value ?? ''));
+      if (linhasDeDeclaracao(a.old_value).some(l => !depois.has(l))) return 'outro ator tirou da descrição uma declaração de dependência ou um marcador; o zelador não declara';
     }
   }
   return null;
@@ -129,14 +166,30 @@ export function prontidaoDoProjeto(cartas, relacoesPorId, porId) {
 /**
  * J58: a escrita não pode mudar resultado nem motivos da prontidão de NENHUMA outra carta; na
  * própria carta, só pode acrescentar motivos (fechar ou travar nunca a torna mais elegível).
+ * Exceção estreita, ligada ao TIPO `preparo` (PAINEL-62, D5), nunca ao motivo: na própria carta só
+ * somem os dois motivos do preparo; numa vizinha só troca o nome do estado em
+ * `dependência <codigoAlvo>: <estado>`, com ela seguindo não-pronta.
  */
-export function violaProntidao(antes, depois, alvoId) {
+export function violaProntidao(antes, depois, alvoId, { tipo = null, codigoAlvo = null } = {}) {
+  const preparo = tipo === 'preparo';
   for (const [cid, a] of antes) {
     const d = depois.get(cid);
     if (!d) return `prontidão de ${cid} sumiu na simulação`;
     if (cid === alvoId) {
-      if ((d.pronta && !a.pronta) || a.motivos.some(m => !d.motivos.includes(m))) return 'a escrita deixaria a própria carta mais perto do READY TO DEV';
-    } else if (a.pronta !== d.pronta || a.motivos.join('§') !== d.motivos.join('§')) return `a escrita mudaria a prontidão de outra carta (${cid.slice(0, 8)})`;
+      const sumiram = a.motivos.filter(m => !d.motivos.includes(m));
+      if (preparo) {
+        if (sumiram.some(m => !MOTIVOS_DO_PREPARO.includes(m))) return 'o preparo tiraria da própria carta um motivo além do estado e da declaração';
+      } else if ((d.pronta && !a.pronta) || sumiram.length) return 'a escrita deixaria a própria carta mais perto do READY TO DEV';
+    } else if (a.pronta !== d.pronta || a.motivos.join('§') !== d.motivos.join('§')) {
+      if (!preparo || !soTrocouOEstadoDaDependencia(a, d, codigoAlvo)) return `a escrita mudaria a prontidão de outra carta (${cid.slice(0, 8)})`;
+    }
   }
   return null;
+}
+
+function soTrocouOEstadoDaDependencia(a, d, codigoAlvo) {
+  if (!codigoAlvo || a.pronta || d.pronta) return false;
+  const prefixo = `dependência ${codigoAlvo}: `;
+  const forma = motivos => motivos.map(m => (m.startsWith(prefixo) ? prefixo : m)).sort().join('§');
+  return a.motivos.some(m => m.startsWith(prefixo)) && forma(a.motivos) === forma(d.motivos);
 }

@@ -358,6 +358,14 @@ regra 16, que saiu da linha curta de `invariants.md` para caber).
 - **Resíduos:** fora das máscaras o disco do usuário segue legível (`/tmp`, outros `.env` fora do
   catálogo); as CLIs têm rede; a CLI do zelador não vai ao bwrap.
 
+## PAINEL-62: preparo do zelador (01/11/2026)
+
+O PRONTA da carta em Backlog sem declaração de dependências ganha um preparo: o painel, depois do
+juiz real e da prontidão simulada, tira a carta do Backlog e/ou escreve a linha
+`Dependências: nenhuma (declarada pelo zelador do Hangar em DD/MM/AAAA)` num PATCH único, e só então
+marca o gate. Desenho, defesas e a tabela janela → teste → mutação em
+[plano-frota-preparo.md](plano-frota-preparo.md) (partido por causa do teto do acervo).
+
 ## Mudanças nas regras (docs na mesma entrega)
 
 - `ProjetosPessoais/ORQUESTRADOR-PROJETOS.md`: hoje só a marcação de gate

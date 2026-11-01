@@ -80,7 +80,15 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   gate só com recibo `GATE/v1` amarrado à etiqueta atual (J55), do mesmo autor que a pôs; o do
   zelador vale só em READY TO DEV, só com a fonte `zelador-gate-v1`, só com a sandbox, play,
   contrato e identidade do projeto, depois de `RegistroGate.validar` ao vivo, nunca em carta
-  cuja trava ele levantou sem o dono reconhecer (J58, J59); carta reservada por sessão viva
+  cuja trava ele levantou sem o dono reconhecer (J58, J59) — tirar um código de carta da descrição
+  conta como trava levantada. Nenhuma escrita do zelador melhora a prontidão de carta alguma nem
+  muda a das outras (J58), **salvo o preparo do PRONTA** (PAINEL-62, 01/11/2026): exceção ligada ao
+  tipo `preparo`, que só o painel monta depois do juiz real, num PATCH único (Backlog → o unstarted
+  de menor `sequence` e/ou a linha `Dependências: nenhuma (declarada pelo zelador do Hangar em
+  DD/MM/AAAA)`); na própria carta só somem "estado inadequado para desenvolvimento" e a declaração
+  ausente, numa vizinha só troca o nome do estado na linha da dependência, e ela segue não-pronta;
+  a anti-lavagem e a J57 dele estão em [plano-frota-preparo.md](../plano-frota-preparo.md). Um ATUALIZAR que anexa "Sem
+  dependências." continua recusado. Carta reservada por sessão viva
   fica fora de despacho, mesa e zelador. Vigília e zelador só agendam com o play (SSO + duas
   ações; com ele desligado, o zelador só fecha o recibo de um PENDENTE aberto) e
   `ORQ_AGENDADOR=true`; o bloco zelador só aceita o provedor `claude`; nunca push nem merge.

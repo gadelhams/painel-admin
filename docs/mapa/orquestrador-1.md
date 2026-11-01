@@ -39,7 +39,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `escritor-gate-zelador.js` — Escritor do gate do zelador: grava o recibo GATE/v1 (fonte `zelador-gate-v1`) e a etiqueta READY TO DEV, com a sessão da chave do zelador. Não confere prontidão nem elegibilidade (zelador-gate.js).
 - `escritor-handoff-plane.js` — Grava o comentário de handoff. O texto HANDOFF/v1 mora em protocolo-handoff.js.
 - `escritor-reserva-plane.js` — Grava o comentário RESERVA/v1 (ou a liberação) na carta, pela identidade técnica do projeto. O texto mora em reserva-servico.js.
-- `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
+- `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava, o preparo do PRONTA), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
 - `estado-carta.js` — Troca o grupo de estado de uma carta. Não escolhe modelo nem registra perfil.
 - `estado-plane.js` — Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e In Progress → Done quando a tentativa de teste é aprovada.
 - `estado.js` — Recupera lease e diário depois de uma queda; uma tentativa por vez no Hangar inteiro (J51). Cada formato mora no módulo ao lado.

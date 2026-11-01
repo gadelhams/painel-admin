@@ -1,4 +1,4 @@
-// Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
+// Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava, o preparo do PRONTA), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
 //
 // Regras (invariants.md §6; J26–J28, J56, J62, J65, J68 do plano e do parecer de 31/10/2026;
 // B6, B13, B15, B19, B20 e B28 da correção):
@@ -18,7 +18,9 @@
 // - comentário só com o prefixo `[ZELADOR/v1 ` e `external_source: zelador-hangar-v1`; 409 do
 //   `external_id` só é "já gravado" se o comentário existente for do zelador, desta origem e com
 //   o mesmo `external_id` (campos estruturados: o Plane sanitiza o HTML, B20);
-// - a verificação relê e compara só os campos escritos (J65); a descrição, como texto.
+// - a verificação relê e compara só os campos escritos (J65); a descrição, como texto;
+// - o preparo do PRONTA (PAINEL-62) é UM PATCH com o estado (o unstarted de menor `sequence`,
+//   resolvido aqui) e/ou a descrição; sob a trava ele relê também as relações, no mesmo teto.
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -27,6 +29,7 @@ import { UUID } from './uuid.js';
 import { ZELADOR_ATOR, atorDe, nomesDe } from './zelador-politica.js';
 import { RESULTADOS_RECIBO, mesmoTexto, mudancaNaListaFechada } from './zelador-veredito.js';
 import { criarMarcadorGateZelador } from './escritor-gate-zelador.js';
+import { estadoAlvoDoPreparo } from './zelador-preparo.js';
 
 export const ORIGEM_ZELADOR = 'zelador-hangar-v1';
 const ARQUIVO_CHAVE_ZELADOR = path.join(os.homedir(), '.config', 'plane', 'zelador.token');
@@ -137,13 +140,28 @@ export function criarEscritorZelador({ escopoPermitido, escopoRecibo = null, arq
 
   // O alvo da mudança, lido FORA da trava: estado pelo grupo, etiquetas pelo nome único.
   async function alvoDa(pedir, projetoId, mudanca, descricaoNova) {
+    const idDoEstado = v => (typeof v.state === 'string' ? v.state : v.state?.id);
+    if (mudanca.tipo === 'preparo') {
+      let estado = null;
+      if (mudanca.estado) {
+        const estados = exigir(await pedir(`/workspaces/astargne/projects/${projetoId}/states/?per_page=100`), 'os estados');
+        if (!Array.isArray(estados.results) || estados.next_page_results) throw erroDe('catálogo de estados incompleto', { abortar: true });
+        const r = estadoAlvoDoPreparo(estados.results);
+        if (r.erro || !UUID.test(r.estado.id ?? '')) throw erroDe(r.erro ?? 'estado alvo do preparo ilegível', { abortar: true });
+        estado = r.estado;
+      }
+      if (mudanca.declarar && typeof descricaoNova !== 'string') throw new Error('descrição nova ausente');
+      return { relacoes: true,
+        corpo: () => ({ ...(estado ? { state: estado.id } : {}), ...(mudanca.declarar ? { description_html: descricaoNova } : {}) }),
+        esperado: v => (!estado || idDoEstado(v) === estado.id) && (!mudanca.declarar || mesmoTexto(v.description_html, descricaoNova)) };
+    }
     if (mudanca.tipo === 'estado') {
       const estados = exigir(await pedir(`/workspaces/astargne/projects/${projetoId}/states/?per_page=100`), 'os estados');
       const grupos = mudanca.grupo === 'completed' ? ['completed'] : ['cancelled', 'canceled'];
       const candidatos = (estados.results ?? []).filter(e => grupos.includes(e.group) && UUID.test(e.id ?? ''));
       const alvo = candidatos.find(e => PREFERIDOS[mudanca.grupo].includes(e.name)) ?? candidatos[0];
       if (!alvo) throw new Error(`projeto sem estado ${mudanca.grupo}`);
-      return { corpo: () => ({ state: alvo.id }), esperado: v => (typeof v.state === 'string' ? v.state : v.state?.id) === alvo.id };
+      return { corpo: () => ({ state: alvo.id }), esperado: v => idDoEstado(v) === alvo.id };
     }
     if (mudanca.tipo === 'labels') {
       const catalogo = exigir(await pedir(`/workspaces/astargne/projects/${projetoId}/labels/?per_page=100`), 'as etiquetas');
@@ -160,8 +178,8 @@ export function criarEscritorZelador({ escopoPermitido, escopoRecibo = null, arq
 
   /**
    * Aplica UMA mudança da lista fechada. `sobTrava(acao)` é a trava de quem chama (J64, com o
-   * fencing); dentro dela, `conferirAntes(cartaLida, comentarios)` roda depois da releitura e
-   * antes do PATCH (digital, J63). Fora do escopo lança com `escopo: true`.
+   * fencing); dentro dela, `conferirAntes(cartaLida, comentarios, relacoes)` roda depois da releitura e
+   * antes do PATCH (digital, J63; relações só no preparo). Fora do escopo lança com `escopo: true`.
    */
   async function mudar({ projetoId, cartaId, mudanca, descricaoNova = null, conferirAntes = async () => {}, sobTrava = acao => acao() }) {
     if (!mudancaNaListaFechada(mudanca)) throw new Error('mudança fora da lista fechada');
@@ -175,11 +193,13 @@ export function criarEscritorZelador({ escopoPermitido, escopoRecibo = null, arq
       const pagina = exigir(await pedir(`${base}/${cartaId}/comments/?per_page=100`, { timeoutMs: resta() }), 'os comentários');
       const comentarios = Array.isArray(pagina) ? pagina : pagina.results;
       if (!Array.isArray(comentarios) || pagina.next_page_results) throw erroDe('comentários demais para conferir sob a trava', { abortar: true });
-      await conferirAntes(carta, comentarios);
+      // Relação ilegível chega como null: quem confere (o preparo) aborta com o motivo.
+      const relacoes = alvo.relacoes ? await pedir(`${base}/${cartaId}/relations/`, { timeoutMs: resta() }).then(r => (r.ok ? r.corpo : null)) : undefined;
+      await conferirAntes(carta, comentarios, relacoes);
       exigir(await pedir(`${base}/${cartaId}/`, { method: 'PATCH', body: JSON.stringify(alvo.corpo(carta)), timeoutMs: resta() }), 'a mudança');
     });
     const verificada = exigir(await pedir(`${base}/${cartaId}/?expand=state,labels`), 'a releitura de verificação');
-    return { conferiu: verificada.id === cartaId && alvo.esperado(verificada), versaoCarta: verificada.updated_at ?? null };
+    return { conferiu: verificada.id === cartaId && alvo.esperado(verificada), versaoCarta: verificada.updated_at ?? null, carta: verificada };
   }
 
   // F4b: o gate do zelador, com a mesma sessão (chave, distinção, `/users/me`) e o mesmo teto sob a trava.

@@ -40,7 +40,8 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `zelador-git.js` — Git só-leitura do zelador: o retrato do repositório e a conferência das evidências (commit no ramo principal, arquivo rastreado). Sem shell, sem trava do git.
 - `zelador-job.js` — Um job do zelador num projeto: reconcilia o PENDENTE dele, monta o retrato, roda a CLI fora da trava, valida e aplica veredito por veredito, e fecha com o "nada fazível". O lease e a vez moram no agendador.
 - `zelador-lease.js` — Leases do zelador em disco: um global (um job por vez no Hangar) e um por projeto, com jobId e prazo. Toda operação sob a trava global; não chama CLI nem Plane.
-- `zelador-politica.js` — Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode melhorar em carta alguma nem mudar nas outras (J58). Funções puras: não lê disco nem Plane.
+- `zelador-politica.js` — Regras do zelador sobre uma carta: o que ele não toca, a digital, o "não desfazer ato humano" (J57) e a prontidão que nenhuma escrita pode melhorar em carta alguma nem mudar nas outras (J58), salvo o preparo do PRONTA (PAINEL-62). Funções puras: não lê disco nem Plane.
+- `zelador-preparo.js` — O preparo do PRONTA (PAINEL-62): as regras puras que decidem se o painel pode tirar a carta do Backlog e/ou declarar "Dependências: nenhuma" antes do gate. Não lê Plane nem escreve.
 - `zelador-retrato.js` — Retrato só-leitura de um projeto para o zelador: cartas, comentários, atividades e relações pela chave Guest (sem cache, pelo caminho do projeto) e o git. Não escreve nada.
 - `zelador-veredito.js` — Do JSON da CLI do zelador à mudança estruturada: forma fechada, evidências conferidas pelo painel, prosa filtrada e o HTML montado aqui. Não escreve no Plane.
 - `zelador.js` — Composição do zelador do Hangar: diário, leases, git, retrato, CLI, escritor e agendador ligados num objeto. Não implementa regra nenhuma.

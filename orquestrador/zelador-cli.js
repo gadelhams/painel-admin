@@ -71,6 +71,7 @@ export function promptZelador(retratoTexto) {
     'FECHAR (o trabalho está no ramo principal: exige evidência commit); CANCELAR (perdeu o sentido ou é duplicata);',
     'IA_DECIDE (decisão já registrada resolve; tira ASTARGNE); DONO (só produto, conta externa, dinheiro, credencial, risco aceito ou o que contradiz decisão do dono: põe ASTARGNE, mais PRODUTO se é rumo; prova humana é TAREFA DONO);',
     'PRONTA (carta folha com escopo e critério de aceite escritos, dependências resolvidas e sem trava: é só PROPOSTA; o painel confere tudo ao vivo e, se passar, marca READY TO DEV).',
+    'PRONTA de carta em Backlog: o painel tira do Backlog e escreve "Dependências: nenhuma" só se o juiz não apontar mais nada; proponha só com evidência da conferência de dependências (conferenciaDeDependencias do retrato: nenhuma relação de dependência e nenhum código citado em aberto). Na dúvida, MANTER.',
     'Nunca proponha READY TO TEST, módulo, pai, apagar carta ou tirar PRODUTO. Não toque marcador (DONO/(ASTARGNE nem linha "Depende de:".',
     'Escreva texto puro em português, sem HTML, sem segredo, sem marcadores de protocolo (GATE/, HANDOFF/, ZELADOR/, DECISAO/, [ORQ/).',
     'Responda SÓ com um objeto JSON, sem texto em volta:',
