@@ -99,6 +99,18 @@ pelo nome: a CLI do zelador não vai ao bwrap). O READY TO DEV do zelador grava 
 worktrees de tentativas ficam para revisão humana — `git -C <projeto> worktree
 remove <caminho>` e `git branch -D orq/...` quando não interessarem mais.
 
+## Voltar a uma versão estável (rollback, provado em 01/11/2026)
+
+Tags `painel-estavel-AAAAMMDD` marcam um `main` com o portão inteiro verde (a primeira,
+`painel-estavel-20261101`, é o selo do PAINEL-42). Para voltar: `git switch --detach <tag>`,
+`npm ci` e `systemctl --user restart painel-admin`; para retomar, `git switch main`, `npm ci` e
+`restart`. O estado em `~/.local/state/painel-admin/` não migra nos dois sentidos: o commit
+`d3cc972` (anterior à frota) subiu sobre o estado de hoje e o `main` subiu sobre o dele. O que a
+versão velha não conhece (play, zelador, reservas, mesa) fica parado em disco até a volta.
+Ensaio sem tocar no serviço: `git worktree add /tmp/<nome> <tag>`, `npm ci` lá e subir com
+`HOME` falso e `PORTA` livre (ex.: 17901). Sem a chave do Plane, `/api/orquestracao` dá 500 nas
+duas versões, e isso não indica falha do rollback.
+
 Mesa de decisão (PAINEL-53, 31/10/2026): diário de acréscimo em
 `~/.local/state/painel-admin/c3po/decisoes.jsonl` — `DECISAO_PENDENTE`,
 `COMENTARIO_GRAVADO`, `DECISAO_CONCLUIDA` ou `DECISAO_ABANDONADA` por chave. Uma

@@ -98,6 +98,9 @@ const mesa = (page) => page.locator('#mesa');
 const conversas = (audit) => audit.chamadas.filter((c) => c.caminho === '/api/conversa').map((c) => c.corpo.mensagem);
 
 test('do Hangar: a peça abre a gaveta, o C-3PO abre a conversa, o rascunho vem com efeitos desmarcados e gravar só escreve depois de confirmar', async ({ page }) => {
+  // A cena 3D do Hangar (WebGL em software, sem GPU) deixa cada passo em 0,2–0,9 s: sozinho o
+  // teste leva ~18 s e, com os 3 workers da suíte, passou dos 30 s padrão (01/11/2026).
+  test.slow();
   const audit = await fixtures(page);
   await page.goto('/');
   await page.locator('#hg-projetos [data-proj="alfa"]').click();
