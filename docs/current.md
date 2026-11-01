@@ -13,7 +13,7 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
   13 projetos no Plane, 15 no catálogo.
 - **Hangar** (28/10) é a entrada: naves = projetos, droids = sessões
   Claude/Codex vivas (carta por MCP, ponte REST, `SIGLA-N` ou URL), C-3PO no popup, Steam por nave —
-  [arquitetura.md](arquitetura.md) § Hangar.
+  [arquitetura/hangar.md](arquitetura/hangar.md).
 - Abas: Projetos · Backlog · Decisões · Orquestração · Contas · Chaves · Docs.
   Decisões abre com o bloco "Astargne". Chaves: só nomes, troca por SSO. Orquestração: fila, gates e handoff com
   identidade técnica do catálogo por SSO + duas ações —

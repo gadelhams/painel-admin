@@ -1,0 +1,86 @@
+# painel-admin — mapa: test (1 de 2) (gerado)
+
+Parte do [mapa de módulos](../mapa.md); gerado, não edite.
+
+## test/
+
+- `acoes.test.js` — Fase 3 do C-3PO (PAINEL-2, -3, -4): leituras novas do motor e ações com portão. Nada de ssh real, LLM, Plane ou CLI paga: o ssh é um executor falso; os comandos são `node scripts/*.mjs` num projeto temporário.
+- `alinhamento.test.js` — Rotina de alinhamento com Plane, git e portão de docs FALSOS. Nada toca a rede nem repositórios reais.
+- `briefings.test.js` — Piloto PAINEL-34 (31/10/2026): o briefing dizia que os únicos comandos eram os do contrato e "não rode comando".
+- `caminhos.test.js`
+- `chaves.test.js` — Tela Chaves: só nomes saem; valor só entra pela confirmação; escrita local atômica 0600; servidor por ssh falso com valor no stdin; portão SSO.
+- `consulta-c3po.test.js`
+- `contas.test.js` — Testes do módulo contas.js (aba Contas). Nunca chamam ssh: o executor é injetado (I5) e captura args + stdin, devolvendo saída pré-gravada no formato que o script remoto produz (corpo JSON, "\n", status HTTP).
+- `correcoes-auditoria.test.js` — Correções da auditoria de 23-24/10/2026: cada teste pina um mecanismo que a auditoria mostrou furado (mutação nomeada no título do caso).
+- `correcoes-memoria.test.js` — Correções da varredura pré-aceite da memória L1 e da reflexão (validador de invariantes, 31/10/2026): diário só com a sessão do dono, queda entre o histórico e o rename, edição de fora avisada, travas, pendente, histórico com linha ruim, neutralização das marcas, filtro de segredo e a reflexão (20 h, marca antes, teto acumulado, insumo pelo fim).
+- `correcoes-mesa.test.js` — Correções da varredura pré-aceite da mesa de decisão (validador de invariantes, 31/10/2026): substituição com "$" na descrição, marcador por nó de texto, lista fechada relida na escrita e na retomada, CKBL fora, digital, janela das atividades, retomada recalculada, abandonar pendência, rótulo pela fase, chave por operação, redirect e o filtro de segredo com o ambiente real.
+- `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css. Não confere cascata nem visual.
+- `decisao.test.js` — Mesa de decisão (PAINEL-53): protocolo DECISAO/v1, lista fechada de efeitos, escritor Painel Admin e a ordem de escrita do confirmar e da retomada.
+- `decisoes-c3po.test.js`
+- `despacho-controlado.test.js`
+- `diario-resumo.test.js`
+- `encomendas.test.js` — Encomenda de nave como pedido registrado (PAINEL-50): validação, colisão de sigla, SSO + duas ações pelo painel MONTADO (HTTP real, porta efêmera) e o diário só de acréscimo.
+- `executor-cli.test.js` — Executor real com CLIs falsas: flags exatas, ambiente limpo, isolamento por worktree, timeout que mata o processo, e os três desfechos.
+- `fluxo-sse.test.js`
+- `fronteira-http.test.js` — Fronteira HTTP do painel MONTADO (PAINEL-17): o handler de produção de montagem.js atrás de um http.Server de verdade numa porta efêmera, atacado por requisição real.
+- `fronteiras-modulos.test.js` — Portão das fronteiras entre áreas (padroes/modulos.md, regra 14; PAINEL-55): lê os `import` de todo módulo fora de test/ e e2e/ e recusa os que pulam a porta de outra área.
+- `frota-f4a.test.js` — F4a da frota (PAINEL-54): uma tentativa por vez no disco (J51), recibo GATE/v1 endurecido (J54, J55, J74), origem no HANDOFF (J70), `instalarEm` (item 7) e a reserva de carta vista pela vigília e pelo despacho (item 9).
+- `frota-f4b-simulacao.test.js` — F4b da frota (PAINEL-54): simulação ponta a ponta com Plane, CLIs e executor falsos — o zelador marca PRONTA, a vigília do Hangar despacha, o despacho manual simultâneo é recusado, o gate recolocado à mão e o recibo forjado em prosa ficam inelegíveis e a carta reservada por sessão viva é pulada pelo zelador e pela vigília.
+- `frota-f4b.test.js` — F4b da frota (PAINEL-54): gate do zelador (J58, J59, J72), sandbox bwrap (J60), despacho do Hangar inteiro em round-robin com teto global (item 6) e a reserva de carta respeitada pelo zelador (item 9).
+- `frota.test.js` — Frota (F2, 29/10/2026): catálogo fechado, dois blocos, estado explícito na leitura, troca por duas ações com versão-base e histórico só de acréscimo.
+- `gate-plane.test.js`
+- `guarda.test.js`
+- `handoff-plane.test.js`
+- `hangar.test.js` — Hangar: sessões vivas (/proc e transcripts falsos em pasta temporária) e naves sobre backlog falso. Nada real é lido.
+- `identidades-escrita.test.js` — J56 (F4a): identidades de escrita pelo catálogo — ator fixo, chave em arquivo 600 lida por operação, conferência de arranque (/users/me, papel Member, chaves e atores distintos) e desligamento só da identidade divergente.
+- `identidades-projeto.test.js`
+- `leitura-pesada.test.js` — Leituras pesadas do C-3PO: uma de cada vez, a mesma em curso é compartilhada, vale 2 min e falha não fica guardada.
+- `liberacao-nativa.test.js` — Liberação do jogo nativo (PAINEL-59): prazo que vence sozinho, só projetos com jogo nativo no catálogo, arquivo estranho conta como desligado e a troca só por duas ações.
+- `mapa-modulos.test.js` — Autoteste do portão do mapa (padroes/testes.md, regra 4): a ferramenta tem de morder. Cada caso monta uma árvore temporária e confere o que reprova e o que só avisa, pela função e pela CLI.
+- `memoria.test.js` — Memória L1 do C-3PO (PAINEL-8): teto, histórico e desfazer, base mudou → recusa, injeção como dado, propor_memoria que não grava, rotas com SSO e o diário de conversas.
+- `motor-ambiente.test.js` — Prova que o processo do modelo do C-3PO não recebe segredo do .env nem config do disco (PAINEL-52).
+- `orquestrador-core-v2.test.js`
+- `orquestrador-sso.test.js`
+- `orquestrador-ui.test.js`
+- `orquestrador-v2.test.js`
+- `painel-falso.js` — Monta o painel REAL (montagem.js) com falsos em toda porta externa e um diretório de estado temporário; não sobe processo nem toca ssh, Plane, LLM, voz ou CLI de verdade.
+- `plane-mesa-falso.js` — Plane falso, em memória, só com as rotas que a mesa de decisão usa (Plane v1.4.2 lido no container em 31/10/2026): carta pelo identificador e pelo projeto, comentários (409 por external_id no PROJETO), labels, estados, atividades, users/me e o PATCH que apaga e recria as labels. Nunca abre rede.
+- `plane.test.js`
+- `politica-fala.test.js`
+- `protocolo-ui.test.js`
+- `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
+- `reflexao.test.js` — Reflexão noturna (PAINEL-9) com CLI falsa: aplica com histórico; apagar demais vira pendente; segredo recusa; frota não ok recusa sem chamar a CLI; a segunda execução da mesma data não faz nada; sem insumo sai sem CLI.
+- `reservas.test.js` — Item 9 da F4 (dono, 31/10/2026: "como evitar double work?"): reserva de carta por sessão — o lease local, a rota sem SSO (loopback + processo conferido no /proc), o comentário RESERVA/v1, a mesa e o droid do Hangar.
+- `rotas-privilegiadas.test.js` — Varre as rotas do próprio app (regra 6 do padrão geral) pelo painel MONTADO de produção (montagem.js, PAINEL-17): guarda, famílias, autorizador SSO e APIs de duas ações de verdade; só as portas externas (ssh, Plane, SSO, LLM, voz, CLI, coletores) são espiões.
+- `sessao-painel.test.js` — Selo de sessão do cabeçalho (31/10/2026): diz de quem é a sessão SSO sem autorizar nada.
+- `sessao-voz.test.js`
+- `sonda-sso.test.js`
+- `triagem-dev.test.js`
+- `vigilia.test.js` — Vigília com Plane, escritores e executor falsos: freios, avanço de gate/estado e, desde a F3, o play por nave no lugar do toggle (J11–J14, J66).
+- `voz-eleven.test.js`
+- `voz-xai.test.js`
+- `zelador-correcao-job.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B1–B26): cada teste fecha um achado no job do zelador, pelas portas reais, com Plane, CLI, sessões e relógio falsos.
+- `zelador-correcao-pecas.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B6–B28): peças do zelador uma a uma — escritor, trava, sessões, diário, agendador, CLI e o play pela HTTP. Sem rede, sem CLI real.
+- `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.
+- `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.
+- `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.
+
+## test/fixtures/
+
+- `frota-f4b.js` — Cenário da F4b montado pelas portas reais: dois projetos do catálogo (PAINEL e CAD) num Plane falso, fila, despacho, vigília, play, zelador (com o escritor de verdade) e reservas; CLIs, executor, sandbox e sessões falsos. Nada de rede nem de CLI paga.
+- `recibo-gate.js` — Recibo GATE/v1 e atividade de etiqueta no formato que o Plane real devolve (F4a: J54, J55, J74), para os Planes falsos dos testes.
+
+## test/fixtures/canal-legado/
+
+- `leitor-falso.mjs` — Dublê do scripts/estado_canal.py: o roteiro vem do nome do config pedido.
+
+## test/fixtures/executor-cli/
+
+- `claude-falso.mjs` — CLI claude falsa: grava argv, stdin, env e cwd ao lado de si mesma e responde como `claude -p --output-format json`.
+- `codex-falso.mjs` — CLI codex falsa: grava o retrato ao lado de si mesma e escreve a última mensagem em -o.
+- `dormente.mjs` — Dorme 5 s; se sobreviver, deixa um marcador ao lado de si mesmo (o timeout deve impedir).
+- `npm-falso.mjs` — npm falso: só registra os argumentos (npm ci nunca roda de verdade em teste).
+
+## test/fixtures/frota/
+
+- `frota.js` — Frota de teste gravada pelo mesmo caminho da troca real (ArquivoFrota.gravar), nunca escrita à mão.

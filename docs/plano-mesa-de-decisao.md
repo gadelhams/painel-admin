@@ -1,7 +1,7 @@
 # Mesa de decisão — discutir com o C-3PO e destravar a carta (painel-admin)
 
 Plano de 28/10/2026, **construído em 31/10/2026** (veja "Feito e escolhas" no fim; o mecanismo
-vivo está em [arquitetura.md](arquitetura.md) § decisao/). Decidido pelo dono: grava **comentário +
+vivo está em [arquitetura/decisao.md](arquitetura/decisao.md)). Decidido pelo dono: grava **comentário +
 destravar** (lista fechada) e mora no **Hangar e na aba Decisões** (um componente só).
 Só carta que espera decisão do dono (`ASTARGNE`/`PRODUTO`) entra na mesa; bloqueio
 por outra carta não é decisão (dono, 28/10/2026). Destravar = tirar `ASTARGNE` e
@@ -135,7 +135,7 @@ ficou diferente do texto acima, e por quê:
   de chamadas sob a trava.
 - **Resíduo novo**: o POST de comentário do Plane aceita `created_by` no corpo, então o ator de
   um comentário é forjável por quem comenta no projeto; o recibo no Plane é sinal, o diário é a
-  prova (`arquitetura.md` § decisao/).
+  prova (`arquitetura/decisao.md`).
 - **Fora desta fatia**: a linha do Painel Admin no `../../PADROES-BACKLOG.md` (diz "só
   administração") mora fora deste repositório — fica para o orquestrador.
 
