@@ -4,6 +4,12 @@
 // zelador escreve; "Dependências: nenhuma (exceto CAD-31)" continua sem declarar.
 const DECLAROU_SEM = /(?:^|\n)[ \t]*(?:[-*•][ \t]*)?(?:sem depend[eê]ncias|depend[eê]ncias[ \t]*:[ \t]*nenhuma(?:[ \t]\(declarada pelo zelador do Hangar em \d{2}\/\d{2}\/\d{4}\))?)[ \t]*[.!?;:]?[ \t]*$/im;
 
+// PAINEL-62 (J2, J8 da correção): fonte única do vocabulário de dependência em prosa, lido pela
+// anti-lavagem do preparo e pela segunda passada do gate. Contém os termos de ESTADO_BLOQUEADO.
+// É conservador: "resultado esperado" cai em "espera" e recusa; "depois do almoço" não cai.
+export const ESTADO_BLOQUEADO = /bloquead|blocked|em espera|aguardando/i;
+export const VOCABULARIO_DEPENDENCIA = /depend|bloque|blocked|requer|requires|pr[eé]-?requisit|depois de|ap[oó]s|\bafter\b|aguard|waiting|espera|antes de|necessita|pendente de|precisa d/i;
+
 // A linha de texto (já visível) declara a ausência de dependências.
 export const linhaDeclaraSem = linha => DECLAROU_SEM.test(String(linha ?? ''));
 

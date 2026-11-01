@@ -22,7 +22,7 @@ import { digitalDaCarta, ehZelador, motivoIntocavel, nomesDe, prontidaoDoProjeto
 import { RESULTADOS_RECIBO, chaveDaMudanca, htmlIntencao, htmlRecibo, mesmoTexto, mudancaNaListaFechada, novaDescricao } from './zelador-veredito.js';
 import { ORIGEM_ZELADOR } from './escritor-zelador-plane.js';
 import { listar } from './zelador-retrato.js';
-import { COMENTARIO_PREPARO, assinaturaRelacoes, estadoAlvoDoPreparo, motivoContraDeclarar } from './zelador-preparo.js';
+import { COMENTARIO_PREPARO, assinaturaRelacoes, estadoAlvoDoPreparo, motivoContraOPreparo } from './zelador-preparo.js';
 
 const DIA_MS = 24 * 60 * 60_000;
 const TERMINAIS = ['completed', 'cancelled', 'canceled'];
@@ -51,8 +51,14 @@ function aplicarNaCopia(carta, mudanca, { descricaoNova, estados }) {
   return copia;
 }
 
-function jaAplicada(carta, mudanca, descricaoNova) {
-  if (mudanca.tipo === 'preparo') return (!mudanca.estado || carta.state?.group === 'unstarted') && (!mudanca.declarar || mesmoTexto(carta.description_html, descricaoNova));
+// J9 da correção: o estado do preparo só conta como feito no id do alvo resolvido, nunca em qualquer unstarted.
+const idDoAlvo = estados => estadoAlvoDoPreparo(estados).estado?.id ?? null;
+
+function jaAplicada(carta, mudanca, descricaoNova, estados = []) {
+  if (mudanca.tipo === 'preparo') {
+    const alvo = mudanca.estado ? idDoAlvo(estados) : null;
+    return (!mudanca.estado || (alvo !== null && (carta.state?.id ?? carta.state) === alvo)) && (!mudanca.declarar || mesmoTexto(carta.description_html, descricaoNova));
+  }
   if (mudanca.tipo === 'estado') return GRUPOS[mudanca.grupo].includes(carta.state?.group);
   if (mudanca.tipo === 'labels') { const n = nomesDe(carta); return mudanca.adicionar.every(x => n.includes(x)) && mudanca.remover.every(x => !n.includes(x)); }
   return mesmoTexto(carta.description_html, descricaoNova);
@@ -62,7 +68,7 @@ function jaAplicada(carta, mudanca, descricaoNova) {
 function zeladorAplicou(atividades, mudanca, { estados, descricaoNova, desde }) {
   const grupo = a => estados.find(e => e.id === a.new_identifier)?.group ?? estados.find(e => e.name === a.new_value)?.group;
   return atividades.some(a => ehZelador(a) && Date.parse(a.created_at) >= desde && (
-    mudanca.tipo === 'preparo' ? (mudanca.estado && a.field === 'state' && grupo(a) === 'unstarted') || (mudanca.declarar && a.field === 'description' && mesmoTexto(a.new_value, descricaoNova))
+    mudanca.tipo === 'preparo' ? (mudanca.estado && a.field === 'state' && idDoAlvo(estados) !== null && a.new_identifier === idDoAlvo(estados)) || (mudanca.declarar && a.field === 'description' && mesmoTexto(a.new_value, descricaoNova))
       : mudanca.tipo === 'estado' ? a.field === 'state' && GRUPOS[mudanca.grupo].includes(grupo(a))
       : mudanca.tipo === 'labels' ? a.field === 'labels' && (mudanca.adicionar.includes(a.new_value) || (mudanca.remover.includes(a.old_value) && !a.new_value))
         : a.field === 'description' && mesmoTexto(a.new_value, descricaoNova)));
@@ -102,8 +108,9 @@ export class AplicacaoZelador {
     // D6 do PAINEL-62 (janelas 13 e 14): as relações na forma do Plane, guardadas para a releitura sob a trava.
     const relacoes = preparo ? assinaturaRelacoes(d.relacoes) : null;
     if (preparo && relacoes === null) throw abortar('relações do Plane ilegíveis ou fora da forma; o preparo não sai');
-    if (preparo && mudanca.declarar) {
-      const contra = motivoContraDeclarar({ carta, codigo: identificadorDe(carta), comentarios: d.comentarios, relacoes: d.relacoes });
+    // J1 da correção: a validação das dependências acompanha toda saída do Backlog, não só a declaração.
+    if (preparo) {
+      const contra = motivoContraOPreparo({ carta, codigo: identificadorDe(carta), comentarios: d.comentarios, relacoes: d.relacoes });
       if (contra) throw abortar(contra);
     }
     // J58: o universo é toda carta aberta do projeto mais as que esperam por esta, de qualquer
@@ -205,7 +212,7 @@ export class AplicacaoZelador {
     if (resultado === 'DIVERGENTE') await this.suspenderPorDivergencia(p);
     const fechado = await this.fechar(p, resultado, motivo, { soDiario: intocavel });
     // D10: o gate depois do preparo usa a digital desta releitura de verificação.
-    return resultado === 'APLICADO' && cartaVerificada ? { ...fechado, cartaVerificada } : fechado;
+    return resultado === 'APLICADO' && cartaVerificada ? { ...fechado, chave: p.chave, cartaVerificada } : fechado;
   }
 
   // B14: apagada ou arquivada. Fora da listagem mas legível e ativa não é "sumiu": lança.
@@ -241,7 +248,7 @@ export class AplicacaoZelador {
       await this.j.comTrava(() => this.j.play.suspenderSobTrava(p.projetoId, `divergência na verificação de ${p.carta}`));
       return this.fechar(p, 'DIVERGENTE', 'a releitura não conferiu; play do projeto suspenso', { reconciliado: 'divergência marcada no índice' });
     }
-    if (jaAplicada(carta, p.mudanca, p.descricaoNova)) return this.fechar(p, 'APLICADO', null, { reconciliado: 'mudança já estava feita' });
+    if (jaAplicada(carta, p.mudanca, p.descricaoNova, this.j.estados)) return this.fechar(p, 'APLICADO', null, { reconciliado: 'mudança já estava feita' });
     const atividades = await listar(this.j.consultar, `/projects/${p.projetoId}/work-items/${p.cartaId}/activities/`);
     if (zeladorAplicou(atividades, p.mudanca, { estados: this.j.estados, descricaoNova: p.descricaoNova, desde: Date.parse(intencao.created_at) })) {
       return this.fechar(p, 'DESFEITO', null, { reconciliado: 'aplicada e desfeita por outro ator' });

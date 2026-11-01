@@ -68,12 +68,13 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
   `preavaliar`; se o juiz só aponta "estado inadequado para desenvolvimento" (carta no grupo backlog)
   e/ou a declaração de dependências ausente, e há identidade de gate e nenhum gate, o PRONTA vira
   `{ tipo: 'preparo', estado, declarar }` e passa pela sequência da limpeza (`zelador-aplicacao.js`:
-  J57 de estado e de declaração, anti-lavagem por código de carta, vocabulário e forma das relações,
+  J57 de estado e de declaração, anti-lavagem em todo preparo por código de carta, vocabulário e forma das relações,
   prontidão simulada que tem de dar pronta, J58 com a exceção do tipo, PENDENTE → intenção com texto
   fixo → um PATCH com estado e descrição → verificação → recibo). O escritor resolve o estado (unstarted
   de menor `sequence`) e relê as relações sob a trava, no mesmo teto; relação nova aborta. O gate então
-  sai com a digital da releitura (D1); se não sai, o diário registra `PREPARADO_SEM_GATE` (contado à
-  parte) e a carta recebe um comentário `[ZELADOR/v1]` com o motivo. A reconciliação nunca rola o
+  sai com a digital da releitura (D1); se não sai (recusa, abort ou erro comum, que segue depois), o
+  diário registra `PREPARADO_SEM_GATE` (contado à parte) e a carta recebe um comentário `[ZELADOR/v1]`
+  com o motivo, salvo posse alheia (lease, reserva, play). A reconciliação nunca rola o
   preparo para a frente, e em todo tipo recusa o PENDENTE cuja descrição difere da recalculada ao
   vivo. O retrato leva à CLI, para a candidata em Backlog, as relações e os códigos citados com o estado.
 - **Despacho do Hangar inteiro** (item 6, `vigilia-varredura.js`): com `ORQ_AGENDADOR=true` e a frota ok,

@@ -107,6 +107,10 @@ Tags `painel-estavel-AAAAMMDD` marcam um `main` com o portão inteiro verde (a p
 `restart`. O estado em `~/.local/state/painel-admin/` não migra nos dois sentidos: o commit
 `d3cc972` (anterior à frota) subiu sobre o estado de hoje e o `main` subiu sobre o dele. O que a
 versão velha não conhece (play, zelador, reservas, mesa) fica parado em disco até a volta.
+**Não volte com PENDENTE de preparo aberto** (PAINEL-62): uma versão anterior ao preparo lê o
+PENDENTE `mudanca.tipo: preparo` de `zelador/pendentes.jsonl` como `FORA_DA_LISTA` "nada escrito",
+e o rótulo mente — a intenção e talvez o PATCH já estão na carta. Antes do rollback, confira que
+nenhum PENDENTE de preparo está sem RESOLVIDO no índice (ou deixe um job da versão atual fechá-lo).
 Ensaio sem tocar no serviço: `git worktree add /tmp/<nome> <tag>`, `npm ci` lá e subir com
 `HOME` falso e `PORTA` livre (ex.: 17901). Sem a chave do Plane, `/api/orquestracao` dá 500 nas
 duas versões, e isso não indica falha do rollback.

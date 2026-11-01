@@ -2,6 +2,10 @@
 
 Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 
+## test/fixtures/canal-legado/
+
+- `leitor-falso.mjs` — Dublê do scripts/estado_canal.py: o roteiro vem do nome do config pedido.
+
 ## test/fixtures/executor-cli/
 
 - `claude-falso.mjs` — CLI claude falsa: grava argv, stdin, env e cwd ao lado de si mesma e responde como `claude -p --output-format json`.

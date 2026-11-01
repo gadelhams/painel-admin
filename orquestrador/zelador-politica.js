@@ -129,23 +129,24 @@ const leitorTexto = new TextoDependencia();
 const linhasDeDeclaracao = html => leitorTexto.visivel(html).split('\n').map(l => l.replace(/\s+/g, ' ').trim())
   .filter(l => linhaDeclaraSem(l) || tocaMarcadorHumano(l));
 
-// J57 do preparo (D8, D9): o zelador não tira do Backlog a carta que um não-zelador pôs lá vinda
-// de Todo/In Progress, nem declara "nenhuma" onde um não-zelador tirou uma declaração ou um
+// J57 do preparo (D8, D9; J11 da correção): o zelador não tira do Backlog a carta que um
+// não-zelador pôs lá, venha de onde vier, nem declara "nenhuma" onde um não-zelador tirou uma declaração ou um
 // marcador (qualquer data na linha do zelador: a comparação é pela forma, não pelo texto exato).
 function violaAtoHumanoNoPreparo(mudanca, alheias, grupoPorId, grupoPorNome) {
   if (mudanca.estado) {
     for (const a of alheias.filter(x => x.field === 'state')) {
-      const de = grupoPorId.get(a.old_identifier) ?? grupoPorNome.get(a.old_value);
       const para = grupoPorId.get(a.new_identifier) ?? grupoPorNome.get(a.new_value);
-      if (!de || !para) return 'atividade de estado ilegível por outro ator';
-      if (para === 'backlog' && ['unstarted', 'started'].includes(de)) return `outro ator pôs a carta no Backlog vinda de ${a.old_value ?? de}; o zelador não a tira de lá`;
+      if (!para) return 'atividade de estado ilegível por outro ator';
+      if (para === 'backlog') return `outro ator pôs a carta no Backlog vinda de ${a.old_value ?? '?'}; o zelador não a tira de lá`;
     }
   }
   if (mudanca.declarar) {
     for (const a of alheias.filter(x => x.field === 'description')) {
-      if (typeof a.old_value !== 'string' || (a.new_value != null && typeof a.new_value !== 'string')) return 'atividade de descrição ilegível por outro ator';
+      // Descrição vazia chega como null: é legível (nada havia); outro tipo é ilegível.
+      const antes = a.old_value ?? '';
+      if (typeof antes !== 'string' || (a.new_value != null && typeof a.new_value !== 'string')) return 'atividade de descrição ilegível por outro ator';
       const depois = new Set(linhasDeDeclaracao(a.new_value ?? ''));
-      if (linhasDeDeclaracao(a.old_value).some(l => !depois.has(l))) return 'outro ator tirou da descrição uma declaração de dependência ou um marcador; o zelador não declara';
+      if (linhasDeDeclaracao(antes).some(l => !depois.has(l))) return 'outro ator tirou da descrição uma declaração de dependência ou um marcador; o zelador não declara';
     }
   }
   return null;

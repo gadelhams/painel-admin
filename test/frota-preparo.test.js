@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { montarF4b, PAINEL, HUMANO } from './fixtures/frota-f4b.js';
+import { PAINEL, HUMANO } from './fixtures/frota-f4b.js';
 import { montarCenario } from './fixtures/zelador/cenario.js';
 import { ZELADOR_ATOR, digitalDaCarta, violaProntidao, MOTIVO_ESTADO, MOTIVO_DECLARACAO } from '../orquestrador/zelador-politica.js';
 import { estadoAlvoDoPreparo } from '../orquestrador/zelador-preparo.js';
@@ -15,29 +15,7 @@ import { linhaDoZelador } from '../orquestrador/texto-dependencia.js';
 import { dependenciasDaCarta } from '../orquestrador/dependencias-carta.js';
 import { uuidV5 } from '../orquestrador/uuid.js';
 
-const H = 3 * 60 * 60_000;
-const MIN = 60_000;
-const ESCOPO = '<p>Escopo: exportar CSV. Aceite: suíte verde.</p>';
-// 31/10/2026 15:00 UTC (montarF4b + 3 h) é 31/10 em São Paulo.
-const LINHA = 'Dependências: nenhuma (declarada pelo zelador do Hangar em 31/10/2026)';
-const EVIDENCIA = [{ tipo: 'arquivo', caminho: 'docs/current.md', linha: 3 }];
-const pronta = carta => ({ carta: `PAINEL-${carta.sequence_id}`, veredito: 'PRONTA', comentario: 'Escopo e aceite escritos; dependências conferidas no retrato.', evidencias: EVIDENCIA });
-const patches = plane => plane.escritas.filter(e => e.startsWith('patch:'));
-const vereditoDe = async (c, carta) => (await c.lerDiario()).filter(l => l.tipo === 'VEREDITO' && l.carta === `PAINEL-${carta.sequence_id}`).at(-1);
-
-// Uma carta em Backlog (a forma da CAD-32) e um job do zelador que a propõe PRONTA; `preparar` mexe no Plane antes.
-async function jobBacklog({ descricao = ESCOPO, estadoNome = 'Backlog', preparar = () => {}, responder = null } = {}) {
-  let alvo;
-  const c = await montarF4b({ comCad: false, responder: (entrada, ctx) => (responder ? responder(alvo, ctx) : { vereditos: [pronta(alvo)] }) });
-  await c.play.alternar(PAINEL.plane, true, '1');
-  // Estado que o Plane falso não traz (ex.: "Em espera"): nasce no grupo backlog, entre Backlog e Todo.
-  if (!c.plane.estado(estadoNome)) c.plane.estados.push({ id: randomUUID(), name: estadoNome, group: 'backlog', sequence: 16000, default: false });
-  alvo = c.plane.novaCarta({ nome: 'Pronta', estadoNome, descricao });
-  await preparar(c, alvo);
-  c.avancar(H);
-  const job = await c.zelador.rodarUmaVez();
-  return { c, alvo, job, v: await vereditoDe(c, alvo) };
-}
+import { ESCOPO, LINHA, EVIDENCIA, COMENTARIO_CLI, MIN, pronta, patches, vereditoDe, jobBacklog } from './fixtures/frota-preparo.js';
 
 // ---------- D1, D2, D10, D13: a forma da CAD-32 ----------
 
@@ -56,6 +34,10 @@ test('PAINEL-62 CAD-32: Backlog sem relação nem declaração → um PATCH (Tod
     const recibo = comentarios.find(x => x.external_source === 'zelador-gate-v1');
     assert.equal(recibo.external_id, uuidV5(`${r.alvo.id}|READY TO DEV|${d1}`));
     assert.equal(recibo.actor, ZELADOR_ATOR);
+    // D1/J4 da correção: a intenção do preparo é texto do painel; a prosa da CLI não entra nela.
+    const intencao = comentarios.find(x => /^<p>\[ZELADOR\/v1 veredito=PRONTA /.test(x.comment_html));
+    assert.match(intencao.comment_html, /Preparo do painel para o READY TO DEV/);
+    assert.ok(!intencao.comment_html.includes(COMENTARIO_CLI), 'o texto da CLI não aparece na intenção do preparo');
     // D14: a CLI recebeu a conferência de dependências da candidata em Backlog.
     const candidata = JSON.parse(r.c.pedidos[0].split('--- RETRATO ---\n')[1]).candidatas[0];
     assert.deepEqual(candidata.conferenciaDeDependencias, { relacoes: {}, codigosCitados: [] });
@@ -131,12 +113,12 @@ test('PAINEL-62 D6, janela 13: relação criada entre a simulação e o PATCH ab
 
 // ---------- D7: lavagem em duas passadas ----------
 
-test('PAINEL-62 D7: ATUALIZAR do zelador tira "Precisa do CAD-31" → o PRONTA seguinte é MANTER até o DECISAO/v1', async () => {
+test('PAINEL-62 D7: ATUALIZAR do zelador tira "Ver também o CAD-31" (só o código, sem vocabulário) → o PRONTA seguinte é MANTER até o DECISAO/v1', async () => {
   let passada = 0;
-  const r = await jobBacklog({ descricao: `${ESCOPO}<p>Precisa do CAD-31 antes.</p>`, responder: alvo => {
+  const r = await jobBacklog({ descricao: `${ESCOPO}<p>Ver também o CAD-31.</p>`, responder: alvo => {
     passada += 1;
     return { vereditos: [passada === 1
-      ? { carta: `PAINEL-${alvo.sequence_id}`, veredito: 'ATUALIZAR', trecho: 'Precisa do CAD-31 antes.', novoTrecho: 'Escopo revisto pelo zelador.',
+      ? { carta: `PAINEL-${alvo.sequence_id}`, veredito: 'ATUALIZAR', trecho: 'Ver também o CAD-31.', novoTrecho: 'Escopo revisto pelo zelador.',
         comentario: 'A nota sobre outra carta ficou velha; o estado do projeto confirma.', evidencias: EVIDENCIA }
       : pronta(alvo)] };
   } });
@@ -148,7 +130,7 @@ test('PAINEL-62 D7: ATUALIZAR do zelador tira "Precisa do CAD-31" → o PRONTA s
     const v = await vereditoDe(r.c, r.alvo);
     assert.equal(v.veredito, 'PRONTA');
     assert.equal(v.resultado, 'MANTER', JSON.stringify(v));
-    assert.match(v.motivo, /código de carta tirado da descrição pelo zelador/);
+    assert.match(v.motivo, /código de carta ou dependência em prosa tirados da descrição pelo zelador/);
     assert.equal(r.alvo.state.name, 'Backlog');
     assert.equal(patches(r.c.plane).length, 1, 'só o PATCH do ATUALIZAR');
   } finally { await r.c.limpar(); }
@@ -248,6 +230,9 @@ test('PAINEL-62 D12: humano mexe entre o preparo e o gate → PREPARADO_SEM_GATE
     const aviso = r.c.plane.comentarios.get(r.alvo.id).find(x => x.actor === ZELADOR_ATOR && /PREPARADO_SEM_GATE/.test(x.comment_html));
     assert.ok(aviso, 'comentário do zelador explicando');
     assert.match(aviso.comment_html, /^<p>\[ZELADOR\/v1 /);
+    // J10 da correção: a chave do aviso é a da intenção do preparo, não a digital D1.
+    const intencao = r.c.plane.comentarios.get(r.alvo.id).find(x => /^<p>\[ZELADOR\/v1 veredito=PRONTA /.test(x.comment_html));
+    assert.equal(aviso.external_id, `${intencao.external_id}:sem-gate`);
     const fim = (await r.c.lerDiario()).find(l => l.tipo === 'JOB_FIM');
     assert.equal(fim.contagem.preparadosSemGate, 1);
     assert.equal(fim.contagem.recusados, 0);

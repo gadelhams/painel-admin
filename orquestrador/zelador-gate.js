@@ -23,8 +23,9 @@ import { atorDe, digitalDaCarta, ehDecisaoDaMesa, motivoIntocavel, nomesDe, ZELA
 import { tocaMarcadorHumano } from './zelador-veredito.js';
 import { listar } from './zelador-retrato.js';
 import { uuidV5 } from './uuid.js';
-import { codigosEm, htmlPreparadoSemGate, planoDoPreparo } from './zelador-preparo.js';
+import { codigosEm, htmlPreparadoSemGate, planoDoPreparo, textoRemovido } from './zelador-preparo.js';
 import { textoDoHtml } from './zelador-veredito.js';
+import { VOCABULARIO_DEPENDENCIA } from './texto-dependencia.js';
 
 const GATE = 'READY TO DEV';
 const DIA_MS = 24 * 60 * 60_000;
@@ -66,18 +67,28 @@ function travaNosAncestrais(carta, porId) {
 }
 
 // As travas que o zelador levantou nesta carta, pelas atividades: { quando, motivo }[]. D7
-// (PAINEL-62): tirar da descrição um código de carta também é levantar trava (a lavagem em duas
-// passadas: ATUALIZAR tira "Precisa do CAD-31", o PRONTA seguinte declararia "nenhuma"); a
-// atividade de descrição ilegível nunca é reconhecida (quando NaN).
+// (PAINEL-62; J2 da correção): tirar da descrição um código de carta, ou uma linha com o
+// vocabulário de dependência (o mesmo da anti-lavagem), também é levantar trava — a lavagem em
+// duas passadas: ATUALIZAR tira "Precisa do CAD-31" ou "Requer o deploy antes", o PRONTA seguinte
+// declararia "nenhuma". Descrição vazia (null) é legível. J5: a atividade ilegível vale do
+// `created_at` dela; sem instante legível, da atividade legível mais recente da carta, e o motivo
+// diz depois de quando o DECISAO/v1 do dono a reconhece.
 function levantamentosDoZelador(atividades, ator = ZELADOR_ATOR) {
   const saida = [];
+  const instantes = atividades.map(a => Date.parse(a.created_at)).filter(Number.isFinite);
+  const maisRecente = instantes.length ? Math.max(...instantes) : NaN;
   for (const a of atividades.filter(x => atorDe(x) === ator)) {
     const quando = Date.parse(a.created_at);
+    const antes = a.old_value ?? '';
+    const depois = a.new_value ?? '';
     if (a.field === 'labels' && TRAVAS.includes(a.old_value) && a.new_value !== a.old_value) saida.push({ quando, motivo: `${a.old_value} tirada pelo zelador` });
-    else if (a.field === 'description' && typeof a.old_value !== 'string') saida.push({ quando: NaN, motivo: 'atividade de descrição do zelador ilegível' });
-    else if (a.field === 'description' && tocaMarcadorHumano(a.old_value) && !tocaMarcadorHumano(a.new_value)) saida.push({ quando, motivo: 'marcador ou dependência tirados da descrição pelo zelador' });
-    else if (a.field === 'description' && codigosEm(textoDoHtml(a.old_value)).some(x => !codigosEm(textoDoHtml(a.new_value)).includes(x))) {
-      saida.push({ quando, motivo: 'código de carta tirado da descrição pelo zelador' });
+    else if (a.field === 'description' && (typeof antes !== 'string' || typeof depois !== 'string')) {
+      const q = Number.isFinite(quando) ? quando : maisRecente;
+      saida.push({ quando: q, motivo: `atividade de descrição do zelador ilegível; o dono reconhece com DECISAO/v1 posterior a ${Number.isFinite(q) ? new Date(q).toISOString() : 'uma atividade legível (nenhuma na carta)'}` });
+    } else if (a.field === 'description' && tocaMarcadorHumano(antes) && !tocaMarcadorHumano(depois)) saida.push({ quando, motivo: 'marcador ou dependência tirados da descrição pelo zelador' });
+    else if (a.field === 'description' && (codigosEm(textoDoHtml(antes)).some(x => !codigosEm(textoDoHtml(depois)).includes(x))
+      || VOCABULARIO_DEPENDENCIA.test(textoRemovido(antes, depois)))) {
+      saida.push({ quando, motivo: 'código de carta ou dependência em prosa tirados da descrição pelo zelador' });
     } else if (CAMPOS_DE_RELACAO.test(a.field ?? '') && a.old_value && !a.new_value) saida.push({ quando, motivo: 'relação tirada pelo zelador' });
   }
   return saida;
@@ -186,28 +197,38 @@ export class GateZelador {
   }
 
   // O preparo pela sequência da limpeza e o gate com a digital da releitura (D10); gate que não
-  // sai depois do preparo aplicado vira PREPARADO_SEM_GATE (D12), nunca um MANTER genérico.
+  // sai depois do preparo aplicado vira PREPARADO_SEM_GATE (D12), nunca um MANTER genérico. J3 da
+  // correção: um erro comum no gate também deixa o diário e a carta dizendo que o preparo saiu, e
+  // só então segue. J10: a chave do comentário é a da intenção do preparo, nunca a D1 (que pode faltar).
   async prepararEMarcar(v, carta, mudanca) {
     const j = this.j;
     const preparado = await j.aplicacao.aplicar({ ...v, mudanca });
     if (preparado.resultado === 'MANTER') return { resultado: 'MANTER', motivo: `preparo recusado: ${preparado.motivo}` };
     if (preparado.resultado !== 'APLICADO') return { resultado: preparado.resultado, motivo: `preparo: ${preparado.motivo}` };
-    const comentarios = await listar(j.consultar, `/projects/${j.projeto.plane}/work-items/${carta.id}/comments/`).catch(() => null);
-    const d1 = comentarios && preparado.cartaVerificada ? digitalDaCarta(preparado.cartaVerificada, comentarios) : null;
+    const semGate = async gate => {
+      let motivo = `preparo aplicado, mas o READY TO DEV não saiu: ${gate.motivo}`;
+      if (!gate.posse) {
+        await j.aplicacao.comentarSobFencing(carta.id, htmlPreparadoSemGate(gate.motivo), `${preparado.chave}:sem-gate`)
+          .catch(e => { motivo += `; comentário não gravado: ${e.message}`; });
+      }
+      return { resultado: 'PREPARADO_SEM_GATE', motivo };
+    };
     let gate;
     try {
+      const comentarios = await listar(j.consultar, `/projects/${j.projeto.plane}/work-items/${carta.id}/comments/`).catch(() => null);
+      const d1 = comentarios && preparado.cartaVerificada ? digitalDaCarta(preparado.cartaVerificada, comentarios) : null;
       const conferida = d1 === null ? { manter: 'releitura do preparo ou comentários ilegíveis; sem a digital D1 o gate não sai' } : await this.conferirCarta(v, carta.id, d1, 'o preparo');
       gate = conferida.manter ? { resultado: 'MANTER', motivo: conferida.manter, posse: conferida.posse } : await this.marcar(v, carta.id, d1);
     } catch (erro) {
-      if (!erro.abortar && !erro.escopo) throw erro;
+      if (!erro.abortar && !erro.escopo) {
+        const r = await semGate({ motivo: `erro no gate: ${erro.message}`, posse: false });
+        await j.anotar({ tipo: 'VEREDITO', carta: v.identificador, veredito: v.veredito, resultado: r.resultado, motivo: r.motivo });
+        throw erro;
+      }
       gate = { resultado: 'ABORTADO', motivo: erro.escopo ? 'play desligado no meio da sequência' : erro.message, posse: Boolean(erro.intocavel || erro.escopo) };
     }
-    if (gate.resultado === 'APLICADO' || gate.resultado === 'DIVERGENTE') return gate;
-    let motivo = `preparo aplicado, mas o READY TO DEV não saiu: ${gate.motivo}`;
-    if (!gate.posse) {
-      await j.aplicacao.comentarSobFencing(carta.id, htmlPreparadoSemGate(gate.motivo), uuidV5(`${carta.id}|PREPARADO_SEM_GATE|${d1}`))
-        .catch(e => { motivo += `; comentário não gravado: ${e.message}`; });
-    }
-    return { resultado: 'PREPARADO_SEM_GATE', motivo };
+    if (gate.resultado === 'APLICADO') return gate;
+    if (gate.resultado === 'DIVERGENTE') return { ...gate, motivo: `preparo aplicado; ${gate.motivo}` };
+    return semGate(gate);
   }
 }

@@ -18,35 +18,56 @@ e "dependência declaração: ausência de dependências não declarada na carta
 - só o painel o monta, depois do juiz real (`preavaliar`: identidade de gate, nenhum gate, pendências
   contidas nos dois motivos) e da prontidão simulada na cópia (tem de dar pronta); nenhum JSON da CLI
   o produz e a prosa da CLI não entra nele;
-- anti-lavagem: para declarar, nenhum código de carta (de qualquer sigla, salvo o da própria) na
-  descrição nem nos comentários de não-zelador, nenhum vocabulário de dependência na descrição, as
-  três listas de dependência presentes nas relações e nenhum tipo além de `blocking`/`*_before`;
-  as relações são relidas sob a trava; tirar código de carta da descrição conta como trava levantada
-  pelo zelador (J58), até o `DECISAO/v1`;
-- J57: não tira do Backlog a carta que um não-zelador pôs lá vinda de Todo/In Progress; não declara
-  onde um não-zelador tirou uma declaração ou um marcador (qualquer data);
+- anti-lavagem, em **todo** preparo (também o que só tira do Backlog, J1 da correção): nenhum código
+  de carta (de qualquer sigla, salvo o da própria) na descrição nem nos comentários de não-zelador,
+  nenhum vocabulário de dependência na descrição (as linhas que já declaram "sem dependências" ficam
+  fora da varredura), as três listas de dependência presentes nas relações e nenhum tipo além de
+  `blocking`/`*_before`; as relações são relidas sob a trava. O vocabulário tem fonte única
+  (`texto-dependencia.js`, com os termos do estado bloqueado) e é conservador: "resultado esperado"
+  cai em "espera" e recusa; "depois do almoço" não cai;
+- tirar da descrição um código de carta ou uma linha com esse vocabulário conta como trava levantada
+  pelo zelador (J58, segunda passada), até o `DECISAO/v1`. Atividade de descrição do zelador ilegível
+  vale do `created_at` dela; sem instante legível, da atividade legível mais recente da carta, e o
+  motivo diz depois de quando o `DECISAO/v1` a reconhece. Descrição vazia (null) é legível;
+- J57: não tira do Backlog a carta que um não-zelador pôs lá, venha de onde vier; não declara onde um
+  não-zelador tirou uma declaração ou um marcador (qualquer data);
 - J58: exceção ligada ao tipo — na própria carta só somem os dois motivos; numa vizinha só troca o nome
   do estado em `dependência <carta>: <estado>`, e ela segue não-pronta;
-- o gate sai com a digital da releitura de verificação do preparo (D1); preparo feito e gate recusado
-  vira `PREPARADO_SEM_GATE` no diário, contado à parte, com comentário `[ZELADOR/v1]` na carta (salvo
-  lease ou reserva de outro: só o diário, como na B4);
-- a reconciliação nunca rola o preparo para a frente (fecha APLICADO, DESFEITO ou ABORTADO), e em
-  todo tipo recusa o PENDENTE cuja descrição difere da recalculada ao vivo;
+- o gate sai com a digital da releitura de verificação do preparo (D1); preparo feito e gate recusado,
+  abortado ou com erro comum vira `PREPARADO_SEM_GATE` no diário, contado à parte, com comentário
+  `[ZELADOR/v1]` na carta, de chave `<chave da intenção>:sem-gate` (salvo lease, reserva ou play de
+  outro: só o diário, como na B4); o erro comum segue depois disso; gate DIVERGENTE continua
+  DIVERGENTE, com o motivo dizendo que o preparo foi aplicado;
+- a reconciliação nunca rola o preparo para a frente (fecha APLICADO — só no id do estado alvo —,
+  DESFEITO ou ABORTADO), e em todo tipo recusa o PENDENTE cuja descrição difere da recalculada ao vivo;
 - o retrato da CLI leva, para a candidata em Backlog, as relações e os códigos citados com o estado.
 
-**Janelas fechadas, cada uma com teste e mutação nomeada por cópia de arquivo** (`test/frota-preparo.test.js`;
-a simulação em `test/frota-f4b-simulacao.test.js`):
+**Janelas fechadas, cada uma com teste e mutação nomeada por cópia de arquivo** (`test/frota-preparo.test.js`,
+a correção em `test/frota-preparo-correcao.test.js`, a simulação em `test/frota-f4b-simulacao.test.js`):
 
 | Janela | Teste | Mutação que o deixa vermelho |
 |---|---|---|
-| forma da CAD-32 (D1, D10) | Backlog sem relação → 1 PATCH (Todo + linha), recibo, READY TO DEV com chave UUIDv5(carta, gate, D1) | regex sem o sufixo do zelador; PATCH em duas partes; gate comparando com a digital do retrato |
+| forma da CAD-32 (D1, D10) | Backlog sem relação → 1 PATCH (Todo + linha), recibo, READY TO DEV com chave UUIDv5(carta, gate, D1); intenção sem a prosa da CLI | regex sem o sufixo do zelador; PATCH em duas partes; gate comparando com a digital do retrato; `v.comentario` na intenção |
 | D2 | a linha fixa declara; "nenhuma (exceto CAD-31)" não; data de São Paulo | parêntese genérico na regex |
 | D13 (15) | alvo = unstarted de menor `sequence`; sem `sequence` ou empate recusa | alvo sem excluir bloqueado/em espera |
 | 5 | "Depende de CAD-31", "Dependência: CAD-31", "Bloqueada por", "Requer LOR-45", comentário humano com código, `relates_to` → MANTER, nada escrito | varredura de código e vocabulário removida |
 | 14 | relações `{}` → declarar recusado | chave ausente tratada como lista vazia |
 | 13 | relação criada sob a trava, antes do PATCH → ABORTADO, sem PATCH | relações não comparadas no `conferirAntes` |
-| 6 | ATUALIZAR do zelador tira "Precisa do CAD-31" → PRONTA seguinte MANTER | levantamento ignora código tirado |
+| 6 | ATUALIZAR do zelador tira "Ver também o CAD-31" → PRONTA seguinte MANTER | levantamento ignora código tirado |
 | 7 | humano Todo → Backlog → MANTER | J57 do estado só olhando terminal |
+| J1 | só estado: "Depende de CAD-31", comentário com código, `relates_to`, "Bloqueada pela migração" → MANTER | anti-lavagem só quando declara |
+| J2 | ATUALIZAR tira "Bloqueada pela migração…" ou "Requer o deploy…" → PRONTA seguinte MANTER | segunda passada sem o vocabulário |
+| J8 | termos novos e os do estado bloqueado casam; "depois do almoço" passa | vocabulário antigo |
+| J3 | `marcarGate` lança erro comum → `PREPARADO_SEM_GATE` no diário e na carta, job ERRO | erro relançado sem diário nem carta |
+| J4 | rascunho surgido depois do juiz → MANTER (a cópia tem de sair pronta) | sem a exigência de pronta |
+| J4 | carta em triage não vai para Todo | estado sai de qualquer grupo |
+| J4, J11 | humano In Progress → Backlog e Done → Backlog → MANTER | J57 só vinda de unstarted; só de unstarted/started |
+| J4 | reserva de outra sessão entre o preparo e o gate → só o diário | comentário mesmo com posse alheia |
+| J5 | descrição do zelador ilegível: MANTER com o instante; `DECISAO/v1` posterior destrava; sem instante, vale a atividade legível mais recente | `quando` NaN |
+| J5 | carta sem descrição (null) prepara e recebe o gate | null tratado como ilegível |
+| J9 | queda antes do PATCH e humano põe a carta noutro unstarted → ABORTADO | `jaAplicada` por grupo |
+| J10 | chave do aviso = chave da intenção + `:sem-gate` | chave pela D1 (repete quando a D1 falta) |
+| desvio 4 | DIVERGENTE depois do preparo diz "preparo aplicado" | DIVERGENTE devolvido como veio |
 | 8 | humano tirou a linha (de 30/10) → MANTER | comparação pelo texto exato com a data de hoje |
 | 4 | A bloqueia B: preparo de A passa com B só trocando o estado; outra mudança em B recusa | comparador de string inteira; vizinha ignorada |
 | escopo | ATUALIZAR anexar "Sem dependências." segue recusado | exceção ligada ao motivo, não ao tipo |
@@ -64,10 +85,23 @@ a simulação em `test/frota-f4b-simulacao.test.js`):
 - a relação da janela 13 nasce no gancho `aoPedir` do Plane falso, na leitura dos comentários sob a
   trava: o `antesDoPatch` dispara dentro do próprio PATCH, depois de qualquer conferência possível;
 - gate DIVERGENTE depois do preparo continua DIVERGENTE (suspende o play), não `PREPARADO_SEM_GATE`;
+- J5: o destrave da atividade ilegível sem `created_at` é o `DECISAO/v1` posterior à atividade legível
+  mais recente da carta (sem nenhuma legível, a recusa fica);
 - o comentário de intenção do preparo usa um texto fixo do painel, não o comentário da CLI.
 
 **Fora desta fatia (irmãs registradas, não corrigidas):** janela 18 — o gate repõe READY TO DEV que
 um humano tirou; janela 19 — `<p>Sem dependências.</p><p>Depende de CAD-31</p>` passa no juiz hoje.
+
+**Resíduos declarados:**
+- TOCTOU entre o `GET /relations/` sob a trava e o PATCH (milissegundos): uma relação criada nesse
+  intervalo, fora do painel, não é vista;
+- rollback para uma versão anterior com PENDENTE de preparo aberto: ela o lê como `FORA_DA_LISTA`
+  "nada escrito", e o rótulo mente; a regra é não voltar assim ([operacao.md](operacao.md) § rollback);
+- no real, em 01/11, a chave do zelador leu `/relations/` igual à Guest nas 35 cartas do CAD, e
+  nenhuma tinha relação: a forma de lista não vazia não foi medida; se ela divergir entre as duas
+  leituras, o preparo aborta a cada rodada (abort em loop, sem escrita);
+- um nbsp (`&#160;` ou outro que a normalização não troque) entre "nenhuma" e "(" na linha
+  fixa faz o juiz não ver a declaração (o preparo então não sai, pela prontidão simulada).
 
 **Não verificado no real:** nenhum preparo rodou contra o Plane de verdade. A J57 da declaração (D9) e a
 lavagem em duas passadas (D7) leem `old_value`/`new_value` das atividades de descrição; se o Plane

@@ -80,8 +80,8 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   gate só com recibo `GATE/v1` amarrado à etiqueta atual (J55), do mesmo autor que a pôs; o do
   zelador vale só em READY TO DEV, só com a fonte `zelador-gate-v1`, só com a sandbox, play,
   contrato e identidade do projeto, depois de `RegistroGate.validar` ao vivo, nunca em carta
-  cuja trava ele levantou sem o dono reconhecer (J58, J59) — tirar um código de carta da descrição
-  conta como trava levantada. Nenhuma escrita do zelador melhora a prontidão de carta alguma nem
+  cuja trava ele levantou sem o dono reconhecer (J58, J59) — tirar da descrição um código de carta
+  ou uma linha com vocabulário de dependência conta como trava levantada. Nenhuma escrita do zelador melhora a prontidão de carta alguma nem
   muda a das outras (J58), **salvo o preparo do PRONTA** (PAINEL-62, 01/11/2026): exceção ligada ao
   tipo `preparo`, que só o painel monta depois do juiz real, num PATCH único (Backlog → o unstarted
   de menor `sequence` e/ou a linha `Dependências: nenhuma (declarada pelo zelador do Hangar em
