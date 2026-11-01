@@ -444,7 +444,7 @@ inalterada. Carta PAINEL-44 absorve a substância do C-0014 do SupervisorHandoff
 Decisão do dono (28–29/10): "a orquestração não é pra ser por card". Os modelos
 de cada papel vêm de **uma** frota do painel, trocada na sub-aba Frota por SSO
 e duas ações (`/api/orquestracao/frota/{preparar,confirmar}`). O mecanismo está
-em [arquitetura.md](arquitetura.md) § orquestrador/ (Frota) e o que ficou de
+em [arquitetura/orquestrador.md](arquitetura/orquestrador.md) (Frota) e o que ficou de
 fora, em [plano-frota-do-hangar.md](plano-frota-do-hangar.md) § "F2 feita".
 - O contrato continua sendo o interruptor do projeto e de cada provedor
   (`agentes[].disponivel`). Modelo e esforço de `agentes`, e o

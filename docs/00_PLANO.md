@@ -70,7 +70,7 @@ da raiz (`padroes/fluxo.md`).
 3. **Sem login, então porta fechada.** Escuta em `127.0.0.1` (porta **7777**
    desde a fusão; nasceu na 7778), sem autenticação. Desde 06/10/2026 a borda
    do tailnet publica `painel.vpn.astargne.com` só para o Windows do dono
-   (`docs/arquitetura.md`, invariante 1).
+   (`docs/arquitetura/invariantes.md`, invariante 1).
 4. **Mínimo de dependências.** Backend: só `@anthropic-ai/claude-agent-sdk`
    (versão fixada). Frontend: zero deps — voz pela Web Speech API nativa
    (`SpeechRecognition` para ouvir, `speechSynthesis` para falar).
@@ -270,7 +270,7 @@ de leitura de (b), `git_projeto` (`status --short`, `diff --stat`, `log --onelin
 passa pelo portão: o C-3PO só propõe (`propor_acao`, comandos do contrato
 `.orquestrador.json`), o chat mostra um cartão, e o dono prepara e confirma com
 SSO + duas ações; uma ação por vez, saída filtrada, diário JSONL de todas as
-etapas. Mecanismo em `arquitetura.md` § motor.js. (c) continua fora.
+etapas. Mecanismo em `arquitetura/motor.md`. (c) continua fora.
 
 ## O que este projeto NÃO faz
 
@@ -293,7 +293,7 @@ Ideia a ideia, contra os princípios de nascimento:
 
 | Ideia do post | Veredito | Porquê |
 |---|---|---|
-| Memória L1 **legível e editável** (`MEMORIES.md`) | **FEITA** (31/10/2026, PAINEL-8) | Auditável e corrigível na mão: o dono edita pela tela (SSO + duas ações) ou no arquivo, com histórico e desfazer; o C-3PO lê em toda conversa como dado e só propõe mudança. Mecanismo em `docs/arquitetura.md` § motor.js. |
+| Memória L1 **legível e editável** (`MEMORIES.md`) | **FEITA** (31/10/2026, PAINEL-8) | Auditável e corrigível na mão: o dono edita pela tela (SSO + duas ações) ou no arquivo, com histórico e desfazer; o C-3PO lê em toda conversa como dado e só propõe mudança. Mecanismo em `docs/arquitetura/motor.md`. |
 | Memória vetorial (sqlite-vec) + ranking por importância/recência | **RECUSADA por ora** | Nosso corpus (docs modeladores) é pequeno e estruturado — leitura direta basta. Vetor é dependência e opacidade sem dor que o justifique. Reavaliar só se a leitura direta doer. |
 | Compressão de histórico via Ollama local | **RECUSADA** | O Agent SDK já compacta contexto sozinho; segundo motor de resumo é dependência e ponto de falha em dobro. |
 | Fase noturna de "reflexão" (consolidar memória dormindo) | **FEITA** (31/10/2026, PAINEL-9, sim expresso do dono) | Timer de usuário às 03:30 com `claude -p` da assinatura, isolado como o executor, modelo do zelador da frota; escreve só na L1, com o diff no diário, e o que apaga mais de 30% vira proposta para o dono. Instalação em `docs/operacao.md`. |

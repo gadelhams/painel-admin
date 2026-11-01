@@ -1,6 +1,6 @@
 // Texto dos comentários da mesa no Plane — DECISAO/v1 (a decisão do dono) e DECISAO-APLICACAO/v1 (o recibo) — e a leitura deles. Não lê nem grava o Plane.
 //
-// Formato (docs/arquitetura.md § decisao/): o primeiro parágrafo é o cabeçalho fixo, e
+// Formato (docs/arquitetura/decisao.md): o primeiro parágrafo é o cabeçalho fixo, e
 // cada campo é um parágrafo "Campo: valor" com o valor escapado. Um zelador que lê a
 // carta conta um DECISAO/v1 como recibo do dono só se, além do cabeçalho, o comentário
 // tem `external_source: painel-decisao-v1`, ator = o Painel Admin configurado e nunca foi

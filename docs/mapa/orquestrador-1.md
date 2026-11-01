@@ -1,0 +1,80 @@
+# painel-admin — mapa: orquestrador (1 de 2) (gerado)
+
+Parte do [mapa de módulos](../mapa.md); gerado, não edite.
+
+## orquestrador/
+
+- `agendador-instancia.js` — Trava de instância do agendador (vigília e zelador): só o processo com ORQ_AGENDADOR=true e o pid gravado em disco agenda. Não varre nem despacha.
+- `ambiente-cli.js` — Ambiente dos filhos da CLI: lista branca, sem chave do painel.
+- `api-despacho.js` — Duas ações do despacho: preparar valida e guarda o desafio com a versão da frota; confirmar inicia a tentativa real. A sessão que preparou é a que confirma; sem fallback de modelo.
+- `api-duas-acoes.js` — Fronteira HTTP das duas ações: sessão antes do corpo, campos fechados, falha upstream sem eco. Não guarda desafio.
+- `api-frota.js` — Duas ações da frota: preparar valida contra o catálogo e guarda a versão-base; confirmar grava se a frota não mudou. A sessão que preparou é a que confirma.
+- `api-gate.js` — Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta. A sessão que preparou é a que confirma; a marca não inicia execução.
+- `api-handoff.js` — Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário. A sessão que preparou é a que confirma; texto não autoriza execução.
+- `api-nativo.js` — Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira do play.
+- `api-play.js` — Duas ações do play por nave: preparar valida projeto e direção; confirmar liga ou desliga, sob a trava. A mesma fronteira do "Steam livre".
+- `argumentos-cli.js` — Argumentos fixos de cada CLI. O lançamento mora em papel-cli.js.
+- `arquivo-lease.js` — Um arquivo de lease por carta. Não escreve o diário.
+- `autorizador.js` — Autoriza uma ação privilegiada: origem, cookie, sessão e dono. Sem cache.
+- `briefing-papel.js` — O texto que cada papel recebe: carta, contrato e o molde do briefing.
+- `canal-carta.js` — Leitura do card: interações, handoffs e gates. Não grava perfil nem muda estado.
+- `canal-plane.js` — Lê os comentários do card. A forma de cada um mora em interacao-canal.js.
+- `carta-da-fila.js` — Julga uma carta já carregada: lease, proveniência do gate e a pré-checagem pedida.
+- `checagem-despacho.js` — Checagem do despacho real. A prévia sem lease mora em simulacao-despacho.js; a tentativa, em tentativa-despacho.js.
+- `classificar-prontidao-dev.js` — Classifica impedimentos verificáveis de uma carta sem gate.
+- `consulta-c3po.js` — Projeção limitada e só-leitura da fila/triagem para a conversa do C-3PO.
+- `consulta-perfil.js` — O perfil antigo da carta, só para exibir "perfil antigo ignorado (era X; roda a frota vN)". Não entra no despacho.
+- `consulta-zelador.js` — Leitura do diário do zelador para o C-3PO: os três últimos dias, só campos estruturados, filtráveis por projeto. Porta só-leitura: não alcança escritor nem CLI.
+- `consumo.js` — Apenas cota incluída na ASSINATURA. Nunca converter gasto/crédito de API em percentual do plano, nem aceitar uma amostra antiga como consumo atual.
+- `contrato-local.js` — Contrato local `.orquestrador.json` de um projeto do catálogo.
+- `contrato-politica.js` — Gramática do contrato opt-in: o que o projeto permite executar.
+- `dependencias-carta.js` — Junta a relação formal do Plane com o que a carta declara no texto.
+- `dependencias-worktree.js` — Instalação do worktree: a raiz e cada subpasta do `instalarEm` do contrato que tem lock e ainda não tem os módulos. Sem scripts de pacote.
+- `desafio-duas-acoes.js` — Esqueleto das duas ações privilegiadas: preparar guarda um desafio, confirmar o executa uma vez. Não sabe o que valida nem o que grava.
+- `despacho-servico.js` — Junta a checagem e a tentativa real. A prévia sem lease mora em simulacao-despacho.js.
+- `diario-frota.js` — Diário da frota: projeção só-leitura dos livros que já existem (touchpoints do despacho, diários da vigília e, desde a F3, os três últimos dias do diário do zelador).
+- `diario-touchpoints.js` — Diário JSONL dos touchpoints. Não cria nem apaga lease.
+- `erro-acesso.js` — Erro das ações privilegiadas. Não decide quem entra.
+- `escritor-gate-plane.js` — Grava a etiqueta depois do comentário. O texto GATE/v1 mora em protocolo-gate.js.
+- `escritor-gate-zelador.js` — Escritor do gate do zelador: grava o recibo GATE/v1 (fonte `zelador-gate-v1`) e a etiqueta READY TO DEV, com a sessão da chave do zelador. Não confere prontidão nem elegibilidade (zelador-gate.js).
+- `escritor-handoff-plane.js` — Grava o comentário de handoff. O texto HANDOFF/v1 mora em protocolo-handoff.js.
+- `escritor-reserva-plane.js` — Grava o comentário RESERVA/v1 (ou a liberação) na carta, pela identidade técnica do projeto. O texto mora em reserva-servico.js.
+- `escritor-zelador-plane.js` — Escritor estreito do zelador no Plane: comentário com prefixo fixo e a lista fechada (estado Done/Cancelled, descrição, etiquetas de trava), o gate READY TO DEV (escritor-gate-zelador.js), com a chave lida de arquivo 600 a cada operação. Não decide veredito.
+- `estado-carta.js` — Troca o grupo de estado de uma carta. Não escolhe modelo nem registra perfil.
+- `estado-plane.js` — Mudança de estado do card pela vigília: Todo → In Progress ao começar a codar e In Progress → Done quando a tentativa de teste é aprovada.
+- `estado.js` — Recupera lease e diário depois de uma queda; uma tentativa por vez no Hangar inteiro (J51). Cada formato mora no módulo ao lado.
+- `executor-cli.js` — Sequência da tentativa: isola, instala, pede os três papéis, roda o aceite e fecha o veredito.
+- `fila-leitura.js` — Junta as cartas do Plane com o contrato local. O julgamento mora em carta-da-fila.js.
+- `fila.js` — Porta da fila. A leitura, o despacho, o gate, o handoff, o perfil e o estado em disco moram nos módulos ao lado.
+- `fonte-consumo-claude.js` — Cota da assinatura do Claude, de duas fontes locais: o arquivo que a statusLine grava (~/.claude/statusline-astargne.mjs, documentada) e o cache de uso que o próprio Claude Code guarda em ~/.claude.json, que a extensão do VS Code também atualiza; por janela, vale a mais nova.
+- `fonte-consumo-codex.js` — Cota da assinatura do Codex. O CLI grava `rate_limits` (percentual usado, janela e quando zera) em cada evento token_count da sessão; a amostra é a da sessão mais recente.
+- `frota-catalogo.js` — Catálogo fechado da frota (provedor → modelo → esforços) e os validadores dos dois blocos. Não lê nem grava arquivo.
+- `frota-pausas.js` — Pausas da frota: por provedor (limite de uso, com prazo) e da versão inteira (CLI ou modelo impedido). Não despacha.
+- `frota-servico.js` — Leitura e troca da frota pelo serviço. A gravação mora em frota.js; as duas ações, em api-frota.js.
+- `frota.js` — Frota: a configuração geral de modelos por papel, num arquivo só, gravado por SSO + duas ações. Não despacha nem escolhe carta.
+- `gate-plane.js` — Entrada do gate no card. O texto mora em protocolo-gate.js e a escrita em escritor-gate-plane.js.
+- `gate-servico.js` — Junta a pré-checagem e a marcação do gate. A etiqueta não inicia execução.
+- `gramatica-cli.js` — Gramática estática do scripts.test e dos scripts do contrato. Não prova que o conteúdo é seguro.
+- `handoff-plane.js` — Entrada do handoff no card. O texto mora em protocolo-handoff.js e a escrita em escritor-handoff-plane.js.
+- `handoff-servico.js` — Handoff no card. Texto e voz não autorizam execução.
+- `identidades-escrita.js` — Identidades técnicas de escrita por projeto, a partir do catálogo (`identidadeEscrita` em projetos.js), e a conferência delas no arranque (J56). Não escreve no Plane.
+- `interacao-canal.js` — Forma de um comentário do card: texto visível e o cabeçalho ORQ/v1.
+- `isolamento-git.js` — Worktree e commit do ramo orq/. A árvore principal do projeto não é tocada.
+- `leitor-jsonl.js` — Leitura e acréscimo de um diário JSONL. A última linha sem quebra pode ser escrita interrompida: fica de fora e é sinalizada.
+- `liberacao-nativa.js` — Liberação do jogo nativo por projeto: o dono liga na nave do Hangar quando a Steam está livre. Não abre jogo nenhum.
+- `marcas-carta.js` — Marcas da carta que os dois julgamentos leem. Não decide gate nem despacho.
+- `modelos.js` — Plano de execução a partir da frota congelada e as flags de modelo/esforço de cada CLI. Sem fallback.
+- `origem-privilegiada.js` — Recusa POST privilegiado que não venha da própria borda. Não olha o cookie.
+- `papel-cli.js` — Lança um papel de IA. Os argumentos moram em argumentos-cli.js; o retrato, em retrato-cli.js.
+- `passo-vigilia.js` — Um projeto ligado: escolhe a carta, despacha com a frota e avança o gate.
+- `peer-loopback.js` — O processo do outro lado de uma conexão TCP de loopback, pelo /proc (tabela de sockets + descritores). Só leitura; não decide nada.
+- `play.js` — Play por nave: o dono libera a frota para um projeto (zeladoria hoje, despacho pela vigília); presença em play.json = ligado. Não varre nem despacha.
+- `politica.js` — Porta da política da orquestração. Contrato, vigília e prontidão moram nos módulos ao lado.
+- `preavaliacao-gate.js` — Pré-checagem só-leitura do gate. A marcação mora em registro-gate.js.
+- `processo-cli.js` — Um processo filho: sem shell, grupo morto no tempo, saída capada e log em disco.
+- `prontidao-despacho.js` — Pode despachar esta carta. Marcar gate continua em prontidao-gate.js.
+- `prontidao-gate.js` — Pode marcar este gate. Não autoriza despacho.
+- `prontidao.js` — Os dois julgamentos da carta. Quem importa daqui recebe as mesmas funções.
+- `protocolo-gate.js` — Texto GATE/v1: valida a proposta, codifica o comentário e lê a evidência (recibo endurecido: J54, J74).
+- `protocolo-handoff.js` — Texto HANDOFF: valida a entrada, codifica o comentário (v2) e lê o card (v1 legado e v2).
+- `protocolo-perfil.js` — Leitura do texto PERFIL-IA/v1 legado. Não grava: desde a F2 da frota (29/10/2026) o perfil por carta não vincula nada.

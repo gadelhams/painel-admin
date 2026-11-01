@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check-docs v1.5 (02/10/2026; v1 de 30/09) — portão de documentação do padrão de contexto
+// check-docs v1.6 (29/10/2026; v1.5 de 25/10, v1 de 30/09) — portão de documentação do padrão de contexto
 // por tarefa (~/Work/PADROES-CONTEXTO.md). Cópia canônica: ~/Work/ferramentas/.
 // Cada repo leva uma cópia (scripts/check-docs.mjs) e a liga ao seu portão.
 //
@@ -7,13 +7,23 @@
 //   1. existência dos arquivos obrigatórios;
 //   2. teto de caracteres dos arquivos de entrada (caracteres, não tokens:
 //      medida reproduzível — a mesma justificativa do LoreEngine);
-//   3. links markdown relativos em README/CLAUDE/AGENTS e docs/**/*.md;
+//   3. links markdown relativos em README/CLAUDE/AGENTS, nas `entradas` extras e
+//      nas `pastas` de docs (padrão: docs/**/*.md);
 //   4. rotas em crase do AGENTS.md (`docs/x.md`, `scripts/y.sh`…) — o
 //      original do LoreEngine não conferia estas;
-//   5. doc órfão em docs/ (ninguém aponta para ele) — AVISO, não reprova;
-//   6. ADRs sem índice (docs/adr/ sem README.md ou index.md) — AVISO.
+//   5. doc órfão nas pastas de docs (ninguém aponta para ele) — AVISO, não reprova;
+//   6. ADRs sem índice (docs/adr/ sem README.md ou index.md) — AVISO;
+//   7. (v1.6, opcional) teto do acervo: aviso e reprovação por tamanho.
 // Configuração opcional em check-docs.json na raiz do projeto:
 //   { "obrigatorios": [...], "tetos": {"AGENTS.md": 5000}, "ignorar": ["docs/historico"] }
+// v1.6 — chaves novas, todas opcionais; sem elas o comportamento é o da v1.5:
+//   "entradas": ["PADROES-*.md"]  arquivos extras cujos links se conferem;
+//   "pastas":   ["docs", "padroes"]  pastas de docs (substitui o padrão ["docs"]);
+//   "tetos":    {"padroes/*.md": 5000}  chave com * vale para cada arquivo que casa
+//               (o * não cruza /);
+//   "acervo":   {"aviso": 15000, "teto": 30000, "excecoes": {"x.md": "nota do dono"}}
+//               mede todo .md conferido que não tem teto próprio; a exceção exige nota.
+// Nasceu para a raiz do ~/Work conferir os masters (PADROES-*.md) e os temas em padroes/.
 // Sai com 1 em qualquer reprovação; avisos não mudam o código de saída.
 // v1.3: a guarda de CLI comparava import.meta.url com `file://${argv[1]}`, que
 // nunca casa com espaço no caminho (a URL vem com %20): a CLI saía 0 sem
@@ -39,6 +49,25 @@ const RE_LINK = /\]\(([^)\s]+)\)/g;
 const RE_CRASE = /`([^`]+)`/g;
 const RE_ROTA = /^(?![a-z]+:)(?:[\w. -]+\/)*[\w. -]+\.md$/;
 
+const ehPadrao = (chave) => chave.includes('*');
+function casaPadrao(padrao, rel) {
+  const re = new RegExp(`^${padrao.split('*').map((p) => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`);
+  return re.test(rel);
+}
+
+// Arquivos .md da pasta do padrão (só o nível do padrão: `padroes/*.md` não desce).
+async function expandir(padrao, raiz) {
+  const pasta = dirname(padrao);
+  const dir = join(raiz, pasta);
+  if (!existsSync(dir)) return [];
+  const achados = [];
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const rel = pasta === '.' ? e.name : `${pasta}/${e.name}`;
+    if (e.isFile() && casaPadrao(padrao, rel)) achados.push(rel);
+  }
+  return achados.sort();
+}
+
 async function listarMd(dir, raiz, ignorar) {
   const achados = [];
   if (!existsSync(dir)) return achados;
@@ -60,22 +89,45 @@ export async function verificar(raiz = process.cwd()) {
   const obrigatorios = config.obrigatorios ?? PADRAO.obrigatorios;
   const tetos = { ...PADRAO.tetos, ...(config.tetos ?? {}) };
   const ignorar = [...PADRAO.ignorar, ...(config.ignorar ?? [])];
+  const pastas = config.pastas ?? ['docs'];
   const erros = [];
   const avisos = [];
   const medidas = [];
 
   for (const f of obrigatorios) if (!existsSync(join(raiz, f))) erros.push(`falta o arquivo obrigatório ${f}`);
 
-  for (const [f, teto] of Object.entries(tetos)) {
-    if (!existsSync(join(raiz, f))) continue;
-    const n = (await readFile(join(raiz, f), 'utf8')).length;
-    medidas.push(`${f}: ${n}/${teto} caracteres`);
-    if (n > teto) erros.push(`${f}: ${n} caracteres excedem o teto de ${teto}`);
+  const comTeto = new Set();
+  for (const [chave, teto] of Object.entries(tetos)) {
+    const arquivos = ehPadrao(chave) ? await expandir(chave, raiz) : [chave];
+    for (const f of arquivos) {
+      if (!existsSync(join(raiz, f))) continue;
+      comTeto.add(f);
+      const n = (await readFile(join(raiz, f), 'utf8')).length;
+      medidas.push(`${f}: ${n}/${teto} caracteres`);
+      if (n > teto) erros.push(`${f}: ${n} caracteres excedem o teto de ${teto}`);
+    }
   }
 
-  const entrada = ['README.md', 'CLAUDE.md', 'AGENTS.md'].filter((f) => existsSync(join(raiz, f)));
-  const docs = await listarMd(join(raiz, 'docs'), raiz, ignorar);
+  const extras = [];
+  for (const e of config.entradas ?? []) extras.push(...(ehPadrao(e) ? await expandir(e, raiz) : [e]));
+  const entrada = [...new Set([...['README.md', 'CLAUDE.md', 'AGENTS.md'], ...extras])].filter((f) => existsSync(join(raiz, f)));
+  const docs = [];
+  for (const p of pastas) for (const d of await listarMd(join(raiz, p), raiz, ignorar)) if (!docs.includes(d) && !entrada.includes(d)) docs.push(d);
   const referenciados = new Set();
+
+  // Acervo (v1.6): o doc sem teto próprio também tem tamanho máximo, quando o
+  // projeto liga a regra. Acima do aviso, avisa; acima do teto, reprova, salvo
+  // exceção com a nota do dono no check-docs.json.
+  if (config.acervo) {
+    const { aviso = 15000, teto = 30000, excecoes = {} } = config.acervo;
+    for (const f of [...entrada, ...docs]) {
+      if (comTeto.has(f)) continue;
+      const n = (await readFile(join(raiz, f), 'utf8')).length;
+      const nota = typeof excecoes[f] === 'string' && excecoes[f].trim();
+      if (n > teto && !nota) erros.push(`${f}: ${n} caracteres excedem o teto do acervo de ${teto} (exceção só com nota do dono em acervo.excecoes)`);
+      else if (n > aviso) avisos.push(`${f}: ${n} caracteres passam do aviso do acervo de ${aviso}${nota ? ' (exceção do dono)' : ''}`);
+    }
+  }
 
   for (const f of [...entrada, ...docs]) {
     const texto = await readFile(join(raiz, f), 'utf8');

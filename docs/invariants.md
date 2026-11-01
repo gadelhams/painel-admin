@@ -1,8 +1,8 @@
 # painel-admin — invariantes
 
-Uma linha por regra; texto completo em [`arquitetura.md`](arquitetura.md)
-§ "Invariantes — texto completo" (mesma ordem). Quem muda código confere
-a lista.
+Uma linha por regra; texto completo em
+[`arquitetura/invariantes.md`](arquitetura/invariantes.md) (mesma ordem). Quem
+muda código confere a lista.
 
 1. **Sem login, então porta fechada** — escuta só em `127.0.0.1:7777`; fora dele, só a borda do tailnet restrita ao Windows; Host/origem: `guarda.js`. (§1)
 2. **SSH só-leitura** em `/api/producao/ssh` e na `consulta_ssh` (lista fixa, sob demanda) — única exceção: o `ssh` de `contas.js` muda só o banco do CadastroUnico, por `/interno/*`, pela tabela fechada `OPERACOES` e com SSO do dono; infra continua SSH manual + `validador-deploy`. (§2)
@@ -13,15 +13,15 @@ a lista.
 
 ## Regras fixas espalhadas pelo texto de arquitetura
 
-O porquê, no título de `arquitetura.md`.
+O porquê, no arquivo de `arquitetura/` entre parênteses.
 
-7. O motor **nunca faz HTTP para o próprio processo** — rotas e ferramentas chamam as funções de `coletores.js`. (§ coletores.js)
-8. `resolverDentroDaRaiz` só aceita `ProjetosPessoais` e `ProjetosCompartilhados`; **`Exitlag/` fica fora do alcance de propósito**, por nome ou por `..`. (§ coletores.js)
-9. Dado de usuário **jamais entra na linha de comando** do ssh: corpo só por stdin, `:id` inteiro positivo, tabela fechada; 401 do central vira 502. (§ contas.js)
-10. `test/contas.test.js` **nunca chama ssh de verdade**. (§ contas.js)
-11. Modelo `claude-sonnet-5` fixo; upgrade do SDK (versão sem `^`) é decisão consciente. (§ motor.js)
-12. `projetos.js` anda com `../../CLAUDE.md` e `../../../PORTAS.md`; `relacoes.js` e `../../../RELACOES.md` **mudam juntos**. (§ projetos.js, § relacoes.js)
-13. Aba Contas **sem polling**: busca ao entrar na aba e após cada ação. (§ contas.js (publico/))
-14. Gasto e fila **sem fonte real** mostram vazio honesto, nunca número inventado. (§ Gasto e fila de jobs)
+7. O motor **nunca faz HTTP para o próprio processo** — rotas e ferramentas chamam as funções de `coletores.js`. (coletores.md)
+8. `resolverDentroDaRaiz` só aceita `ProjetosPessoais` e `ProjetosCompartilhados`; **`Exitlag/` fica fora do alcance de propósito**, por nome ou por `..`. (coletores.md)
+9. Dado de usuário **jamais entra na linha de comando** do ssh: corpo só por stdin, `:id` inteiro positivo, tabela fechada; 401 do central vira 502. (contas.md)
+10. `test/contas.test.js` **nunca chama ssh de verdade**. (contas.md)
+11. Modelo `claude-sonnet-5` fixo; upgrade do SDK (versão sem `^`) é decisão consciente. (motor.md)
+12. `projetos.js` anda com `../../CLAUDE.md` e `../../../PORTAS.md`; `relacoes.js` e `../../../RELACOES.md` **mudam juntos**. (projetos.md, relacoes.md)
+13. Aba Contas **sem polling**: busca ao entrar na aba e após cada ação. (publico.md)
+14. Gasto e fila **sem fonte real** mostram vazio honesto, nunca número inventado. (publico.md)
 15. Persona por voz só com **gatilho explícito** do dono, e grounding antes de falar de estado. (`operacao.md` § C-3PO por voz)
-16. **Executor só atrás de todos os portões** — nasce só com `ORQ_EXECUCAO_HABILITADA=true`; worktree, sem shell, ambiente e comandos por lista branca, CLIs sem MCP; CLIs e aceite sob bwrap (aceite sem rede); infra é `impedido`, sem retry; modelos só da frota; uma tentativa por vez no Hangar (disco); gate só com recibo amarrado à etiqueta atual (zelador: só READY TO DEV, com bwrap, conferido ao vivo); reservada por sessão viva fica fora; vigília e zelador só com o play e `ORQ_AGENDADOR`; sem push nem merge; voz paga só com SSO. Texto completo (frota, play, zelador, `/api/conversa`): § Invariantes. (§ orquestrador/)
+16. **Executor só atrás de todos os portões** — nasce só com `ORQ_EXECUCAO_HABILITADA=true`; worktree, sem shell, ambiente e comandos por lista branca, CLIs sem MCP; CLIs e aceite sob bwrap (aceite sem rede); infra é `impedido`, sem retry; modelos só da frota; uma tentativa por vez no Hangar (disco); gate só com recibo amarrado à etiqueta atual (zelador: só READY TO DEV, com bwrap, conferido ao vivo); reservada por sessão viva fica fora; vigília e zelador só com o play e `ORQ_AGENDADOR`; sem push nem merge; voz paga só com SSO. Texto completo (frota, play, zelador, `/api/conversa`): invariantes.md. (orquestrador.md)
