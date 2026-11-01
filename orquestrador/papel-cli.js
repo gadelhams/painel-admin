@@ -29,7 +29,9 @@ export class PapelCli {
     // Binário sumido entre a checagem e o papel é infra da CLI (pausa a frota), não da carta.
     try { executavel = await this.binario(escolha.provedor === 'claude' ? 'claude' : 'codex'); }
     catch (erro) { return { ...RetratoCli.base({ papel, escolha, duracaoMs: 0 }), causa: { tipo: 'cli', provedor: escolha.provedor }, impedimento: erro.message }; }
-    const r = await this.processo.rodar({ executavel, argumentos, cwd: worktree,
+    // J60: sob o sandbox (se houver), com rede (a API do provedor) e só o worktree e os logs
+    // desta tentativa graváveis (o Codex escreve a última mensagem em `logs`).
+    const r = await this.processo.rodar({ executavel, argumentos, cwd: worktree, isolar: { rede: true, gravaveis: [worktree, logs] },
       stdin: prompt, timeoutMs: this.limites.minutosIa * 60_000, log: path.join(logs, `${papel}.log`) });
     const retrato = RetratoCli.base({ papel, escolha, duracaoMs: r.duracaoMs });
     // A causa decide o freio (J6 + correção J-C): 'cli' pausa a versão da frota,

@@ -34,6 +34,10 @@ function blocoBloqueio(fim) {
     + `<p class="hg-apagado hg-mono">último job: ${esc(new Date(fim.quando).toLocaleString('pt-BR'))}</p>`;
 }
 
+// F4b: o READY TO DEV do zelador só vale com play, contrato, identidade e a sandbox bwrap; o motivo aparece aqui.
+const gateDoZelador = (linha) => (!linha?.gateZelador ? '' : linha.gateZelador.ok ? ' Gate do zelador: elegível.'
+  : ` Gate do zelador inelegível: ${linha.gateZelador.motivo}.`);
+
 function desenhar(linha, mensagem) {
   const caixa = $('hg-play-caixa');
   caixa.checked = linha?.situacao === 'ligado';
@@ -42,7 +46,7 @@ function desenhar(linha, mensagem) {
   $('hg-play-confirma').hidden = true;
   const extra = linha?.situacao === 'suspenso' ? `: ${linha.suspenso?.motivo ?? 'releitura não conferiu'}. Religar é a saída.` : '';
   $('hg-play-estado').textContent = mensagem ?? (!linha ? 'Play indisponível para esta nave (sem Plane, congelada, Anya ou CKBL).'
-    : `${SITUACAO[linha.situacao]}${extra}${linha.desde && linha.situacao !== 'desligado' ? ` Desde ${hora(linha.desde)}.` : ''}${linha.emCurso ? ` Em curso: ${linha.emCurso}.` : ''}`);
+    : `${SITUACAO[linha.situacao]}${extra}${linha.desde && linha.situacao !== 'desligado' ? ` Desde ${hora(linha.desde)}.` : ''}${linha.emCurso ? ` Em curso: ${linha.emCurso}.` : ''}${gateDoZelador(linha)}`);
   $('hg-play-bloqueio').innerHTML = atual?.nave ? blocoBloqueio(H.zelador?.porProjeto?.[atual.nave.planePrj]) : '';
 }
 

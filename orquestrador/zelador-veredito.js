@@ -11,14 +11,15 @@ import { createHash } from 'node:crypto';
 import { DECISAO_HUMANA_NA_DESCRICAO } from './marcas-carta.js';
 import { textoDeHtml } from '../decisao.js';
 
-const VEREDITOS = Object.freeze(['MANTER', 'ATUALIZAR', 'FECHAR', 'CANCELAR', 'IA_DECIDE', 'DONO']);
+// PRONTA (F4b, J59): o zelador PROPÕE o READY TO DEV; quem confere e marca é zelador-gate.js.
+const VEREDITOS = Object.freeze(['MANTER', 'ATUALIZAR', 'FECHAR', 'CANCELAR', 'IA_DECIDE', 'DONO', 'PRONTA']);
 const CAMPOS = new Set(['carta', 'veredito', 'evidencias', 'comentario', 'trecho', 'novoTrecho', 'labelsTrava']);
 const TRAVAS_PERMITIDAS = [['ASTARGNE'], ['ASTARGNE', 'PRODUTO'], ['TAREFA DONO'], ['BLOQUEADA']];
 const MARCADORES_PROIBIDOS = /GATE\/|HANDOFF\/|ZELADOR\/|DECISAO\/|\[ORQ\//i;
 // A lista do juiz (DECISAO_HUMANA_NA_DESCRICAO) mais as formas sem parêntese: "dono" minúsculo é
 // palavra comum, por isso só DONO/BLOQUEADA em maiúsculas; ASTARGNE é nome, em qualquer caixa.
 const MARCADORES_HUMANOS = [DECISAO_HUMANA_NA_DESCRICAO, /astargne/i, /\b(?:DONO|BLOQUEADA)\b/u, /depende\s+d[aeo]|depend[eê]ncias\s*:/i];
-const tocaMarcadorHumano = t => MARCADORES_HUMANOS.some(r => r.test(String(t ?? '')));
+export const tocaMarcadorHumano = t => MARCADORES_HUMANOS.some(r => r.test(String(t ?? '')));
 export const RESULTADOS_RECIBO = Object.freeze(['APLICADO', 'ABORTADO', 'DIVERGENTE', 'DESFEITO']);
 // Formas de credencial conhecidas e blocos longos com maiúscula, minúscula e dígito (um sha
 // em hexadecimal não cai aqui): na dúvida, recusa.
@@ -82,6 +83,10 @@ function mudancaDo(v) {
     case 'FECHAR': return { tipo: 'estado', grupo: 'completed' };
     case 'CANCELAR': return { tipo: 'estado', grupo: 'cancelled' };
     case 'IA_DECIDE': return { tipo: 'labels', adicionar: [], remover: ['ASTARGNE'] };
+    // Fora da lista fechada do escritor de limpeza de propósito: vai só ao portão do gate.
+    case 'PRONTA':
+      if (v.trecho !== undefined || v.novoTrecho !== undefined || v.labelsTrava !== undefined) throw new Error('PRONTA não leva trecho nem trava');
+      return { tipo: 'gate', gate: 'READY TO DEV' };
     case 'DONO': {
       const pedidas = [...new Set(v.labelsTrava ?? ['ASTARGNE'])].sort();
       if (!TRAVAS_PERMITIDAS.some(p => [...p].sort().join() === pedidas.join())) throw new Error('etiquetas de trava fora da lista (PRODUTO só junto com ASTARGNE)');
@@ -134,6 +139,7 @@ export async function validarVeredito(v, { cartasPorIdentificador, candidatas, g
 const DESCRICAO_MUDANCA = {
   estado: m => `estado → ${m.grupo === 'completed' ? 'Done' : 'Cancelled'}`,
   labels: m => [m.adicionar.length && `pôr ${m.adicionar.join(' + ')}`, m.remover.length && `tirar ${m.remover.join(', ')}`].filter(Boolean).join('; '),
+  gate: m => `marcar ${m.gate}`,
   trecho: () => 'trocar um trecho da descrição',
   anexar: () => 'anexar um parágrafo à descrição',
 };

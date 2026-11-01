@@ -33,7 +33,7 @@ export function digitalDaCarta(carta, comentarios, ator = ZELADOR_ATOR) {
 
 const recente = (quando, agoraMs, janela) => Number.isFinite(Date.parse(quando)) && agoraMs - Date.parse(quando) < janela;
 // B2: comentário da mesa (fonte ou cabeçalho DECISAO/v1, de qualquer ator: na dúvida, conta).
-const ehDecisaoDaMesa = c => c?.external_source === FONTE_DECISAO || textoNormal(c?.comment_html).includes(CABECALHO_DECISAO);
+export const ehDecisaoDaMesa = c => c?.external_source === FONTE_DECISAO || textoNormal(c?.comment_html).includes(CABECALHO_DECISAO);
 
 // Relações inversas: as cartas que ESTA bloqueia ou que esperam por ela.
 export const reversas = relacoes => ['blocking', 'start_before', 'finish_before'].flatMap(t => (Array.isArray(relacoes?.[t]) ? relacoes[t] : []))
@@ -41,11 +41,12 @@ export const reversas = relacoes => ['blocking', 'start_before', 'finish_before'
 
 /**
  * Motivo para o zelador não tocar a carta, ou null (J29, J31, J34, J35, J37, J67, B1, B2).
- * ctx: { porId (todo o catálogo), relacoes, comentarios, atividades, lease, historico, agoraMs, mesaPendente }
+ * ctx: { porId (todo o catálogo), relacoes, comentarios, atividades, lease, historico, agoraMs, mesaPendente, reserva }
+ * `reserva` (F4b, item 9): a reserva viva de outra sessão ({ motivo }) ou null = livre.
  * `relacoes`/`atividades`/`comentarios` null = ilegíveis = intocável (falha fechada); carta
  * relacionada fora da leitura do catálogo também; `mesaPendente` null = diário da mesa ilegível.
  */
-export function motivoIntocavel(carta, { porId, relacoes, comentarios, atividades, lease, historico = [], agoraMs, mesaPendente = false, ator = ZELADOR_ATOR }) {
+export function motivoIntocavel(carta, { porId, relacoes, comentarios, atividades, lease, historico = [], agoraMs, mesaPendente = false, reserva = null, ator = ZELADOR_ATOR }) {
   if (TERMINAIS.includes(grupoDe(carta))) return 'carta fechada';
   if (carta.filhos?.length) return 'não é folha';
   if (nomesDe(carta).some(n => GATES_ZELADOR.includes(n))) return 'carta com gate (portão próprio)';
@@ -55,6 +56,7 @@ export function motivoIntocavel(carta, { porId, relacoes, comentarios, atividade
   if (reversas(relacoes).some(r => !porId.has(r))) return 'carta relacionada fora da leitura do catálogo';
   if (reversas(relacoes).some(r => nomesDe(porId.get(r)).some(n => GATES_ZELADOR.includes(n)))) return 'bloqueia carta com gate';
   if (lease) return 'lease de despacho na carta';
+  if (reserva) return `carta reservada por outra sessão: ${reserva.motivo}`;
   if (!historico) return 'touchpoints do despacho ilegíveis';
   if (historico.some(e => e.tipo === 'TENTATIVA' && recente(e.quando ?? e.criadoEm, agoraMs, DIA_MS))) return 'tentativa de despacho nas últimas 24 h';
   if (!comentarios) return 'comentários ilegíveis';

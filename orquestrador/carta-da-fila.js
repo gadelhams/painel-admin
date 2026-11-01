@@ -3,7 +3,7 @@
 import { avaliarCarta, avaliarProntidaoGate, avisosDoContrato } from './politica.js';
 import { perfilAntigoDoCanal } from './consulta-perfil.js';
 import { lerCanalPlane } from './canal-plane.js';
-import { lerGatesDoCanal } from './gate-plane.js';
+import { lerGatesDoCanal, autorDoProjeto, autorZelador, FONTE_GATE_ZELADOR } from './gate-plane.js';
 import { conferirInstanciaDoGate } from './recibo-gate.js';
 import { dependenciasDaCarta } from './dependencias-carta.js';
 
@@ -47,13 +47,21 @@ export class CartaDaFila {
       } else {
         try {
           const canal = await lerCanalPlane({ consultar: consulta, projetoId: c.projetoId, cartaId: c.id });
-          const { gates, ignorados } = lerGatesDoCanal(canal.interacoes, { projetoId: c.projetoId, cartaId: c.id, autorId });
+          // F4b (J59, J60): o zelador é autor aceito só de READY TO DEV e só com o gate dele
+          // elegível (sandbox do executor funcional); senão o recibo dele fica de fora, com o motivo.
+          // `gateZelador(projetoId)` → { ok, motivo, ator }: o ator fixo vem de quem compõe.
+          const zelador = avaliacao.gate === 'READY TO DEV' && this.s.gateZelador
+            ? await this.s.gateZelador(c.projetoId).catch(e => ({ ok: false, motivo: `elegibilidade ilegível: ${e.message}` })) : null;
+          const autores = [autorDoProjeto(autorId), ...(zelador?.ok ? [autorZelador(zelador.ator)] : [])];
+          const { gates, ignorados } = lerGatesDoCanal(canal.interacoes, { projetoId: c.projetoId, cartaId: c.id, autores });
           const recibos = gates.filter(g => g.gate === avaliacao.gate);
-          const nota = ignorados.length ? ` (${ignorados.length} recibo(s) ignorado(s): ${[...new Set(ignorados.map(x => x.motivo))].join(', ')})` : '';
+          const doZelador = zelador && !zelador.ok && canal.interacoes.some(e => e.fonteExterna === FONTE_GATE_ZELADOR);
+          const nota = (ignorados.length ? ` (${ignorados.length} recibo(s) ignorado(s): ${[...new Set(ignorados.map(x => x.motivo))].join(', ')})` : '')
+            + (doZelador ? `; gate do zelador inelegível: ${zelador.motivo}` : '');
           if (!recibos.length) provenienciaGate = `evidência GATE/v1 ausente ou sem autoria autorizada${nota}`;
           else {
             // J55: o recibo vale para a etiqueta que está na carta agora, não para uma recolocada depois.
-            const instancia = await conferirInstanciaDoGate({ consultar: consulta, carta: c, gate: avaliacao.gate, recibos, autores: [autorId] });
+            const instancia = await conferirInstanciaDoGate({ consultar: consulta, carta: c, gate: avaliacao.gate, recibos, autores: autores.map(a => a.autorId) });
             provenienciaGate = instancia.ok ? 'verificada' : `recibo GATE/v1 não amarrado à etiqueta atual: ${instancia.motivo}`;
             if (instancia.ok) origemGate = instancia.recibo.origemGate;
           }

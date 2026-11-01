@@ -413,6 +413,52 @@ marcar gate; a F4b liga o gate do zelador e o despacho do Hangar inteiro. Mecani
   Guest foram lidos no código do Plane v1.4.2, não medidos); o script de reserva não rodou contra o
   painel em produção.
 
+## F4 feita (31/10/2026)
+
+A F4b fecha a F4: o zelador marca READY TO DEV e a vigília despacha no Hangar inteiro. Mecanismo em
+[arquitetura.md](arquitetura.md) § orquestrador/ (Puxar, F4b) e § Invariantes (o texto completo da
+regra 16, que saiu da linha curta de `invariants.md` para caber).
+- **Janelas fechadas, cada uma com teste e mutação nomeada por cópia de arquivo**
+  (`test/frota-f4b.test.js`, simulação em `test/frota-f4b-simulacao.test.js`):
+
+| Janela | Teste | Mutação que o deixa vermelho |
+|---|---|---|
+| J58 | trava tirada pelo zelador segura o gate até o `DECISAO/v1`; dependência fechada por ele também | levantamento ignorado; dependência fechada não lida |
+| J59 | PRONTA recusada pela prontidão ao vivo (dependência nova); ancestral com ASTARGNE; autores por gate; recibo de um autor não vale para a etiqueta do outro; chave UUIDv5; escritor sem `remover` | sem `validarGate`; ancestral ignorado; zelador em READY TO TEST; fonte do outro; autor do recibo ≠ da etiqueta; chave aleatória |
+| J60 | filho sob o bwrap não lê a chave (HOME falso), `~/.ssh`, `.env`, o `environ` do painel; executor com CLIs e aceite no bwrap, aceite sem rede, `redeNoAceite`; sem bwrap o gate do zelador é inelegível e a tentativa dele, impedida | sem tmpfs; `/proc` da máquina; aceite com rede; aceite fora do bwrap; elegível sem bwrap; fila aceita sem elegibilidade; executor sem a segunda trava |
+| J72 | POST do gate pendurado aborta no teto e solta a trava | POST sem teto |
+| item 6 | round-robin PAINEL→CAD→PAINEL→CAD, uma por passada; teto diário do Hangar | sem a ordem; passada sem parar; sem teto |
+| item 9 | reservada fica intocável no retrato; reservada no meio da sequência aborta sob a trava | reserva ignorada no retrato; e sob a trava |
+| J56 (lado do zelador) | chave ou ator iguais aos de um orquestrador do catálogo recusam | hash ignorado |
+
+- **Simulação ponta a ponta** (Plane, CLIs e executor falsos): o zelador marca PRONTA (recibo
+  `zelador-gate-v1`, etiqueta posta por ele) → a vigília do Hangar despacha, com `origemDespacho:
+  hangar` e `origemGate: zelador` no HANDOFF → o despacho manual simultâneo é recusado ("tentativa em
+  curso") → o gate recolocado à mão e o recibo forjado em prosa ficam inelegíveis → a carta reservada
+  por sessão viva é pulada pelo zelador e pela vigília.
+- **Escolhas:**
+  - a sandbox embrulha as CLIs do executor e o aceite, não a CLI do zelador (sem ferramentas, num
+    diretório vazio): o bloco zelador continua só `claude` (B27);
+  - sem bwrap funcional o executor roda como antes para o gate do dono; só o gate do zelador cai
+    (inelegível na fila, impedido no executor), como o contrato pede;
+  - máscaras além da lista do contrato: `~/.config/gh`, `/dev` e `/proc` próprios (o `environ` do
+    painel tem a Guest e as chaves legadas do `.env`);
+  - "o dono reconhecer" = um `DECISAO/v1` da mesa na carta depois do levantamento;
+  - o round-robin conta a vez pela última TENTATIVA no diário da vigília (sobrevive ao reinício);
+  - teto global `ORQ_TETO_DIA` (padrão 12), além do teto do contrato.
+- **Provas reais sob bwrap (31/10, autorizadas pelo integrador):** `claude-sonnet-5`/low, prompt de
+  uma linha, sem ferramentas: código 0, resposta "ok", US$ 0,0072, 1 turno. `codex` `gpt-5.6-luna`/low
+  com `--sandbox workspace-write` aninhado: rodou `echo sandbox-ok` no sandbox próprio (aninhamento
+  funciona), código 0; custo em tokens não capturado (assinatura). Nas duas a chave do zelador ficou
+  invisível (`test -e`, sem ler o conteúdo), o `/proc` só com 4 processos e o aceite sem rede só com
+  `lo`. Sem `--dev /dev` o `claude` (Bun 1.4.3) abortava na partida.
+- **Não verificado no real:** nenhum job do zelador, gate do zelador nem despacho do Hangar rodou
+  contra o Plane de verdade; `ORQ_AGENDADOR` não está na unit; `.orquestrador.json` de CAD, EMU e
+  PAINEL é do integrador. O texto da skill `zeladoria-de-cartas` (reserva e lease) e o de
+  `ORQUESTRADOR-PROJETOS.md` foram entregues ao integrador, não aplicados.
+- **Resíduos:** fora das máscaras o disco do usuário segue legível (`/tmp`, outros `.env` fora do
+  catálogo); as CLIs têm rede; a CLI do zelador não vai ao bwrap.
+
 ## Mudanças nas regras (docs na mesma entrega)
 
 - `ProjetosPessoais/ORQUESTRADOR-PROJETOS.md`: hoje só a marcação de gate
@@ -449,9 +495,8 @@ marcar gate; a F4b liga o gate do zelador e o despacho do Hangar inteiro. Mecani
    - **Jobs de limpeza:** rodam sem o dono, numa CLI real, pela frota.
    - **Destaque do bloqueio:** aparece no painel lateral quando a nave fica
      sem nada a fazer.
-5. **F4, puxar:** `READY TO DEV` e `READY TO TEST` pelo zelador e despacho pela
-   frota, depois do piloto PAINEL-34. A F4a (trava global, recibo, identidades,
-   reserva de carta) foi feita em 31/10/2026; falta a F4b.
+5. **F4, puxar — feita em 31/10/2026** (seções "F4a feita" e "F4 feita"): `READY TO DEV`
+   pelo zelador e despacho do Hangar inteiro pela frota, sob o bwrap.
 6. **A mesa (PAINEL-53)** absorve a aba Demanda.
 
 ## Decisões do dono (28/10/2026)

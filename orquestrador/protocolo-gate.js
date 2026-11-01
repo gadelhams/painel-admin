@@ -26,22 +26,31 @@ export function codificarGate({ projetoId, cartaId, chaveIdempotencia, versaoCar
 }
 
 // Fontes externas aceitas num recibo GATE/v1, com a origem do gate que cada uma prova (J70):
-// lista fechada; o escritor do zelador (F4b) entra aqui com a origem `zelador`.
-export const FONTES_GATE = new Map([['orquestrador-gate-v1', 'dono']]);
+// lista fechada. Cada autor só vale com a SUA fonte (`autores`): a identidade técnica do projeto
+// com `orquestrador-gate-v1` (origem `dono`), o zelador com `zelador-gate-v1` (origem `zelador`)
+// e só para READY TO DEV (J59, F4b) — a fonte do outro, no comentário de um, não vale.
+const FONTE_GATE_DONO = 'orquestrador-gate-v1';
+export const FONTE_GATE_ZELADOR = 'zelador-gate-v1';
+export const FONTES_GATE = new Map([[FONTE_GATE_DONO, 'dono'], [FONTE_GATE_ZELADOR, 'zelador']]);
+const TODOS_OS_GATES = Object.freeze([...GATES]);
+export const autorDoProjeto = autorId => ({ autorId, fontes: [FONTE_GATE_DONO], gates: TODOS_OS_GATES });
+export const autorZelador = autorId => ({ autorId, fontes: [FONTE_GATE_ZELADOR], gates: ['READY TO DEV'] });
 
 // Recibo só vale com o cabeçalho `[ORQ/v1 papel=decisao]`, autor aceito, fonte da lista fechada e
 // sem edição depois de criado (J54, J74). O que não passa fica de fora e é anotado: um recibo
 // malformado do autor não derruba a leitura da carta (o DoS da variante do J54).
-export function lerGatesDoCanal(interacoes, { projetoId, cartaId, autorId, fontes = FONTES_GATE }) {
-  if (!UUID.test(autorId ?? '')) throw new Error('identidade de escrita não configurada');
+// `autorId` sozinho = só a identidade do projeto (autorDoProjeto); `autores` = a lista aceita.
+export function lerGatesDoCanal(interacoes, { projetoId, cartaId, autorId = null, autores = autorId ? [autorDoProjeto(autorId)] : [] }) {
+  if (!autores.length || autores.some(a => !UUID.test(a?.autorId ?? ''))) throw new Error('identidade de escrita não configurada');
   const gates = [];
   const ignorados = [];
   for (const e of interacoes) {
     if (!e.texto?.includes(MARCADOR)) continue;
     const ignorar = motivo => ignorados.push({ comentarioId: e.id ?? null, motivo });
-    if (e.autorId !== autorId) { ignorar('autor não aceito'); continue; }
+    const autor = autores.find(a => a.autorId === e.autorId);
+    if (!autor) { ignorar('autor não aceito'); continue; }
     if (e.papel !== 'decisao' || !e.texto.startsWith(MARCADOR)) { ignorar('sem o cabeçalho [ORQ/v1 papel=decisao]'); continue; }
-    if (!fontes.has(e.fonteExterna)) { ignorar('fonte externa fora da lista'); continue; }
+    if (!FONTES_GATE.has(e.fonteExterna) || !autor.fontes.includes(e.fonteExterna)) { ignorar('fonte externa fora da lista'); continue; }
     if (e.editadoEm) { ignorar('editado depois de criado'); continue; }
     let dados;
     try { dados = JSON.parse(Buffer.from(e.texto.slice(MARCADOR.length).split(/\s/)[0], 'base64url').toString('utf8')); }
@@ -49,7 +58,8 @@ export function lerGatesDoCanal(interacoes, { projetoId, cartaId, autorId, fonte
     if (dados?.versao !== 1 || dados.projetoId !== projetoId || dados.cartaId !== cartaId ||
         !UUID.test(dados.chaveIdempotencia ?? '') || !Number.isFinite(Date.parse(dados.versaoCarta))) { ignorar('não confere com a carta'); continue; }
     try { validarPropostaGate(dados); } catch { ignorar('proposta fora da forma'); continue; }
-    gates.push({ ...dados, comentarioId: e.id, autorId: e.autorId, quando: e.quando, origemGate: fontes.get(e.fonteExterna) });
+    if (!autor.gates.includes(dados.gate)) { ignorar('gate fora do que este autor pode marcar'); continue; }
+    gates.push({ ...dados, comentarioId: e.id, autorId: e.autorId, quando: e.quando, origemGate: FONTES_GATE.get(e.fonteExterna) });
   }
   return { gates, ignorados };
 }

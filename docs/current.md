@@ -23,10 +23,10 @@ Só o que vale hoje, medido nesta máquina (Omarchy). Histórico datado em
 
 ## Feito em 31/10 e o que falta
 
-- **Frota**: F2, F3 e F4a feitas (play, zelador, uma tentativa por vez no
-  disco, recibo amarrado à etiqueta, identidades no catálogo, reserva de carta
-  por `scripts/reservar.mjs`; F3 corrigida, B1–B30); falta a F4b, puxar
-  ([plano](plano-frota-do-hangar.md)). Piloto PAINEL-34 passou.
+- **Frota**: F2–F4 feitas (play, zelador, reserva por `scripts/reservar.mjs`,
+  READY TO DEV pelo zelador, despacho do Hangar inteiro, CLIs e aceite sob
+  bwrap); nada agenda sem `ORQ_AGENDADOR` ([plano](plano-frota-do-hangar.md)).
+  Piloto PAINEL-34 passou.
 - **C-3PO**: lê ssh e git e só propõe rodar a suíte (cartão, SSO); mesa de
   decisão grava como Painel Admin por SSO, com retomar e abandonar
   ([plano](plano-mesa-de-decisao.md)); varredura pré-aceite corrigida (31/10).

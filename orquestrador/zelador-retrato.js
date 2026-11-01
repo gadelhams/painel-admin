@@ -24,7 +24,9 @@ export async function listar(consultar, url) {
 }
 
 export class RetratoZelador {
-  constructor({ consultar, git, estado, projetos = PROJETOS, pendenciasMesa = async () => [] }) {
+  // `cartaReservada(id)` (F4b, item 9): a reserva viva de outra sessão; ilegível = reservada.
+  constructor({ consultar, git, estado, projetos = PROJETOS, pendenciasMesa = async () => [], cartaReservada = null }) {
+    this.cartaReservada = cartaReservada;
     this.consultar = consultar;
     this.git = git;
     this.estado = estado;
@@ -54,12 +56,13 @@ export class RetratoZelador {
   async detalhes(projetoId, cartaId) {
     const base = `/projects/${projetoId}/work-items/${cartaId}`;
     const ler = p => p.catch(() => null);
-    const [comentarios, atividades, relacoes, lease, historico] = await Promise.all([
+    const [comentarios, atividades, relacoes, lease, historico, reserva] = await Promise.all([
       ler(listar(this.consultar, `${base}/comments/`)), ler(listar(this.consultar, `${base}/activities/`)),
       ler(this.consultar(`${base}/relations/`)), this.estado.lerLease(cartaId).catch(() => ({ ilegivel: true })),
       this.estado.lerHistorico(cartaId).catch(() => null),
+      this.cartaReservada ? this.cartaReservada(cartaId).catch(() => ({ motivo: 'reservas ilegíveis' })) : null,
     ]);
-    return { comentarios, atividades, relacoes, lease, historico };
+    return { comentarios, atividades, relacoes, lease, historico, reserva };
   }
 
   async montar(projeto, pasta, agoraMs) {

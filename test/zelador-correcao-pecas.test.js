@@ -169,7 +169,7 @@ test('B27: provedor fora do claude no bloco zelador é recusado pelo nome antes 
   const c = await montarCenario({ tuplaZelador: tupla('openai', 'high') });
   try {
     c.plane.novaCarta();
-    assert.match((await c.zelador.rodarUmaVez()).motivo, /só aceita o provedor claude até a sandbox da F4b/);
+    assert.match((await c.zelador.rodarUmaVez()).motivo, /só aceita o provedor claude \(bloco zelador em openai; a CLI dele não roda sob o bwrap\)/);
     assert.equal(c.pedidos.length, 0);
   } finally { await c.limpar(); }
   const segredo = 'plane_api_0123456789abcdefABCDEF';

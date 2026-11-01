@@ -48,8 +48,10 @@ export class PassoVigilia {
     return (await this.servico.fila()).itens.find(x => x.id === cartaId) ?? null;
   }
 
-  // `registro` é a linha do play do projeto: quem ligou responde pela tentativa.
-  async projeto(p, registro) {
+  // `registro` é a linha do play do projeto: quem ligou responde pela tentativa. `lerFila`: a
+  // leitura única da passada do Hangar (F4b), para não reler o Plane inteiro a cada projeto; a
+  // reserva confere tudo de novo sob a trava. O retorno leva `tentou: true` quando houve reserva.
+  async projeto(p, registro, { lerFila = () => this.servico.fila() } = {}) {
     const id = p.plane;
     const nota = campos => { this.memoria.set(id, { ...this.memoria.get(id), ultimaVarredura: this.livro.iso(), ...campos }); return { projetoId: id, ...this.memoria.get(id) }; };
     const { contrato, erros } = await this.servico.contrato(id);
@@ -63,8 +65,11 @@ export class PassoVigilia {
     if (pausa) return nota({ motivoOciosa: pausa });
     const feitas = await this.livro.tentativas24h(id);
     if (feitas >= cfg.tetoPorDia) return nota({ motivoOciosa: `teto diário atingido (${feitas}/${cfg.tetoPorDia})` });
-    const doProjeto = (await this.servico.fila()).itens.filter(i => i.projetoId === id);
-    if (doProjeto.some(i => i.leaseSituacao === 'ativo')) return nota({ motivoOciosa: 'tentativa em curso (lease ativo)' });
+    const itens = (await lerFila()).itens;
+    // Uma por vez no Hangar inteiro (F4b; no disco, J51): lease ativo de QUALQUER projeto segura.
+    const emCurso = itens.find(i => i.leaseSituacao === 'ativo');
+    if (emCurso) return nota({ motivoOciosa: `tentativa em curso no Hangar (${emCurso.identificador}): uma por vez` });
+    const doProjeto = itens.filter(i => i.projetoId === id);
     const tentativasDe = item => tentativasDaCarta(item.historico);
     const agoraMs = Date.parse(this.livro.iso());
     const aptas = doProjeto.filter(i => i.elegivel && GATES.includes(i.gate) && tentativasDe(i) < cfg.maxTentativasPorCarta);
@@ -100,7 +105,7 @@ export class PassoVigilia {
       // Reservou e caiu antes do executor: fica no diário com causa infra e o motivo, sem gastar tentativa da carta.
       await this.livro.anotar(id, { tipo: 'TENTATIVA', cartaId: carta.id, carta: carta.identificador, tentativaId: erro.semInicio.tentativaId,
         resultado: 'SEM_INICIO', gate, frotaVersao: congelada.versao, causa: 'infra', motivo: String(erro.message).slice(0, 200) });
-      return nota({ motivoOciosa: `${carta.identificador}: tentativa sem início (${String(erro.message).slice(0, 120)})` });
+      return { ...nota({ motivoOciosa: `${carta.identificador}: tentativa sem início (${String(erro.message).slice(0, 120)})` }), tentou: true };
     }
     const historico = await this.servico.lerHistorico(carta.id);
     const detalhe = historico.find(e => e.tipo === 'RESULTADO_EXECUTOR' && e.tentativaId === resultado.tentativaId) ?? {};
@@ -113,12 +118,12 @@ export class PassoVigilia {
       let ate;
       for (const provedor of provedores) ate = await this.servico.comTrava(() => pausas.pausarProvedor(provedor, cfg.pausaPorLimiteMinutos, 'limite de uso do provedor'));
       await this.livro.anotar(id, { tipo: 'PAUSA', ate, motivo: `limite de uso: ${provedores.join(', ')} (todos os projetos)` });
-      return nota({ ultimaTentativa: resultado, motivoOciosa: `frota pausada até ${ate}: limite de uso de ${provedores.join(', ')}` });
+      return { ...nota({ ultimaTentativa: resultado, motivoOciosa: `frota pausada até ${ate}: limite de uso de ${provedores.join(', ')}` }), tentou: true };
     }
     if (resultado.resultado === 'impedido' && causa?.tipo === 'cli') {
       await this.servico.comTrava(() => pausas.pausarVersao(congelada, `CLI ou modelo ${causa.provedor ?? ''} impedido`.replace(/\s+/g, ' ').trim()));
       await this.livro.anotar(id, { tipo: 'PAUSA', motivo: `frota v${congelada.versao} pausada: CLI ou modelo impedido` });
-      return nota({ ultimaTentativa: resultado, motivoOciosa: `frota v${congelada.versao} pausada: CLI ou modelo impedido` });
+      return { ...nota({ ultimaTentativa: resultado, motivoOciosa: `frota v${congelada.versao} pausada: CLI ou modelo impedido` }), tentou: true };
     }
     if (resultado.resultado === 'concluido') {
       try {
@@ -141,6 +146,6 @@ export class PassoVigilia {
     } else if (resultado.resultado === 'rejeitado' && tentativasDe(carta) + 1 >= cfg.maxTentativasPorCarta) {
       await this.livro.anotar(id, { tipo: 'ESGOTADA', cartaId: carta.id, carta: carta.identificador, tentativas: tentativasDe(carta) + 1 });
     }
-    return nota({ ultimaTentativa: resultado });
+    return { ...nota({ ultimaTentativa: resultado }), tentou: true };
   }
 }

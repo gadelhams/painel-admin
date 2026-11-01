@@ -152,5 +152,17 @@ export function montarIdentidadesEscrita({ projetos, ambiente = {}, proprietario
     return Object.fromEntries([...situacoes].map(([id, s]) => [id, { ...s }]));
   }
 
-  return { identidades, conferir, estado, situacao: id => situacoes.get(id) ?? null };
+  // F4b: o lado do zelador também confere (hashes das chaves e atores de todo orquestrador do
+  // catálogo, de arquivo ou do `.env`); chave sumida não entra, ilegível lança (falha fechada).
+  async function chavesEAtores() {
+    const hashes = new Set();
+    for (const e of entradas) {
+      let chave;
+      try { chave = await snapshot(e); } catch (erro) { if (/ausente/.test(erro.message)) continue; throw erro; }
+      if (chave) hashes.add(hash(chave));
+    }
+    return { hashes, atores: new Set(entradas.map(e => e.ator)) };
+  }
+
+  return { identidades, conferir, estado, chavesEAtores, situacao: id => situacoes.get(id) ?? null };
 }

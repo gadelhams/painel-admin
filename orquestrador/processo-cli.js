@@ -5,7 +5,10 @@ import { createWriteStream } from 'node:fs';
 export class ProcessoCli {
   // `aoIniciar(pgid)`: avisado a cada filho lançado (o grupo é o pid, por `detached`); o
   // executor grava o grupo no lease da tentativa (J51). Falha do aviso não para o filho.
-  constructor({ spawn, env, agora = Date.now, maxSaidaBytes, aoIniciar = null }) {
+  // `sandbox` (F4b, J60): o SandboxCli; quem pede `isolar` num `rodar` tem o filho embrulhado
+  // no bwrap. Sem sandbox, `isolar` é ignorado e o retrato diz `isolado: false`.
+  constructor({ spawn, env, agora = Date.now, maxSaidaBytes, aoIniciar = null, sandbox = null }) {
+    this.sandbox = sandbox;
     this.spawn = spawn;
     this.env = env;
     this.agora = agora;
@@ -13,7 +16,14 @@ export class ProcessoCli {
     this.aoIniciar = aoIniciar;
   }
 
-  rodar({ executavel, argumentos, cwd, stdin = null, timeoutMs, maxSaidaBytes = this.maxSaidaBytes, log = null }) {
+  rodar({ executavel: pedido, argumentos: argsPedidos, cwd, stdin = null, timeoutMs, maxSaidaBytes = this.maxSaidaBytes, log = null, isolar = null }) {
+    let executavel = pedido;
+    let argumentos = argsPedidos;
+    const isolado = Boolean(isolar && this.sandbox);
+    if (isolado) {
+      try { ({ executavel, argumentos } = this.sandbox.embrulhar({ executavel: pedido, argumentos: argsPedidos, ...isolar })); }
+      catch (erro) { return Promise.resolve({ codigo: null, sinal: null, expirou: false, erroSpawn: `sandbox: ${erro.message}`, stdout: '', stderr: '', duracaoMs: 0, isolado }); }
+    }
     return new Promise(resolve => {
       const inicio = this.agora();
       const saida = { stdout: [], stderr: [] };
@@ -22,7 +32,7 @@ export class ProcessoCli {
       arquivo?.write(`$ ${[executavel, ...argumentos].join(' ')}\n--- cwd ${cwd} ---\n`);
       let filho;
       try { filho = this.spawn(executavel, argumentos, { cwd, env: this.env, stdio: ['pipe', 'pipe', 'pipe'], detached: true }); }
-      catch (erro) { arquivo?.end(); return resolve({ codigo: null, sinal: null, expirou: false, erroSpawn: erro.message, stdout: '', stderr: '', duracaoMs: 0 }); }
+      catch (erro) { arquivo?.end(); return resolve({ codigo: null, sinal: null, expirou: false, erroSpawn: erro.message, stdout: '', stderr: '', duracaoMs: 0, isolado }); }
       if (this.aoIniciar && Number.isInteger(filho.pid)) Promise.resolve().then(() => this.aoIniciar(filho.pid)).catch(() => {});
       let expirou = false;
       let erroSpawn = null;
@@ -39,7 +49,7 @@ export class ProcessoCli {
         clearTimeout(temporizador);
         arquivo?.end(`\n--- fim: código ${codigo} sinal ${sinal}${expirou ? ' (tempo esgotado)' : ''}${bytes.descartados ? ` (${bytes.descartados} bytes descartados)` : ''} ---\n`);
         resolve({ codigo, sinal, expirou, erroSpawn, stdout: Buffer.concat(saida.stdout).toString('utf8'),
-          stderr: Buffer.concat(saida.stderr).toString('utf8'), duracaoMs: this.agora() - inicio, descartados: bytes.descartados });
+          stderr: Buffer.concat(saida.stderr).toString('utf8'), duracaoMs: this.agora() - inicio, descartados: bytes.descartados, isolado });
       });
       filho.stdin.on('error', () => { /* processo morreu antes de ler o prompt: o retrato diz */ });
       if (stdin !== null) filho.stdin.end(stdin); else filho.stdin.end();

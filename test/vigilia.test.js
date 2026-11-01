@@ -187,7 +187,7 @@ test('uma tentativa por vez: lease ativo em outra carta do projeto segura a varr
     if (!liberar) assert.fail(`executor não foi alcançado: ${JSON.stringify(await primeira)}`);
     const segunda = criarVigilia({ servico: a.servico, play: a.play, diretorioEstado: path.join(a.raiz, 'estado'), projetos: a.projetos });
     const [bloqueada] = await segunda.varrer();
-    assert.equal(bloqueada.motivoOciosa, 'tentativa em curso (lease ativo)');
+    assert.equal(bloqueada.motivoOciosa, 'tentativa em curso no Hangar (PAINEL-1): uma por vez');
     liberar();
     const [fim] = await primeira;
     assert.equal(fim.ultimaTentativa.resultado, 'concluido');
