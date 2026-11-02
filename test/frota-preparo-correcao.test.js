@@ -10,12 +10,6 @@ import { ESTADO_BLOQUEADO, VOCABULARIO_DEPENDENCIA } from '../orquestrador/texto
 import { ADMIN, ESCOPO, EVIDENCIA, MIN, decidir, pronta, patches, vereditoDe, jobBacklog } from './fixtures/frota-preparo.js';
 
 const SEM = `${ESCOPO}<p>Sem dependências.</p>`;
-// O Painel Admin configurado só durante `fn` (W3): sem ele, nenhuma decisão destrava.
-async function comAdmin(fn) {
-  const anterior = process.env.PLANE_ADMIN_ACTOR_ID;
-  process.env.PLANE_ADMIN_ACTOR_ID = ADMIN;
-  try { return await fn(); } finally { if (anterior === undefined) delete process.env.PLANE_ADMIN_ACTOR_ID; else process.env.PLANE_ADMIN_ACTOR_ID = anterior; }
-}
 const semGateNaCarta = r => r.c.plane.comentarios.get(r.alvo.id).filter(x => x.actor === ZELADOR_ATOR && /PREPARADO_SEM_GATE/.test(x.comment_html));
 
 test('J1: o preparo que só tira do Backlog passa pelas mesmas defesas — código do catálogo, comentário, relates_to e prosa sem julgamento → MANTER', async () => {
@@ -132,8 +126,8 @@ test('J4: sem comentário na carta quando o gate não sai por posse alheia (rese
   } finally { await r.c.limpar(); }
 });
 
-test('J5: atividade de descrição do zelador ilegível vale do created_at dela — o DECISAO/v1 posterior a reconhece', async () => comAdmin(async () => {
-  const r = await jobBacklog({ estadoNome: 'Todo', descricao: SEM, preparar: (c, alvo) => {
+test('J5: atividade de descrição do zelador ilegível vale do created_at dela — o DECISAO/v1 posterior a reconhece', async () => {
+  const r = await jobBacklog({ autorDecisao: ADMIN, estadoNome: 'Todo', descricao: SEM, preparar: (c, alvo) => {
     c.plane.atividade(alvo.id, { field: 'description', old_value: { html: '?' }, new_value: SEM, actor: ZELADOR_ATOR });
   } });
   try {
@@ -151,7 +145,7 @@ test('J5: atividade de descrição do zelador ilegível vale do created_at dela 
   try {
     assert.match(semInstante.v.motivo, /posterior a 2026-10-31T12:00:00.000Z/, 'sem instante, vale a atividade legível mais recente');
   } finally { await semInstante.c.limpar(); }
-}));
+});
 
 test('J5: descrição vazia (null) é legível — o preparo de uma carta sem descrição não trava o próprio gate', async () => {
   const r = await jobBacklog({ descricao: null });

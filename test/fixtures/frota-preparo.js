@@ -22,9 +22,11 @@ export const vereditoDe = async (c, carta) => (await c.lerDiario()).filter(l => 
 // `preparar` mexe no Plane antes do job; estado que o Plane falso não traz (ex.: "Em espera") nasce
 // no grupo `grupo` (backlog por padrão), entre Backlog e Todo.
 // `comCad`: o CAD entra no catálogo (com uma carta, para a sigla existir no juiz), e CAD-N vira código do catálogo.
-export async function jobBacklog({ descricao = ESCOPO, nome = 'Pronta', estadoNome = 'Backlog', grupo = 'backlog', preparar = () => {}, responder = null, comCad = false } = {}) {
+// `autorDecisao`: o Painel Admin que a montagem injeta (W3); null = nada destrava.
+export async function jobBacklog({ descricao = ESCOPO, nome = 'Pronta', estadoNome = 'Backlog', grupo = 'backlog', preparar = () => {}, responder = null, comCad = false,
+  autorDecisao = null } = {}) {
   let alvo;
-  const c = await montarF4b({ comCad, responder: (entrada, ctx) => (responder ? responder(alvo, ctx) : { vereditos: [pronta(alvo)] }) });
+  const c = await montarF4b({ comCad, autorDecisao, responder: (entrada, ctx) => (responder ? responder(alvo, ctx) : { vereditos: [pronta(alvo)] }) });
   await c.play.alternar(PAINEL.plane, true, '1');
   if (!c.plane.estado(estadoNome)) c.plane.estados.push({ id: randomUUID(), name: estadoNome, group: grupo, sequence: 16000, default: false });
   if (comCad) c.planes.get(CAD.plane).novaCarta({ nome: 'Carta do CAD' });

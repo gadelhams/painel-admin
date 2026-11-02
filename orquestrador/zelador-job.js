@@ -14,8 +14,8 @@ import { GateZelador } from './zelador-gate.js';
 import { todas } from './contrato-local.js';
 import { UUID } from './uuid.js';
 
-// W3 (PAINEL-62): o ator do Painel Admin, cuja decisão da mesa destrava a J58 — o mesmo
-// `PLANE_ADMIN_ACTOR_ID` que a montagem reserva; ausente ou inválido, nada destrava.
+// W3 (PAINEL-62): o ator do Painel Admin, cuja decisão da mesa destrava a J58 — injetado pela
+// montagem (`PLANE_ADMIN_ACTOR_ID`, via `criarZelador`); ausente ou inválido, nada destrava.
 const autorDaMesa = valor => (UUID.test(String(valor ?? '').trim()) ? String(valor).trim() : null);
 
 export class JobZelador {
@@ -23,7 +23,7 @@ export class JobZelador {
   constructor({ jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas,
     consultar, comTrava, agora, ocupacao = async () => ({ ocupado: false, motivo: null }), aoFase = () => {},
     servico = null, elegibilidadeGate = async () => ({ ok: false, motivo: 'gate do zelador não configurado' }), cartaReservada = null,
-    autorDecisao = process.env.PLANE_ADMIN_ACTOR_ID }) {
+    autorDecisao = null }) {
     Object.assign(this, { jobId, projeto, pasta, tupla, frotaCongelada, play, leases, diario, retrato, cli, git, escritor, estado, pausas, consultar, comTrava, agora, ocupacao, aoFase,
       servico, cartaReservada, autorDecisao: autorDaMesa(autorDecisao) });
     this.renovacaoFalhou = false;

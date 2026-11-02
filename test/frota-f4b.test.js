@@ -37,9 +37,9 @@ const pronta = (...cartas) => () => ({ vereditos: cartas.map(c => ({ carta: `PAI
 const veredito = async (c, carta) => (await c.lerDiario()).find(l => l.tipo === 'VEREDITO' && l.carta === `PAINEL-${carta.sequence_id}`);
 
 // Um cenário com uma carta pronta: o job do zelador roda depois de `preparar` mexer no Plane.
-async function jobComPronta({ preparar = () => {}, responderTambem = null, sandboxOk = true } = {}) {
+async function jobComPronta({ preparar = () => {}, responderTambem = null, sandboxOk = true, autorDecisao = null } = {}) {
   let alvo;
-  const c = await montarF4b({ comCad: false, sandboxOk, responder: (entrada, ctx) => { responderTambem?.(ctx, alvo); return pronta(alvo)(); } });
+  const c = await montarF4b({ comCad: false, sandboxOk, autorDecisao, responder: (entrada, ctx) => { responderTambem?.(ctx, alvo); return pronta(alvo)(); } });
   await c.play.alternar(PAINEL.plane, true, '1');
   alvo = c.plane.novaCarta({ nome: 'Pronta', descricao: DESCRICAO });
   await preparar(c, alvo);
@@ -58,18 +58,14 @@ test('J58: o zelador não marca gate em carta cuja trava ele mesmo levantou, at�
     assert.match(semReconhecer.v.motivo, /ASTARGNE tirada pelo zelador; o zelador não marca gate até o dono reconhecer/);
     assert.deepEqual(semReconhecer.alvo.labels, []);
   } finally { await semReconhecer.c.limpar(); }
-  // W3 (PAINEL-62): só a decisão da mesa, da autoria do Painel Admin configurado, destrava.
-  const anterior = process.env.PLANE_ADMIN_ACTOR_ID;
-  process.env.PLANE_ADMIN_ACTOR_ID = ADMIN;
-  try {
-    const reconhecida = await jobComPronta({ preparar: (c, carta) => {
-      tirou(c, carta);
-      c.avancar(60_000);
-      decidir(c, carta);
-      c.avancar(25 * 60 * 60_000); // o comentário da mesa sai da janela das 2 h de outro ator
-    } });
-    try { assert.equal(reconhecida.v.resultado, 'APLICADO', JSON.stringify(reconhecida.v)); } finally { await reconhecida.c.limpar(); }
-  } finally { if (anterior === undefined) delete process.env.PLANE_ADMIN_ACTOR_ID; else process.env.PLANE_ADMIN_ACTOR_ID = anterior; }
+  // W3 (PAINEL-62): só a decisão da mesa, da autoria do Painel Admin injetado pela montagem, destrava.
+  const reconhecida = await jobComPronta({ autorDecisao: ADMIN, preparar: (c, carta) => {
+    tirou(c, carta);
+    c.avancar(60_000);
+    decidir(c, carta);
+    c.avancar(25 * 60 * 60_000); // o comentário da mesa sai da janela das 2 h de outro ator
+  } });
+  try { assert.equal(reconhecida.v.resultado, 'APLICADO', JSON.stringify(reconhecida.v)); } finally { await reconhecida.c.limpar(); }
 });
 
 test('J58: dependência fechada pelo zelador também é trava levantada por ele (a lavagem em duas passadas)', async () => {

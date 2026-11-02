@@ -18,12 +18,6 @@ const julgada = (linha, porque = POR_QUE_NPM) => ({ linha, porque });
 const comJulgamento = (...linhas) => alvo => ({ vereditos: [{ ...pronta(alvo), prosaJulgada: linhas.map(l => julgada(l)) }] });
 const avisos = (r, cabecalho) => r.c.plane.comentarios.get(r.alvo.id).filter(x => x.actor === ZELADOR_ATOR && x.comment_html.includes(`preparo=${cabecalho}`));
 
-async function comAdmin(configurado, fn) {
-  const anterior = process.env.PLANE_ADMIN_ACTOR_ID;
-  if (configurado) process.env.PLANE_ADMIN_ACTOR_ID = ADMIN; else delete process.env.PLANE_ADMIN_ACTOR_ID;
-  try { return await fn(); } finally { if (anterior === undefined) delete process.env.PLANE_ADMIN_ACTOR_ID; else process.env.PLANE_ADMIN_ACTOR_ID = anterior; }
-}
-
 // ---------- L1: a forma real não é vetada; a prosa é julgada ----------
 
 test('L1: a forma da CAD-31 (AST-181, ADR-0005, dependências do npm) sem julgamento → MANTER com a linha; o retrato a passa à CLI', async () => {
@@ -143,14 +137,14 @@ test('prosaJulgada: só no PRONTA; porquê filtrado e com os tetos do comentári
 test('W3: o texto "DECISAO/v1" de qualquer ator não destrava; a decisão do Painel Admin só destrava com o ator configurado', async () => {
   const tirou = (c, carta) => c.plane.atividade(carta.id, { field: 'labels', old_value: 'ASTARGNE', new_value: '', old_identifier: c.plane.label('ASTARGNE').id, actor: ZELADOR_ATOR });
   const cenario = autor => async (c, carta) => { tirou(c, carta); c.avancar(60_000); decidir(c, carta, { autor }); c.avancar(25 * 60 * 60_000); };
-  const humano = await comAdmin(true, () => jobBacklog({ estadoNome: 'Todo', descricao: SEM, preparar: cenario(HUMANO) }));
+  const humano = await jobBacklog({ autorDecisao: ADMIN, estadoNome: 'Todo', descricao: SEM, preparar: cenario(HUMANO) });
   try {
     assert.equal(humano.v.resultado, 'MANTER', JSON.stringify(humano.v));
     assert.match(humano.v.motivo, /ASTARGNE tirada pelo zelador; o zelador não marca gate até o dono reconhecer/);
   } finally { await humano.c.limpar(); }
-  const semAtor = await comAdmin(false, () => jobBacklog({ estadoNome: 'Todo', descricao: SEM, preparar: cenario(ADMIN) }));
-  try { assert.equal(semAtor.v.resultado, 'MANTER', `sem PLANE_ADMIN_ACTOR_ID nada destrava: ${JSON.stringify(semAtor.v)}`); } finally { await semAtor.c.limpar(); }
-  const mesa = await comAdmin(true, () => jobBacklog({ estadoNome: 'Todo', descricao: SEM, preparar: cenario(ADMIN) }));
+  const semAtor = await jobBacklog({ autorDecisao: null, estadoNome: 'Todo', descricao: SEM, preparar: cenario(ADMIN) });
+  try { assert.equal(semAtor.v.resultado, 'MANTER', `sem o ator injetado nada destrava: ${JSON.stringify(semAtor.v)}`); } finally { await semAtor.c.limpar(); }
+  const mesa = await jobBacklog({ autorDecisao: ADMIN, estadoNome: 'Todo', descricao: SEM, preparar: cenario(ADMIN) });
   try { assert.equal(mesa.v.resultado, 'APLICADO', JSON.stringify(mesa.v)); } finally { await mesa.c.limpar(); }
 });
 

@@ -29,7 +29,7 @@ const contratoDe = p => ({ versao: 1, optIn: true, projetoPlane: p.plane, ambien
   agentes: [{ id: 'Claude', provedor: 'claude', modelo: 'claude-opus-5', esforco: 'max', disponivel: true }], vigilia: { maxTentativasPorCarta: 2, tetoPorDia: 6 } });
 
 export async function montarF4b({ inicio = Date.parse('2026-10-31T12:00:00Z'), responder = () => ({ vereditos: [] }), executar = null,
-  sandboxOk = true, tetoDia = 12, comCad = true } = {}) {
+  sandboxOk = true, tetoDia = 12, comCad = true, autorDecisao = null } = {}) {
   let tempo = inicio;
   const agora = () => tempo;
   const raiz = await fs.mkdtemp(path.join(os.tmpdir(), 'orq-f4b-'));
@@ -97,7 +97,7 @@ export async function montarF4b({ inicio = Date.parse('2026-10-31T12:00:00Z'), r
   const cli = { rodar: async (t, entrada) => { pedidos.push(entrada); const r = await responder(entrada, { plane }); return { ok: true, texto: JSON.stringify(r), uso: { duracaoMs: 1, custoUsd: 0.01 } }; } };
   const lerConsumo = async () => ({ claude: { disponivel: true, tipo: 'assinatura', janelas: [{ percentual: 20, janela: '5h', atualizadoEm: new Date(tempo - 60_000).toISOString() }] } });
   zelador = criarZelador({ servico, estado, play, escritor, diretorio, consultar, lerConsumo, ocupacao: async () => ({ ocupado: false, motivo: null }), cli, raiz, agora,
-    projetos, pendenciasMesa: async () => [], elegibilidadeGate: id => elegibilidade(id), cartaReservada });
+    projetos, pendenciasMesa: async () => [], elegibilidadeGate: id => elegibilidade(id), cartaReservada, autorDecisao });
   const frota = await servico.lerFrota();
 
   // Um recibo GATE/v1 válido de `autor` com a fonte dele, e a atividade que pôs a etiqueta.
