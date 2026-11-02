@@ -209,6 +209,13 @@ export class GateZelador {
       // O julgamento que não cabe no recibo recusa antes do preparo, não depois.
       const recibo = evidenciasDoRecibo(v);
       if (recibo.manter) return manter(recibo.manter);
+      // W5: o preparo que abortou (ex.: relações divergentes sob a trava) não se repete por 24 h —
+      // sem o freio, cada job gravaria de novo PENDENTE, intenção e recibo ABORTADO na carta.
+      if (plano.mudanca) {
+        let ultimo;
+        try { ultimo = await j.diario.ultimoPreparo(carta.id); } catch (e) { return manter(`diário do zelador ilegível; o preparo não sai: ${e.message}`); }
+        if (ultimo?.tipo === 'ZELADOR_ABORTADO') return manter(`preparo abortado há menos de 24 h: ${ultimo.motivo ?? 'motivo não registrado'}`);
+      }
       if (!plano.mudanca) return await this.marcar(v, carta.id, conferida.digital);
       return await this.prepararEMarcar(v, carta, plano.mudanca);
     } catch (erro) {

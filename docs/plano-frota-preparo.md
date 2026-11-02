@@ -36,8 +36,8 @@ e "dependência declaração: ausência de dependências não declarada na carta
   (`texto-dependencia.js`, com os termos do estado bloqueado);
 - tirar da descrição um código de carta ou uma linha com esse vocabulário conta como trava levantada
   pelo zelador (J58, segunda passada), até o `DECISAO/v1`. **Só destrava a mesa de verdade (W3):**
-  `external_source` da mesa, autoria do Painel Admin configurado (`PLANE_ADMIN_ACTOR_ID`, a mesma
-  fonte da montagem), nunca editado, com o cabeçalho; sem o ator configurado nada destrava. O
+  `external_source` da mesa, autoria do Painel Admin (`PLANE_ADMIN_ACTOR_ID`, injetado pela montagem
+  em `criarZelador` e no job), nunca editado, com o cabeçalho; sem o ator configurado nada destrava. O
   `ehDecisaoDaMesa` frouxo (qualquer ator, só o texto) fica só na B2, onde recusar é o lado seguro. Atividade de descrição do zelador ilegível
   vale do `created_at` dela; sem instante legível, da atividade legível mais recente da carta, e o
   motivo diz depois de quando o `DECISAO/v1` a reconhece. Descrição vazia (null) é legível;
@@ -94,6 +94,7 @@ em `test/frota-f4b-simulacao.test.js`):
 | campo | `prosaJulgada` fora do PRONTA recusa; porquê curto, com marcador ou fora da forma recusa | campo aceito fora do PRONTA |
 | W3 | DECISAO/v1 de humano não destrava; sem `PLANE_ADMIN_ACTOR_ID` nada destrava; o do Painel Admin destrava | destrave pelo texto de qualquer ator |
 | W4 | erro depois da etiqueta → `PREPARADO_GATE_INCERTO` "gate presente"; releitura falha → "incerto"; sem etiqueta → "não saiu" | aviso sem a releitura |
+| W5 | preparo ABORTADO há menos de 24 h → MANTER sem intenção nem escrita; depois de 24 h volta; diário ilegível → MANTER | freio ignorado; diário ilegível segue |
 | 8 | humano tirou a linha (de 30/10) → MANTER | comparação pelo texto exato com a data de hoje |
 | 4 | A bloqueia B: preparo de A passa com B só trocando o estado; outra mudança em B recusa | comparador de string inteira; vizinha ignorada |
 | escopo | ATUALIZAR anexar "Sem dependências." segue recusado | exceção ligada ao motivo, não ao tipo |
@@ -124,17 +125,18 @@ um humano tirou; janela 19 — `<p>Sem dependências.</p><p>Depende de CAD-31</p
 - a decisão da mesa que destrava é conferida pela fonte, pelo ator, pelo `edited_at` e pelo
   cabeçalho, não pelos campos do corpo (`lerDecisao` mora atrás da porta `decisao.js`, que só exporta
   a fonte e o cabeçalho);
-- abort por relações divergentes (W5): a cada rodada, o preparo grava o PENDENTE, a intenção e o
-  recibo ABORTADO na carta e não escreve o PATCH; se a leitura da chave do zelador divergir sempre
-  da Guest, isso se repete a cada job, sem teto. Falta o freio: não repetir o preparo de uma carta
-  com ABORTADO pelo mesmo motivo nas últimas 24 h;
+- abort por relações divergentes (W5, **fechado** em 02/11/2026): o preparo abortado grava o PENDENTE,
+  a intenção e o recibo ABORTADO uma vez; o freio, pelo diário local, não repete o preparo numa carta
+  cujo último preparo fechou ABORTADO nas últimas 24 h (MANTER "preparo abortado há menos de 24 h",
+  sem intenção, PENDENTE nem escrita; diário ilegível também recusa). Resta uma escrita por carta a
+  cada 24 h enquanto a divergência durar;
 - TOCTOU entre o `GET /relations/` sob a trava e o PATCH (milissegundos): uma relação criada nesse
   intervalo, fora do painel, não é vista;
 - rollback para uma versão anterior com PENDENTE de preparo aberto: ela o lê como `FORA_DA_LISTA`
   "nada escrito", e o rótulo mente; a regra é não voltar assim ([operacao.md](operacao.md) § rollback);
 - no real, em 01/11, a chave do zelador leu `/relations/` igual à Guest nas 35 cartas do CAD, e
   nenhuma tinha relação: a forma de lista não vazia não foi medida; se ela divergir entre as duas
-  leituras, vale o abort em loop acima;
+  leituras, vale o abort com freio acima;
 - um nbsp (`&#160;` ou outro que a normalização não troque) entre "nenhuma" e "(" na linha
   fixa faz o juiz não ver a declaração (o preparo então não sai, pela prontidão simulada).
 

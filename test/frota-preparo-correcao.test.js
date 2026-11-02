@@ -181,3 +181,42 @@ test('desvio 4: gate DIVERGENTE depois do preparo diz que o preparo foi aplicado
     assert.equal(r.alvo.state.name, 'Todo');
   } finally { await r.c.limpar(); }
 });
+
+test('W5: preparo ABORTADO há menos de 24 h não se repete — MANTER sem intenção, PENDENTE nem escrita; depois de 24 h, volta', async () => {
+  let dep;
+  const r = await jobBacklog({ preparar: (c, alvo) => {
+    dep = c.plane.novaCarta({ nome: 'Dependência nova' });
+    let feito = false;
+    c.plane.falhas.aoPedir = (metodo, caminho) => {
+      if (!feito && metodo === 'GET' && caminho.endsWith(`/work-items/${alvo.id}/comments/`)) { feito = true; c.plane.relacionar(alvo, dep); }
+    };
+  } });
+  try {
+    assert.equal(r.v.resultado, 'ABORTADO', JSON.stringify(r.v));
+    // A relação some (o Plane voltou a concordar): só o freio segura a repetição.
+    r.c.plane.relacoes.get(r.alvo.id).blocked_by.length = 0;
+    r.c.plane.relacoes.get(dep.id).blocking.length = 0;
+    const intencoes = () => r.c.plane.comentarios.get(r.alvo.id).filter(x => /^<p>\[ZELADOR\/v1 veredito=PRONTA /.test(x.comment_html)).length;
+    const escritas = r.c.plane.escritas.length;
+    r.c.avancar(31 * MIN);
+    await r.c.zelador.rodarUmaVez();
+    const v = await vereditoDe(r.c, r.alvo);
+    assert.equal(v.resultado, 'MANTER', JSON.stringify(v));
+    assert.match(v.motivo, /^preparo abortado há menos de 24 h: as relações da carta mudaram/);
+    assert.equal(intencoes(), 1, 'nenhuma intenção nova');
+    assert.equal(r.c.plane.escritas.length, escritas, 'nada escrito no Plane');
+    assert.deepEqual(await r.c.zelador.diario.pendentes(), []);
+    r.c.avancar(24 * 60 * MIN);
+    await r.c.zelador.rodarUmaVez();
+    assert.equal((await vereditoDe(r.c, r.alvo)).resultado, 'APLICADO');
+  } finally { await r.c.limpar(); }
+});
+
+test('W5: diário do zelador ilegível na consulta do freio → MANTER, nada escrito', async () => {
+  const r = await jobBacklog({ preparar: c => { c.zelador.diario.ultimoPreparo = async () => { throw new Error('linha corrompida no meio'); }; } });
+  try {
+    assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
+    assert.match(r.v.motivo, /diário do zelador ilegível; o preparo não sai/);
+    assert.deepEqual(r.c.plane.escritas, []);
+  } finally { await r.c.limpar(); }
+});

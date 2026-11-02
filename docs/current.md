@@ -34,6 +34,6 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
 
 ## Portão
 
-`npm test` 490 e Playwright 38 (01/11), check-docs com acervo (teto 30 mil
+`npm test` 492 e Playwright 38 (01/11), check-docs com acervo (teto 30 mil
 por doc). Sem linter: o portão monta o painel real com falsos e confere
 mapa, imports e tamanho. `main` no GitHub.

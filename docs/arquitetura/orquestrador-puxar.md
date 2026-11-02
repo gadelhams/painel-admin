@@ -74,7 +74,8 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
   no `prosaJulgada` do PRONTA, com o julgamento nas evidências do recibo GATE/v1;
   prontidão simulada que tem de dar pronta, J58 com a exceção do tipo, PENDENTE → intenção com texto
   fixo → um PATCH com estado e descrição → verificação → recibo). O escritor resolve o estado (unstarted
-  de menor `sequence`) e relê as relações sob a trava, no mesmo teto; relação nova aborta. O gate então
+  de menor `sequence`) e relê as relações sob a trava, no mesmo teto; relação nova aborta, e o preparo
+  abortado não se repete na carta por 24 h (pelo diário local; diário ilegível recusa). O gate então
   sai com a digital da releitura (D1); se não sai (recusa ou abort), o diário registra
   `PREPARADO_SEM_GATE` (contado à parte) e a carta recebe um comentário `[ZELADOR/v1]` com o motivo,
   salvo posse alheia (lease, reserva, play); num erro comum, que segue depois, as etiquetas são relidas
