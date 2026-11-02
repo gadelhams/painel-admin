@@ -169,7 +169,9 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       ...(fetchPlane ? { fetchImpl: fetchPlane } : {}), ...(arquivoChaveZelador ? { arquivoChave: arquivoChaveZelador } : {}) }),
     pendenciasMesa: () => mesa.servico.pendentes(), elegibilidadeGate: id => elegibilidadeGate(id), cartaReservada,
     spawn: spawnCli ?? spawnReal, lerConsumo, ocupacao: ocupacaoSessoes, executarGit, cli: cliZelador ?? null, agora, registrarLog: log,
-    intervaloMs: inteiroEntre(ambiente.ZELADOR_INTERVALO_MIN, 5, 1440, 30) * 60_000, tetoDia: inteiroEntre(ambiente.ZELADOR_TETO_DIA, 1, 100, 12) });
+    intervaloMs: inteiroEntre(ambiente.ZELADOR_INTERVALO_MIN, 5, 1440, 30) * 60_000, tetoDia: inteiroEntre(ambiente.ZELADOR_TETO_DIA, 1, 100, 12),
+    // W3 (PAINEL-62): só a decisão da mesa deste ator destrava o gate do zelador; o mesmo ator reservado acima.
+    autorDecisao: ambiente.PLANE_ADMIN_ACTOR_ID?.trim() || null });
   const instancia = new InstanciaAgendador({ diretorio: diretorioOrquestracao, comTrava: estadoOrquestracao.comTrava,
     habilitado: ambiente.ORQ_AGENDADOR?.trim() === 'true', agora });
   // O que está rodando num projeto, para a tela do play dizer antes de desligar (J66); o job do

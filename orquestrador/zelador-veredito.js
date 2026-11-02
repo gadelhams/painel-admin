@@ -6,14 +6,16 @@
 // texto de LLM com eles poderia forjar recibo. Trecho e texto novo nunca tocam marcador humano
 // (`(DONO`, `(ASTARGNE`, `(BLOQUEADA`, ou ASTARGNE/DONO/BLOQUEADA sem parêntese) nem linha de
 // dependência, e a descrição nova guarda intactas as linhas que os têm (J58, B7). Veredito que
-// cai em qualquer regra vira MANTER, com o motivo, e nada é escrito.
+// cai em qualquer regra vira MANTER, com o motivo, e nada é escrito. O `preparo` do PRONTA
+// (PAINEL-62) está na lista fechada do escritor, mas nenhum JSON da CLI o produz: só o painel o monta.
 import { createHash } from 'node:crypto';
 import { DECISAO_HUMANA_NA_DESCRICAO } from './marcas-carta.js';
 import { textoDeHtml } from '../decisao.js';
+import { linhaDoZelador } from './texto-dependencia.js';
 
 // PRONTA (F4b, J59): o zelador PROPÕE o READY TO DEV; quem confere e marca é zelador-gate.js.
 const VEREDITOS = Object.freeze(['MANTER', 'ATUALIZAR', 'FECHAR', 'CANCELAR', 'IA_DECIDE', 'DONO', 'PRONTA']);
-const CAMPOS = new Set(['carta', 'veredito', 'evidencias', 'comentario', 'trecho', 'novoTrecho', 'labelsTrava']);
+const CAMPOS = new Set(['carta', 'veredito', 'evidencias', 'comentario', 'trecho', 'novoTrecho', 'labelsTrava', 'prosaJulgada']);
 const TRAVAS_PERMITIDAS = [['ASTARGNE'], ['ASTARGNE', 'PRODUTO'], ['TAREFA DONO'], ['BLOQUEADA']];
 const MARCADORES_PROIBIDOS = /GATE\/|HANDOFF\/|ZELADOR\/|DECISAO\/|\[ORQ\//i;
 // A lista do juiz (DECISAO_HUMANA_NA_DESCRICAO) mais as formas sem parêntese: "dono" minúsculo é
@@ -69,6 +71,7 @@ export function mudancaNaListaFechada(m) {
     return !m.remover.length && TRAVAS_PERMITIDAS.some(p => [...p].sort().join() === [...new Set(m.adicionar)].sort().join() && p.length === m.adicionar.length);
   }
   if (m?.tipo === 'anexar') return chaves === 'texto,tipo' && typeof m.texto === 'string' && !tocaMarcadorHumano(m.texto);
+  if (m?.tipo === 'preparo') return chaves === 'declarar,estado,tipo' && typeof m.estado === 'boolean' && typeof m.declarar === 'boolean' && (m.estado || m.declarar);
   if (m?.tipo === 'trecho') return chaves === 'novoTrecho,tipo,trecho' && typeof m.trecho === 'string' && typeof m.novoTrecho === 'string' && !tocaMarcadorHumano(m.trecho) && !tocaMarcadorHumano(m.novoTrecho);
   return false;
 }
@@ -101,9 +104,25 @@ function mudancaDo(v) {
   }
 }
 
+// PAINEL-62 (decisão do dono, 01/11/2026: "o zelador julga a prosa"): o julgamento da CLI sobre
+// cada linha suspeita, só no PRONTA. `porque` passa pelo filtro e pelos tetos do `comentario`;
+// a `linha` também é filtrada, porque vai ao recibo GATE/v1. Devolve { prosaJulgada } ou { erro }.
+function julgamentoDaProsa(lista) {
+  if (!Array.isArray(lista) || !lista.length || lista.length > 20) return { erro: 'prosaJulgada fora da forma (1 a 20 linhas)' };
+  const saida = [];
+  for (const j of lista) {
+    if (!j || typeof j !== 'object' || Array.isArray(j) || Object.keys(j).sort().join() !== 'linha,porque') return { erro: 'prosaJulgada fora da forma ({linha, porque})' };
+    if (typeof j.linha !== 'string' || !j.linha.trim() || j.linha.length > 2000) return { erro: 'linha julgada vazia ou longa demais' };
+    const recusa = prosaRecusada(j.linha) ?? prosaRecusada(j.porque) ?? (j.porque.trim().length < 15 || j.porque.length > 1500 ? 'porquê curto ou longo demais' : null);
+    if (recusa) return { erro: `prosaJulgada: ${recusa}` };
+    saida.push({ linha: j.linha.replace(/\s+/g, ' ').trim(), porque: j.porque.trim() });
+  }
+  return { prosaJulgada: saida };
+}
+
 /**
  * Valida um veredito da CLI. ctx: { cartasPorIdentificador, candidatas (Set de identificadores),
- * git (GitZelador), pasta }. Devolve { identificador, veredito, mudanca, evidencias, comentario }
+ * git (GitZelador), pasta }. Devolve { identificador, veredito, mudanca, evidencias, comentario, prosaJulgada? }
  * ou { identificador, veredito: 'MANTER', recusado: motivo }.
  */
 export async function validarVeredito(v, { cartasPorIdentificador, candidatas, git, pasta }) {
@@ -112,6 +131,9 @@ export async function validarVeredito(v, { cartasPorIdentificador, candidatas, g
   if (!v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).some(k => !CAMPOS.has(k))) return manter('veredito fora da forma fechada');
   if (!identificador || !candidatas.has(identificador)) return manter('carta fora das candidatas do retrato');
   if (!VEREDITOS.includes(v.veredito)) return manter('veredito desconhecido');
+  if (v.prosaJulgada !== undefined && v.veredito !== 'PRONTA') return manter('prosaJulgada só vale no PRONTA');
+  const julgamento = v.prosaJulgada === undefined ? { prosaJulgada: null } : julgamentoDaProsa(v.prosaJulgada);
+  if (julgamento.erro) return manter(julgamento.erro);
   if (v.veredito === 'MANTER') return { identificador, veredito: 'MANTER', recusado: null };
   let mudanca;
   try { mudanca = mudancaDo(v); } catch (e) { return manter(e.message); }
@@ -133,7 +155,8 @@ export async function validarVeredito(v, { cartasPorIdentificador, candidatas, g
   }
   if (!evidencias.length) return manter('nenhuma evidência conferiu');
   if (v.veredito === 'FECHAR' && !evidencias.some(e => e.tipo === 'commit')) return manter('fechar exige commit no ramo principal');
-  return { identificador, veredito: v.veredito, mudanca, evidencias, comentario: v.comentario.trim(), recusado: null };
+  return { identificador, veredito: v.veredito, mudanca, evidencias, comentario: v.comentario.trim(), recusado: null,
+    ...(julgamento.prosaJulgada ? { prosaJulgada: julgamento.prosaJulgada } : {}) };
 }
 
 const DESCRICAO_MUDANCA = {
@@ -142,6 +165,7 @@ const DESCRICAO_MUDANCA = {
   gate: m => `marcar ${m.gate}`,
   trecho: () => 'trocar um trecho da descrição',
   anexar: () => 'anexar um parágrafo à descrição',
+  preparo: m => [m.estado && 'estado → o primeiro de "não começada" (sai do Backlog)', m.declarar && 'declarar "Dependências: nenhuma" na descrição'].filter(Boolean).join('; '),
 };
 const descreverMudanca = m => DESCRICAO_MUDANCA[m.tipo](m);
 
@@ -165,9 +189,17 @@ export function htmlRecibo({ chave, resultado, motivo }) {
 const linhasMarcadas = html => textoDeHtml(html, Infinity).split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(tocaMarcadorHumano);
 
 // A descrição nova: o trecho tem de aparecer UMA vez (cru ou escapado); o texto novo entra
-// escapado; nenhuma linha com marcador humano muda, some ou nasce (B7).
-export function novaDescricao(html, mudanca) {
+// escapado; nenhuma linha com marcador humano muda, some ou nasce (B7). No preparo (D3), as
+// linhas marcadas depois são as de antes mais exatamente a linha fixa do zelador.
+export function novaDescricao(html, mudanca, { agoraMs } = {}) {
   const atual = String(html ?? '');
+  if (mudanca.tipo === 'preparo') {
+    if (!mudanca.declarar) throw new Error('preparo sem declaração não muda a descrição');
+    const linha = linhaDoZelador(agoraMs);
+    const preparada = `${atual}<p>${escapar(linha)}</p>`;
+    if (JSON.stringify(linhasMarcadas(preparada)) !== JSON.stringify([...linhasMarcadas(atual), linha])) throw new Error('o preparo tocaria outra linha com marcador humano ou de dependência');
+    return preparada;
+  }
   let nova = null;
   if (mudanca.tipo === 'anexar') nova = `${atual}<p>${escapar(mudanca.texto)}</p>`;
   for (const forma of mudanca.tipo === 'trecho' ? [mudanca.trecho, escapar(mudanca.trecho)] : []) {

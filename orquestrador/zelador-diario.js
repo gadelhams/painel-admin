@@ -96,6 +96,13 @@ export class DiarioZelador {
     return [...abertos.values()];
   }
 
+  // W5 (PAINEL-62): o último fechamento de um preparo (veredito PRONTA) desta carta na janela, ou
+  // null. Corrupção no meio lança: quem chama recusa (falha fechada).
+  async ultimoPreparo(cartaId, janelaMs = DIA_MS) {
+    const { linhas } = await this.linhas({ janelaMs });
+    return linhas.filter(l => l.cartaId === cartaId && l.veredito === 'PRONTA' && /^ZELADOR_/.test(l.tipo) && l.tipo !== 'ZELADOR_PENDENTE').at(-1) ?? null;
+  }
+
   async marcarPendente(registro) {
     await fs.mkdir(this.pasta, { recursive: true });
     await anexarJsonl(this.indice, { quando: this.iso(), tipo: 'PENDENTE', ...registro });

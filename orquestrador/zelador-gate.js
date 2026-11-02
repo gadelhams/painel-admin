@@ -8,15 +8,25 @@
 //   relido ao vivo; nenhum ancestral com trava (BLOQUEIOS, PRODUTO ou marcador humano na
 //   descrição); `RegistroGate.validar` ao vivo — ProntidaoGate, preavaliação e relações relidas;
 // - J58: nunca marca gate em carta cuja trava o próprio zelador levantou (etiqueta de trava
-//   tirada, marcador ou dependência tirados da descrição, relação removida, dependência fechada)
+//   tirada, marcador, dependência ou código de carta tirados da descrição, relação removida,
+//   dependência fechada)
 //   até o dono reconhecer — um `DECISAO/v1` da mesa na carta, depois do levantamento;
 // - chave = UUIDv5(carta | gate | digital): a mesma carta, no mesmo estado, dá o mesmo recibo;
-// - sob a trava só o fencing do lease, lease/tentativa/reserva e o escritor (teto de 20 s).
+// - sob a trava só o fencing do lease, lease/tentativa/reserva e o escritor (teto de 20 s);
+// - PAINEL-62: depois das conferências e do juiz real (`preavaliar`), se o juiz só aponta o
+//   Backlog e/ou a declaração ausente, o PRONTA ganha um preparo (zelador-preparo.js), escrito pela
+//   sequência da limpeza (PENDENTE → intenção → PATCH único → recibo); o gate sai depois com a
+//   digital da releitura do preparo (D1). Preparo feito e gate recusado = PREPARADO_SEM_GATE, com
+//   um comentário na carta (salvo lease ou reserva de outro: aí só o diário, como na B4).
 import { BLOQUEIOS, DECISAO_HUMANA_NA_DESCRICAO } from './marcas-carta.js';
-import { atorDe, digitalDaCarta, ehDecisaoDaMesa, motivoIntocavel, nomesDe, ZELADOR_ATOR } from './zelador-politica.js';
+import { atorDe, digitalDaCarta, motivoIntocavel, nomesDe, ZELADOR_ATOR } from './zelador-politica.js';
+import { CABECALHO_DECISAO, FONTE_DECISAO } from '../decisao.js';
 import { tocaMarcadorHumano } from './zelador-veredito.js';
 import { listar } from './zelador-retrato.js';
 import { uuidV5 } from './uuid.js';
+import { codigosEm, htmlPreparado, motivoContraOPronta, planoDoPreparo, siglasDoCatalogo, textoRemovido } from './zelador-preparo.js';
+import { textoDoHtml } from './zelador-veredito.js';
+import { VOCABULARIO_DEPENDENCIA } from './texto-dependencia.js';
 
 const GATE = 'READY TO DEV';
 const DIA_MS = 24 * 60 * 60_000;
@@ -57,21 +67,53 @@ function travaNosAncestrais(carta, porId) {
   return null;
 }
 
-// As travas que o zelador levantou nesta carta, pelas atividades: { quando, motivo }[].
+// As travas que o zelador levantou nesta carta, pelas atividades: { quando, motivo }[]. D7
+// (PAINEL-62; J2 da correção): tirar da descrição um código de carta, ou uma linha com o
+// vocabulário de dependência (o mesmo da anti-lavagem), também é levantar trava — a lavagem em
+// duas passadas: ATUALIZAR tira "Precisa do CAD-31" ou "Requer o deploy antes", o PRONTA seguinte
+// declararia "nenhuma". Descrição vazia (null) é legível. J5: a atividade ilegível vale do
+// `created_at` dela; sem instante legível, da atividade legível mais recente da carta, e o motivo
+// diz depois de quando o DECISAO/v1 do dono a reconhece.
 function levantamentosDoZelador(atividades, ator = ZELADOR_ATOR) {
   const saida = [];
+  const instantes = atividades.map(a => Date.parse(a.created_at)).filter(Number.isFinite);
+  const maisRecente = instantes.length ? Math.max(...instantes) : NaN;
   for (const a of atividades.filter(x => atorDe(x) === ator)) {
     const quando = Date.parse(a.created_at);
+    const antes = a.old_value ?? '';
+    const depois = a.new_value ?? '';
     if (a.field === 'labels' && TRAVAS.includes(a.old_value) && a.new_value !== a.old_value) saida.push({ quando, motivo: `${a.old_value} tirada pelo zelador` });
-    else if (a.field === 'description' && tocaMarcadorHumano(a.old_value) && !tocaMarcadorHumano(a.new_value)) saida.push({ quando, motivo: 'marcador ou dependência tirados da descrição pelo zelador' });
-    else if (CAMPOS_DE_RELACAO.test(a.field ?? '') && a.old_value && !a.new_value) saida.push({ quando, motivo: 'relação tirada pelo zelador' });
+    else if (a.field === 'description' && (typeof antes !== 'string' || typeof depois !== 'string')) {
+      const q = Number.isFinite(quando) ? quando : maisRecente;
+      saida.push({ quando: q, motivo: `atividade de descrição do zelador ilegível; o dono reconhece com DECISAO/v1 posterior a ${Number.isFinite(q) ? new Date(q).toISOString() : 'uma atividade legível (nenhuma na carta)'}` });
+    } else if (a.field === 'description' && tocaMarcadorHumano(antes) && !tocaMarcadorHumano(depois)) saida.push({ quando, motivo: 'marcador ou dependência tirados da descrição pelo zelador' });
+    else if (a.field === 'description' && (codigosEm(textoDoHtml(antes)).some(x => !codigosEm(textoDoHtml(depois)).includes(x))
+      || VOCABULARIO_DEPENDENCIA.test(textoRemovido(antes, depois)))) {
+      saida.push({ quando, motivo: 'código de carta ou dependência em prosa tirados da descrição pelo zelador' });
+    } else if (CAMPOS_DE_RELACAO.test(a.field ?? '') && a.old_value && !a.new_value) saida.push({ quando, motivo: 'relação tirada pelo zelador' });
   }
   return saida;
 }
 
-// Reconhecido = DECISAO/v1 da mesa na carta, de outro ator, depois do levantamento.
-const reconhecido = (levantamento, comentarios, ator = ZELADOR_ATOR) => comentarios.some(c => ehDecisaoDaMesa(c) && atorDe(c) !== ator
+// W3 (PAINEL-62): só destrava uma decisão da mesa de verdade — `external_source` da mesa, autoria do
+// Painel Admin configurado (`PLANE_ADMIN_ACTOR_ID`, a mesma fonte da montagem), nunca editada, com o
+// cabeçalho, depois do levantamento. Sem o ator configurado nada destrava. O `ehDecisaoDaMesa`
+// frouxo (qualquer ator, só o texto) fica onde recusar é o lado seguro (B2), nunca aqui.
+const ehDecisaoQueDestrava = (c, autorDecisao) => Boolean(autorDecisao) && c?.external_source === FONTE_DECISAO
+  && atorDe(c) === autorDecisao && !c.edited_at && textoDoHtml(c.comment_html).includes(CABECALHO_DECISAO);
+const reconhecido = (levantamento, comentarios, autorDecisao) => comentarios.some(c => ehDecisaoQueDestrava(c, autorDecisao)
   && Date.parse(c.created_at) > levantamento.quando);
+
+const FIXO_RECIBO = 'prontidão READY TO DEV, preavaliação e relações conferidas ao vivo; ancestrais sem trava';
+// As evidências do recibo GATE/v1: { evidencias } ou { manter }. Com a prosa julgada pela CLI
+// (PAINEL-62), cada julgamento entra inteiro como evidência; o que não cabe recusa, nunca corta.
+function evidenciasDoRecibo(v) {
+  const conferidas = v.evidencias.map(e => e.texto);
+  if (!v.prosaJulgada?.length) return { evidencias: [...conferidas, FIXO_RECIBO].slice(0, 10).map(x => String(x).slice(0, 500)) };
+  const julgadas = v.prosaJulgada.map(x => `prosa julgada pelo zelador «${x.linha}»: ${x.porque}`);
+  if (julgadas.length > 8 || julgadas.some(x => x.length > 500)) return { manter: 'o julgamento da prosa não cabe no recibo GATE/v1 (até 8 linhas de 500 caracteres)' };
+  return { evidencias: [`evidências conferidas pelo painel: ${conferidas.join('; ')}`.slice(0, 500), FIXO_RECIBO, ...julgadas] };
+}
 
 export class GateZelador {
   constructor({ job, elegibilidade }) { this.j = job; this.elegibilidade = elegibilidade; }
@@ -96,56 +138,144 @@ export class GateZelador {
     return saida;
   }
 
-  // Devolve { resultado: MANTER|APLICADO|ABORTADO|DIVERGENTE, motivo? }.
-  async aplicar(v) {
+  // As conferências ao vivo antes de escrever: { manter, posse } ou { atual, digital }. `digitalEsperada`
+  // é a do retrato, ou a D1 da releitura do preparo (D10).
+  async conferirCarta(v, cartaId, digitalEsperada, mudouDesde = 'o retrato') {
+    const j = this.j;
+    const { porId } = await j.retrato.cartasDoProjeto(j.projeto);
+    const atual = porId.get(cartaId);
+    if (!atual || atual.projetoId !== j.projeto.plane) return { manter: 'carta sumiu do Plane' };
+    const [d, mesa] = await Promise.all([j.retrato.detalhes(j.projeto.plane, cartaId), j.retrato.mesaPendente()]);
+    const intocavel = motivoIntocavel(atual, { porId, ...d, agoraMs: j.agora(), mesaPendente: mesa && mesa.has(v.identificador.toUpperCase()) });
+    if (intocavel) return { manter: intocavel, posse: Boolean(d.lease || d.reserva) };
+    const noAncestral = travaNosAncestrais(atual, porId);
+    if (noAncestral) return { manter: `trava no ancestral: ${noAncestral}` };
+    // J58: o que o próprio zelador levantou nesta carta ou nas dependências dela, sem o dono reconhecer.
+    const levantados = [...levantamentosDoZelador(d.atividades), ...(await this.dependenciasFechadas(d.relacoes, porId))]
+      .filter(l => !Number.isFinite(l.quando) || !reconhecido(l, d.comentarios, j.autorDecisao));
+    if (levantados.length) return { manter: `${levantados[0].motivo}; o zelador não marca gate até o dono reconhecer (DECISAO/v1)` };
+    const digital = digitalDaCarta(atual, d.comentarios);
+    if (digital !== digitalEsperada) return { manter: `a carta mudou desde ${mudouDesde}` };
+    // X1: o veto certo e a prosa julgada valem para TODO PRONTA, com ou sem preparo, ao vivo.
+    const contra = motivoContraOPronta({ carta: atual, codigo: `${atual.sigla}-${atual.sequence_id}`, comentarios: d.comentarios, relacoes: d.relacoes,
+      siglas: siglasDoCatalogo(porId), porId, prosaJulgada: v.prosaJulgada ?? null });
+    if (contra) return { manter: contra };
+    return { atual, digital };
+  }
+
+  // O gate em si: juiz real (J59), chave UUIDv5(carta | gate | digital) e o escritor sob a trava.
+  async marcar(v, cartaId, digital) {
     const j = this.j;
     const pid = j.projeto.plane;
+    const manter = motivo => ({ resultado: 'MANTER', motivo });
+    const recibo = evidenciasDoRecibo(v);
+    if (recibo.manter) return manter(recibo.manter);
+    const proposta = { gate: GATE, justificativa: `Zelador do Hangar, conferido ao vivo pelo painel: ${v.comentario}`.slice(0, 2000), evidencias: recibo.evidencias };
+    // J59: a prontidão do juiz real, ao vivo (fila pela Guest, relações relidas).
+    let validado;
+    try { validado = await j.servico.validarGate(cartaId, proposta); } catch (e) { return manter(`prontidão ao vivo recusou: ${e.message}`); }
+    const chave = uuidV5(`${cartaId}|${GATE}|${digital}`);
+    await j.estado.registrarEvento({ tipo: 'GATE_PENDENTE', cartaId, chaveIdempotencia: chave, gate: GATE, origem: 'zelador', jobId: j.jobId });
+    const r = await j.escritor.marcarGate({ projetoId: pid, cartaId, chaveIdempotencia: chave, versaoCarta: validado.versaoCarta,
+      justificativa: proposta.justificativa, evidencias: proposta.evidencias,
+      sobTrava: acao => j.sobFencing(async () => {
+        if (await j.estado.lerLease(cartaId).catch(() => ({ ilegivel: true }))) throw abortar('lease de despacho apareceu na carta', true);
+        const historico = await j.estado.lerHistorico(cartaId).catch(() => null);
+        if (!historico || historico.some(e => e.tipo === 'TENTATIVA' && j.agora() - Date.parse(e.quando) < DIA_MS)) throw abortar('tentativa de despacho na carta', true);
+        const reserva = j.cartaReservada ? await j.cartaReservada(cartaId).catch(() => ({ motivo: 'reservas ilegíveis' })) : null;
+        if (reserva) throw abortar(`carta reservada por outra sessão: ${reserva.motivo}`, true);
+        return acao();
+      }) });
+    if (!r.conferiu) {
+      await j.estado.registrarEvento({ tipo: 'GATE_DIVERGENTE', cartaId, chaveIdempotencia: chave, gate: GATE, origem: 'zelador' });
+      await j.comTrava(() => j.play.suspenderSobTrava(pid, `divergência na verificação do gate de ${v.identificador}`));
+      return { resultado: 'DIVERGENTE', motivo: 'a releitura do gate não conferiu; play do projeto suspenso' };
+    }
+    await j.estado.registrarEvento({ tipo: 'GATE_APLICADO', cartaId, chaveIdempotencia: chave, gate: GATE, origem: 'zelador', comentarioId: r.comentarioId });
+    return { resultado: 'APLICADO' };
+  }
+
+  // Devolve { resultado: MANTER|APLICADO|ABORTADO|DIVERGENTE|PREPARADO_SEM_GATE, motivo? }.
+  async aplicar(v) {
+    const j = this.j;
     const carta = j.r.porIdentificador.get(v.identificador);
     const manter = motivo => ({ resultado: 'MANTER', motivo });
-    const eleg = await this.elegibilidade(pid).catch(e => ({ ok: false, motivo: e.message }));
+    const eleg = await this.elegibilidade(j.projeto.plane).catch(e => ({ ok: false, motivo: e.message }));
     if (!eleg.ok) return manter(`gate do zelador inelegível: ${eleg.motivo}`);
     try {
-      const { porId } = await j.retrato.cartasDoProjeto(j.projeto);
-      const atual = porId.get(carta.id);
-      if (!atual || atual.projetoId !== pid) return manter('carta sumiu do Plane');
-      const [d, mesa] = await Promise.all([j.retrato.detalhes(pid, carta.id), j.retrato.mesaPendente()]);
-      const intocavel = motivoIntocavel(atual, { porId, ...d, agoraMs: j.agora(), mesaPendente: mesa && mesa.has(v.identificador.toUpperCase()) });
-      if (intocavel) return manter(intocavel);
-      const noAncestral = travaNosAncestrais(atual, porId);
-      if (noAncestral) return manter(`trava no ancestral: ${noAncestral}`);
-      // J58: o que o próprio zelador levantou nesta carta ou nas dependências dela, sem o dono reconhecer.
-      const levantados = [...levantamentosDoZelador(d.atividades), ...(await this.dependenciasFechadas(d.relacoes, porId))]
-        .filter(l => !Number.isFinite(l.quando) || !reconhecido(l, d.comentarios));
-      if (levantados.length) return manter(`${levantados[0].motivo}; o zelador não marca gate até o dono reconhecer (DECISAO/v1)`);
-      const digital = digitalDaCarta(atual, d.comentarios);
-      if (digital !== j.r.digitais.get(carta.id)) return manter('a carta mudou desde o retrato');
-      const proposta = { gate: GATE, justificativa: `Zelador do Hangar, conferido ao vivo pelo painel: ${v.comentario}`.slice(0, 2000),
-        evidencias: [...v.evidencias.map(e => e.texto), 'prontidão READY TO DEV, preavaliação e relações conferidas ao vivo; ancestrais sem trava'].slice(0, 10).map(x => String(x).slice(0, 500)) };
-      // J59: a prontidão do juiz real, ao vivo (fila pela Guest, relações relidas).
-      let validado;
-      try { validado = await j.servico.validarGate(carta.id, proposta); } catch (e) { return manter(`prontidão ao vivo recusou: ${e.message}`); }
-      const chave = uuidV5(`${carta.id}|${GATE}|${digital}`);
-      await j.estado.registrarEvento({ tipo: 'GATE_PENDENTE', cartaId: carta.id, chaveIdempotencia: chave, gate: GATE, origem: 'zelador', jobId: j.jobId });
-      const r = await j.escritor.marcarGate({ projetoId: pid, cartaId: carta.id, chaveIdempotencia: chave, versaoCarta: validado.versaoCarta,
-        justificativa: proposta.justificativa, evidencias: proposta.evidencias,
-        sobTrava: acao => j.sobFencing(async () => {
-          if (await j.estado.lerLease(carta.id).catch(() => ({ ilegivel: true }))) throw abortar('lease de despacho apareceu na carta', true);
-          const historico = await j.estado.lerHistorico(carta.id).catch(() => null);
-          if (!historico || historico.some(e => e.tipo === 'TENTATIVA' && j.agora() - Date.parse(e.quando) < DIA_MS)) throw abortar('tentativa de despacho na carta', true);
-          const reserva = j.cartaReservada ? await j.cartaReservada(carta.id).catch(() => ({ motivo: 'reservas ilegíveis' })) : null;
-          if (reserva) throw abortar(`carta reservada por outra sessão: ${reserva.motivo}`, true);
-          return acao();
-        }) });
-      if (!r.conferiu) {
-        await j.estado.registrarEvento({ tipo: 'GATE_DIVERGENTE', cartaId: carta.id, chaveIdempotencia: chave, gate: GATE, origem: 'zelador' });
-        await j.comTrava(() => j.play.suspenderSobTrava(pid, `divergência na verificação do gate de ${v.identificador}`));
-        return { resultado: 'DIVERGENTE', motivo: 'a releitura do gate não conferiu; play do projeto suspenso' };
+      const conferida = await this.conferirCarta(v, carta.id, j.r.digitais.get(carta.id));
+      if (conferida.manter) return manter(conferida.manter);
+      // D4: o juiz real antes de qualquer escrita, também a do preparo.
+      let pre;
+      try { pre = await j.servico.preavaliar(carta.id, GATE); } catch (e) { return manter(`prontidão ao vivo recusou: ${e.message}`); }
+      const plano = planoDoPreparo(pre, conferida.atual);
+      if (plano.manter) return manter(plano.manter);
+      // O julgamento que não cabe no recibo recusa antes do preparo, não depois.
+      const recibo = evidenciasDoRecibo(v);
+      if (recibo.manter) return manter(recibo.manter);
+      // W5: o preparo que abortou (ex.: relações divergentes sob a trava) não se repete por 24 h —
+      // sem o freio, cada job gravaria de novo PENDENTE, intenção e recibo ABORTADO na carta.
+      if (plano.mudanca) {
+        let ultimo;
+        try { ultimo = await j.diario.ultimoPreparo(carta.id); } catch (e) { return manter(`diário do zelador ilegível; o preparo não sai: ${e.message}`); }
+        if (ultimo?.tipo === 'ZELADOR_ABORTADO') return manter(`preparo abortado há menos de 24 h: ${ultimo.motivo ?? 'motivo não registrado'}`);
       }
-      await j.estado.registrarEvento({ tipo: 'GATE_APLICADO', cartaId: carta.id, chaveIdempotencia: chave, gate: GATE, origem: 'zelador', comentarioId: r.comentarioId });
-      return { resultado: 'APLICADO' };
+      if (!plano.mudanca) return await this.marcar(v, carta.id, conferida.digital);
+      return await this.prepararEMarcar(v, carta, plano.mudanca);
     } catch (erro) {
       if (erro.abortar || erro.escopo) return { resultado: 'ABORTADO', motivo: erro.escopo ? 'play desligado no meio da sequência; o gate não saiu' : erro.message };
       throw erro;
     }
+  }
+
+  // W4: depois de um erro, o que a carta diz do gate. true = READY TO DEV presente, false = ausente
+  // (conferido), null = releitura falhou.
+  async gateNaCarta(cartaId) {
+    try {
+      const { porId } = await this.j.retrato.cartasDoProjeto(this.j.projeto);
+      const c = porId.get(cartaId);
+      return c ? nomesDe(c).includes(GATE) : null;
+    } catch { return null; }
+  }
+
+  // O preparo pela sequência da limpeza e o gate com a digital da releitura (D10); gate que não
+  // sai depois do preparo aplicado vira PREPARADO_SEM_GATE (D12), nunca um MANTER genérico. J3: um
+  // erro comum no gate também deixa o diário e a carta dizendo que o preparo saiu, e só então
+  // segue; W4: antes do aviso, as etiquetas são relidas — "não saiu" só com a releitura conferindo.
+  // J10: a chave do comentário é a da intenção do preparo, nunca a D1 (que pode faltar).
+  async prepararEMarcar(v, carta, mudanca) {
+    const j = this.j;
+    const preparado = await j.aplicacao.aplicar({ ...v, mudanca });
+    if (preparado.resultado === 'MANTER') return { resultado: 'MANTER', motivo: `preparo recusado: ${preparado.motivo}` };
+    if (preparado.resultado !== 'APLICADO') return { resultado: preparado.resultado, motivo: `preparo: ${preparado.motivo}` };
+    const avisar = async (resultado, texto, posse) => {
+      let motivo = resultado === 'PREPARADO_SEM_GATE' ? `preparo aplicado, mas o READY TO DEV não saiu: ${texto}` : `preparo aplicado; ${texto}`;
+      if (!posse) {
+        await j.aplicacao.comentarSobFencing(carta.id, htmlPreparado(resultado, texto), `${preparado.chave}:sem-gate`)
+          .catch(e => { motivo += `; comentário não gravado: ${e.message}`; });
+      }
+      return { resultado, motivo };
+    };
+    let gate;
+    try {
+      const comentarios = await listar(j.consultar, `/projects/${j.projeto.plane}/work-items/${carta.id}/comments/`).catch(() => null);
+      const d1 = comentarios && preparado.cartaVerificada ? digitalDaCarta(preparado.cartaVerificada, comentarios) : null;
+      const conferida = d1 === null ? { manter: 'releitura do preparo ou comentários ilegíveis; sem a digital D1 o gate não sai' } : await this.conferirCarta(v, carta.id, d1, 'o preparo');
+      gate = conferida.manter ? { resultado: 'MANTER', motivo: conferida.manter, posse: conferida.posse } : await this.marcar(v, carta.id, d1);
+    } catch (erro) {
+      if (!erro.abortar && !erro.escopo) {
+        const presente = await this.gateNaCarta(carta.id);
+        const r = presente === false ? await avisar('PREPARADO_SEM_GATE', `erro no gate: ${erro.message}`, false)
+          : await avisar('PREPARADO_GATE_INCERTO', presente
+            ? `gate presente, mas a verificação falhou; conferir (erro no gate: ${erro.message})`
+            : `estado do gate incerto: a releitura das etiquetas falhou (erro no gate: ${erro.message})`, false);
+        await j.anotar({ tipo: 'VEREDITO', carta: v.identificador, veredito: v.veredito, resultado: r.resultado, motivo: r.motivo });
+        throw erro;
+      }
+      gate = { resultado: 'ABORTADO', motivo: erro.escopo ? 'play desligado no meio da sequência' : erro.message, posse: Boolean(erro.intocavel || erro.escopo) };
+    }
+    if (gate.resultado === 'APLICADO') return gate;
+    if (gate.resultado === 'DIVERGENTE') return { ...gate, motivo: `preparo aplicado; ${gate.motivo}` };
+    return avisar('PREPARADO_SEM_GATE', gate.motivo, gate.posse);
   }
 }

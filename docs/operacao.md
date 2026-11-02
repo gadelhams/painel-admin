@@ -64,7 +64,7 @@ Saída 0 = reservada (ou solta), 1 = recusada (outra sessão viva ou tentativa d
 | `PLANE_ORQ_PLAYER_WRITE_KEY` / `_PROJECT_ID` / `_ACTOR_ID` | idem, PLAYER (`orquestrador-player.token`). Projeto novo: `identidadeEscrita: { arquivo: 'orquestrador-<sigla>', ator }` em `projetos.js` e a chave 600 em `~/.config/plane/`, nunca no `.env`; conferida no arranque (`/users/me`, Member) |
 | `XAI_API_KEY` | transcrição de voz (xAI); sem ela a rota responde 503 |
 | `PLANE_API_BASE` | sobrescreve `http://127.0.0.1:8095` |
-| `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), lida uma vez por operação (aberta sem seguir elo); antes de escrever, `/users/me` tem de devolver este UUID |
+| `PLANE_ADMIN_ACTOR_ID` | UUID do usuário **Painel Admin (C-3PO)** no Plane; liga a escrita da **mesa de decisão** (sem ela, ou inválida, a gaveta abre só para leitura e diz por quê). A chave dele **não** vai no `.env`: fica em `~/.config/plane/painel-admin.token` (modo 600, dono = o usuário do serviço), lida uma vez por operação (aberta sem seguir elo); antes de escrever, `/users/me` tem de devolver este UUID. É também o único autor cuja decisão da mesa destrava o gate do zelador (J58, PAINEL-62); sem ela, nada destrava |
 | `CHAVES_SERVIDOR_ESCRITA` | `true` liga a troca de chave no `.env` do servidor pela aba Chaves (ssh + `sudo python3` fixo); **ligada em 24/10/2026** depois de REPROVADO (1ª) e APROVADO (2ª) do `validador-deploy`; remover a linha desliga a troca no servidor (o inventário continua) |
 | `ORQ_EXECUCAO_HABILITADA` | `true` constrói o executor real (`orquestrador/executor-cli.js`); **ausente por padrão** — ligar é o "vai" do dono para um piloto nomeado, nunca rotina. Com ela ligada (e `ORQ_AGENDADOR` na unit), a **vigília do Hangar** despacha uma carta por vez de qualquer projeto com o **play da nave** ligado (Hangar, SSO + confirmação), sozinha, dentro dos freios do contrato e do teto global |
 | `ORQ_AGENDADOR` | `true` deixa ESTA instância agendar a vigília e o zelador (trava em `agendador.json`, pid conferido a cada volta). **Só na unit systemd, nunca no `.env`**: o smoke na 7787 lê o mesmo `.env` e o mesmo estado, e dois agendadores despachariam duas vezes. Linha a acrescentar em `~/.config/systemd/user/painel-admin.service`, seção `[Service]`: `Environment=ORQ_AGENDADOR=true` (depois `systemctl --user daemon-reload` e `restart`). Quem não tomou a trava no arranque tenta de novo a cada 5 min e liga sozinho quando o dono antigo morre |
@@ -107,6 +107,10 @@ Tags `painel-estavel-AAAAMMDD` marcam um `main` com o portão inteiro verde (a p
 `restart`. O estado em `~/.local/state/painel-admin/` não migra nos dois sentidos: o commit
 `d3cc972` (anterior à frota) subiu sobre o estado de hoje e o `main` subiu sobre o dele. O que a
 versão velha não conhece (play, zelador, reservas, mesa) fica parado em disco até a volta.
+**Não volte com PENDENTE de preparo aberto** (PAINEL-62): uma versão anterior ao preparo lê o
+PENDENTE `mudanca.tipo: preparo` de `zelador/pendentes.jsonl` como `FORA_DA_LISTA` "nada escrito",
+e o rótulo mente — a intenção e talvez o PATCH já estão na carta. Antes do rollback, confira que
+nenhum PENDENTE de preparo está sem RESOLVIDO no índice (ou deixe um job da versão atual fechá-lo).
 Ensaio sem tocar no serviço: `git worktree add /tmp/<nome> <tag>`, `npm ci` lá e subir com
 `HOME` falso e `PORTA` livre (ex.: 17901). Sem a chave do Plane, `/api/orquestracao` dá 500 nas
 duas versões, e isso não indica falha do rollback.
