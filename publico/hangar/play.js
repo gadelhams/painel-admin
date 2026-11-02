@@ -39,8 +39,11 @@ function blocoBloqueio(resumo) {
   const recusadas = (resumo.prontaRecusadas ?? []).map((r) => `<li><b>${esc(r.carta)} não foi para o dev:</b> ${esc(r.motivo ?? r.resultado ?? 'sem motivo')}</li>`).join('');
   const u = resumo.ultimoJob;
   const ultimo = u ? `último job: ${data(u.quando)} (${u.resultado ?? '?'})${u.inicioLido ? '' : ', início fora da janela lida: vereditos não mostrados'}` : '';
-  return `${topo}<ul class="hg-linhas">${lista('Decisão:', c.decisao)}${lista('Tarefa do dono:', c.tarefaDono)}${lista('Espera outra carta:', c.esperaOutraCarta)}${lista('Espera puxar (F4):', c.esperaPuxar)}${lista('Espera integração:', c.esperaIntegracao)}${recusadas}</ul>`
-    + `<p class="hg-apagado hg-mono">${esc(ultimo)}</p>${retrato ? `<p class="hg-apagado hg-mono">${esc(retrato)}</p>` : ''}`;
+  // Cada bloco diz de qual job é: o retrato (categorias e contagem) é do último concluído; as
+  // recusadas são do último job, que pode ser outro (interrompido, erro).
+  return `${topo}<ul class="hg-linhas">${lista('Decisão:', c.decisao)}${lista('Tarefa do dono:', c.tarefaDono)}${lista('Espera outra carta:', c.esperaOutraCarta)}${lista('Espera puxar (F4):', c.esperaPuxar)}${lista('Espera integração:', c.esperaIntegracao)}</ul>`
+    + `${retrato ? `<p class="hg-apagado hg-mono">${esc(retrato)}</p>` : ''}<p class="hg-apagado hg-mono">${esc(ultimo)}</p>`
+    + (recusadas ? `<ul class="hg-linhas">${recusadas}</ul>` : '');
 }
 
 // PAINEL-61: play ligado não basta; a nave diz quando nada vai rodar e quando sai a próxima volta.
