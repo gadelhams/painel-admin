@@ -242,7 +242,7 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       ssh: leituraSsh ?? new LeituraSsh({ chave: CHAVE_SSH }),
     }),
     orquestracao: new RotasOrquestracao({
-      resposta, orquestracao, liberacaoNativa, estadoPlay, estadoZelador: () => zelador.estado(),
+      resposta, orquestracao, liberacaoNativa, estadoPlay, estadoZelador: async () => ({ ...(await zelador.estado()), instancia: await instancia.situacao() }),
       triagemDev: criarTriagemDev(consultarPlane ? { consultar: consultarPlane } : {}),
       lerConsumo,
       lerDiarioFrota: criarLeitorDiarioFrota({ diretorio: diretorioOrquestracao }),

@@ -74,6 +74,11 @@ ações: a liberação do jogo nativo, o play e o registro da encomenda de nave 
   poll de 5 s das sessões): sai da fábrica do provedor, vai à vaga do projeto no pátio (não reboca
   a nave para a doca) e volta quando o job termina; pinta pela cor `COR_PAPEL.zelador` e o popup dele
   mostra a fase e o diário do job.
+  Play ligado não basta (PAINEL-61, 02/11/2026). Se a instância não agenda, o chip vira "play sem
+  agendador" e o popup diz "Mas nada roda", com o motivo da trava (`instancia` na mesma rota). O aviso
+  também aparece antes de confirmar o ligar. Com o agendador de pé, o popup mostra "Próximo job do
+  zelador às HH:MM" (`proximoEm`) e a última volta pulada desta nave (`motivoOcioso`). O resumo do
+  último job traz a contagem e cada PRONTA que não foi para o dev, com o motivo (`prontaRecusadas`).
 - **Conversa no popup** (`conversa.js`, 29/10/2026). Todo popup tem a caixa
   "Pergunte ao C-3PO sobre isto": a pergunta vai a `POST /api/conversa` com o
   olho e o título do popup na frente, como texto (o C-3PO não vê a cena), e a

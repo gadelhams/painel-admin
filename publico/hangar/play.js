@@ -30,8 +30,22 @@ function blocoBloqueio(fim) {
   const topo = fim.feita ? '<p>Feita: nenhuma carta aberta.</p>'
     : fim.soDono ? '<p class="hg-bloqueio-dono"><b>Bloqueada: só decisões e tarefas do dono seguram esta nave.</b></p>'
       : `<p>${fim.abertas} abertas, ${fim.emAndamento} em andamento.</p>`;
-  return `${topo}<ul class="hg-linhas">${lista('Decisão:', c.decisao)}${lista('Tarefa do dono:', c.tarefaDono)}${lista('Espera outra carta:', c.esperaOutraCarta)}${lista('Espera puxar (F4):', c.esperaPuxar)}${lista('Espera integração:', c.esperaIntegracao)}</ul>`
-    + `<p class="hg-apagado hg-mono">último job: ${esc(new Date(fim.quando).toLocaleString('pt-BR'))}</p>`;
+  const k = fim.contagem;
+  const mudancas = k ? ` · ${k.aplicados ?? 0} mudança(s) aplicada(s), ${k.recusados ?? 0} recusada(s)` : '';
+  const recusadas = (fim.prontaRecusadas ?? []).map((r) => `<li><b>${esc(r.carta)} não foi para o dev:</b> ${esc(r.motivo ?? r.resultado ?? 'sem motivo')}</li>`).join('');
+  return `${topo}<ul class="hg-linhas">${lista('Decisão:', c.decisao)}${lista('Tarefa do dono:', c.tarefaDono)}${lista('Espera outra carta:', c.esperaOutraCarta)}${lista('Espera puxar (F4):', c.esperaPuxar)}${lista('Espera integração:', c.esperaIntegracao)}${recusadas}</ul>`
+    + `<p class="hg-apagado hg-mono">último job: ${esc(new Date(fim.quando).toLocaleString('pt-BR'))}${esc(mudancas)}</p>`;
+}
+
+// PAINEL-61: play ligado não basta; a nave diz quando nada vai rodar e quando sai o próximo job.
+export function agendaDoZelador(z, sigla) {
+  if (!z) return '';
+  if (z.instancia && !z.instancia.agenda) return ` Mas nada roda: ${z.instancia.motivo}.`;
+  const partes = [];
+  if (z.atual?.sigla === sigla) partes.push(' O zelador está nesta nave agora.');
+  else if (z.agendando && z.proximoEm) partes.push(` Próximo job do zelador às ${hora(z.proximoEm)}.`);
+  if (z.motivoOcioso && z.motivoOcioso.startsWith(`${sigla}:`)) partes.push(` Última volta pulada: ${z.motivoOcioso.slice(sigla.length + 1).trim()}.`);
+  return partes.join('');
 }
 
 // F4b: o READY TO DEV do zelador só vale com play, contrato, identidade e a sandbox bwrap; o motivo aparece aqui.
@@ -46,7 +60,7 @@ function desenhar(linha, mensagem) {
   $('hg-play-confirma').hidden = true;
   const extra = linha?.situacao === 'suspenso' ? `: ${linha.suspenso?.motivo ?? 'releitura não conferiu'}. Religar é a saída.` : '';
   $('hg-play-estado').textContent = mensagem ?? (!linha ? 'Play indisponível para esta nave (sem Plane, congelada, Anya ou CKBL).'
-    : `${SITUACAO[linha.situacao]}${extra}${linha.desde && linha.situacao !== 'desligado' ? ` Desde ${hora(linha.desde)}.` : ''}${linha.emCurso ? ` Em curso: ${linha.emCurso}.` : ''}${gateDoZelador(linha)}`);
+    : `${SITUACAO[linha.situacao]}${extra}${linha.desde && linha.situacao !== 'desligado' ? ` Desde ${hora(linha.desde)}.` : ''}${linha.emCurso ? ` Em curso: ${linha.emCurso}.` : ''}${gateDoZelador(linha)}${linha.situacao === 'ligado' ? agendaDoZelador(H.zelador, atual?.nave?.sigla) : ''}`);
   $('hg-play-bloqueio').innerHTML = atual?.nave ? blocoBloqueio(H.zelador?.porProjeto?.[atual.nave.planePrj]) : '';
 }
 
@@ -79,7 +93,8 @@ async function preparar(ligar) {
       body: JSON.stringify({ projeto: atual.nave.planePrj, ligar }) });
     if (minha !== geracao) return;
     if (dados.jaEstava) { desenhar(atual.linha, ligar ? 'Já estava ligado.' : 'Já estava desligado.'); return; }
-    $('hg-play-aviso').textContent = dados.aviso;
+    const semAgenda = ligar && H.zelador?.instancia && !H.zelador.instancia.agenda ? ` Atenção: esta instância não agenda (${H.zelador.instancia.motivo}); ligado, nada vai rodar.` : '';
+    $('hg-play-aviso').textContent = `${dados.aviso}${semAgenda}`;
     const botao = $('hg-play-confirmar');
     botao.textContent = ligar ? 'Confirmar: ligar o play' : 'Confirmar: desligar agora';
     botao.dataset.id = dados.confirmacaoId;

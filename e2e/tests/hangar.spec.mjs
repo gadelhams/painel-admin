@@ -38,12 +38,12 @@ const sessoes = (extra = []) => ({
     acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }, ...extra],
 });
 
-async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [], semSso = false, zelador = { atual: null, porProjeto: {}, diario: [] } } = {}) {
+async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [], semSso = false, zelador = { atual: null, porProjeto: {}, diario: [] }, playInicial = {} } = {}) {
   const chamadas = [];
   const encomendas = [];
   const errosPagina = [];
   const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
-  const play = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', sigla: 'ALFA', situacao: 'desligado', desde: null, suspenso: null, emCurso: null, despacho: null };
+  const play = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', sigla: 'ALFA', situacao: 'desligado', desde: null, suspenso: null, emCurso: null, despacho: null, ...playInicial };
   page.on('pageerror', (e) => errosPagina.push(e.message));
   await page.route('**/*', async (route) => {
     const req = route.request(); const url = new URL(req.url());
@@ -331,6 +331,33 @@ test('play da nave (F3): marcar só prepara, confirmar liga por SSO; o droid zel
   ]);
   await page.locator('#hg-projetos [data-proj="beta"]').click();
   await expect(page.locator('#hg-play')).toBeHidden();
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('PAINEL-61: play ligado sem agendador diz que nada roda; com agendador, mostra o próximo job e o PRONTA que não foi para o dev', async ({ page }) => {
+  const fim = { quando: agora(), feita: false, abertas: 3, emAndamento: 0, soDono: false, contagem: { aplicados: 1, recusados: 1 },
+    categorias: { esperaPuxar: ['ALFA-2'], tarefaDono: [], decisao: [], esperaOutraCarta: [], esperaIntegracao: [] },
+    prontaRecusadas: [{ carta: 'ALFA-2', resultado: 'MANTER', motivo: 'prontidão ao vivo recusou: estado inadequado para desenvolvimento' }] };
+  const zelador = { atual: null, porProjeto: { P: fim }, diario: [], agendando: false, proximoEm: null, motivoOcioso: null,
+    instancia: { agenda: false, motivo: 'ORQ_AGENDADOR ausente: esta instância não agenda vigília nem zelador' } };
+  const audit = await fixtures(page, { zelador, playInicial: { situacao: 'ligado', desde: agora() } });
+  await page.goto('/');
+  await expect(page.locator('#hg-projetos [data-proj="alfa"]')).toContainText('play sem agendador');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-play-estado')).toContainText('Mas nada roda: ORQ_AGENDADOR ausente');
+  await expect(page.locator('#hg-play-bloqueio')).toContainText('ALFA-2 não foi para o dev: prontidão ao vivo recusou: estado inadequado para desenvolvimento');
+  await expect(page.locator('#hg-play-bloqueio')).toContainText('1 mudança(s) aplicada(s), 1 recusada(s)');
+  // Agendador de pé: a nave diz quando sai o próximo job e por que a última volta pulou.
+  const proximo = new Date(Date.now() + 120_000).toISOString();
+  Object.assign(zelador, { agendando: true, proximoEm: proximo, motivoOcioso: 'ALFA: ocupado: sessão claude tocou o projeto nas últimas 120 min',
+    instancia: { agenda: true, motivo: null } });
+  await page.reload();
+  await expect(page.locator('#hg-projetos [data-proj="alfa"]')).not.toContainText('play sem agendador');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  const hhmm = new Date(proximo).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  await expect(page.locator('#hg-play-estado')).toContainText(`Próximo job do zelador às ${hhmm}.`);
+  await expect(page.locator('#hg-play-estado')).toContainText('Última volta pulada: ocupado: sessão claude tocou o projeto nas últimas 120 min.');
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
   expect(audit.errosPagina).toEqual([]);
 });
 

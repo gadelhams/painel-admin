@@ -31,13 +31,29 @@ function avaliarConsumo(leitura, provedor, agoraMs) {
   return { seguir: true, motivo: null, consumo };
 }
 
+// O último job de cada projeto para a nave: o fim (categorias), a contagem e os PRONTA que não
+// viraram gate, com o motivo (PAINEL-61). Linhas em ordem cronológica.
+function resumoPorProjeto(linhas) {
+  const porProjeto = {};
+  const vereditos = new Map();
+  for (const l of linhas) {
+    if (l.tipo === 'JOB_INICIO') vereditos.set(l.jobId, []);
+    else if (l.tipo === 'VEREDITO' && l.veredito === 'PRONTA' && l.resultado !== 'APLICADO') vereditos.get(l.jobId)?.push({ carta: l.carta, resultado: l.resultado ?? null, motivo: typeof l.motivo === 'string' ? l.motivo.slice(0, 200) : null });
+    else if (l.tipo === 'JOB_FIM' && l.fim) {
+      porProjeto[l.projetoId] = { quando: l.quando, ...l.fim, ...(l.contagem ? { contagem: l.contagem } : {}), prontaRecusadas: (vereditos.get(l.jobId) ?? []).slice(0, 10) };
+    }
+  }
+  return porProjeto;
+}
+
 export class AgendadorZelador {
   constructor({ servico, play, diario, leases, fabricaJob, lerConsumo, ocupacao, consultar, raiz = RAIZ, intervaloMs = 30 * 60_000, tetoDia = 12,
-    agora = Date.now, registrarLog = () => {} }) {
-    Object.assign(this, { servico, play, diario, leases, fabricaJob, lerConsumo, ocupacao, consultar, raiz, intervaloMs, tetoDia, agora, registrarLog });
+    primeiraVoltaMs = 2 * 60_000, agora = Date.now, registrarLog = () => {} }) {
+    Object.assign(this, { servico, play, diario, leases, fabricaJob, lerConsumo, ocupacao, consultar, raiz, intervaloMs, tetoDia, primeiraVoltaMs, agora, registrarLog });
     this.atual = null;
     this.ultimoMotivo = null;
     this.temporizador = null;
+    this.proximoEm = null;
   }
 
   async recuperar() {
@@ -119,20 +135,30 @@ export class AgendadorZelador {
     let jobsHoje = null;
     try { ({ linhas, avisos } = await this.diario.linhas({ janelaMs: 3 * 24 * 60 * 60_000 })); jobsHoje = await this.diario.jobs24h(); }
     catch (e) { avisos = [`diário do zelador ilegível: ${e.message}`]; }
-    const porProjeto = {};
-    for (const l of linhas) if (l.tipo === 'JOB_FIM' && l.fim) porProjeto[l.projetoId] = { quando: l.quando, ...l.fim };
     return { atual: this.atual, motivoOcioso: this.ultimoMotivo, intervaloMinutos: Math.round(this.intervaloMs / 60_000), tetoDia: this.tetoDia,
-      jobsHoje, agendando: Boolean(this.temporizador), porProjeto, avisos, diario: linhas.slice(-60).reverse().map(projecaoDaLinha) };
+      jobsHoje, agendando: Boolean(this.temporizador), proximoEm: this.proximoEm ? new Date(this.proximoEm).toISOString() : null,
+      porProjeto: resumoPorProjeto(linhas), avisos, diario: linhas.slice(-60).reverse().map(projecaoDaLinha) };
   }
 
+  // PAINEL-61: a primeira volta sai `primeiraVoltaMs` depois do arranque (antes esperava um
+  // intervalo inteiro, 30 min sem sinal na tela). Reinício em laço fica contido pelo teto diário,
+  // que conta do diário, e pela trava do agendador em disco.
   iniciar(podeAgendar = async () => false) {
     if (this.temporizador) return;
-    this.temporizador = setInterval(async () => {
+    const volta = async () => {
+      this.proximoEm = this.agora() + this.intervaloMs;
       try { if (await podeAgendar()) await this.rodarUmaVez(); }
       catch (e) { this.registrarLog(`[zelador] ${e.message}`); }
-    }, this.intervaloMs);
+    };
+    this.proximoEm = this.agora() + this.primeiraVoltaMs;
+    this.temporizador = setTimeout(() => {
+      if (!this.temporizador) return;
+      this.temporizador = setInterval(volta, this.intervaloMs);
+      this.temporizador.unref?.();
+      volta();
+    }, this.primeiraVoltaMs);
     this.temporizador.unref?.();
   }
 
-  parar() { if (this.temporizador) clearInterval(this.temporizador); this.temporizador = null; }
+  parar() { if (this.temporizador) { clearTimeout(this.temporizador); clearInterval(this.temporizador); } this.temporizador = null; this.proximoEm = null; }
 }

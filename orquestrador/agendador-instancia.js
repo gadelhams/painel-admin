@@ -24,6 +24,14 @@ export class InstanciaAgendador {
     this.processoVivo = processoVivo;
     this.agora = agora;
     this.tomada = false;
+    this.ultimaTentativa = null;
+  }
+
+  // PAINEL-61: a nave diz quando o play está ligado mas esta instância não agenda (e por quê).
+  async situacao() {
+    if (await this.podeAgendar()) return { agenda: true, motivo: null };
+    if (this.tomada) return { agenda: false, motivo: 'outro processo tomou o arquivo do agendador; esta instância parou de agendar' };
+    return { agenda: false, motivo: this.ultimaTentativa?.motivo ?? (this.habilitado ? 'a instância ainda não tentou tomar o agendador' : 'ORQ_AGENDADOR ausente: esta instância não agenda vigília nem zelador') };
   }
 
   async lerDono() {
@@ -35,6 +43,12 @@ export class InstanciaAgendador {
 
   // Devolve { agenda, motivo }. Sem a flag nem tenta: o arquivo de quem agenda fica intacto.
   async tomar() {
+    const r = await this.tomarSemRegistro();
+    this.ultimaTentativa = r;
+    return r;
+  }
+
+  async tomarSemRegistro() {
     if (!this.habilitado) return { agenda: false, motivo: 'ORQ_AGENDADOR ausente: esta instância não agenda vigília nem zelador' };
     return this.comTrava(async () => {
       const dono = await this.lerDono();
