@@ -29,6 +29,7 @@ export class InstanciaAgendador {
 
   // PAINEL-61: a nave diz quando o play está ligado mas esta instância não agenda (e por quê).
   async situacao() {
+    if (this.falhaAoLigar) return { agenda: false, motivo: `o agendador foi tomado mas não ligou: ${this.falhaAoLigar}; reinicie o serviço` };
     if (await this.podeAgendar()) return { agenda: true, motivo: null };
     if (this.tomada) {
       const dono = await this.lerDono();
@@ -52,6 +53,9 @@ export class InstanciaAgendador {
       this.ultimaTentativa = r;
       return r;
     } catch (e) {
+      // W5: o arquivo pode ter sido gravado antes de a soltura da trava lançar. Sem `tomada`, a
+      // vigia tenta de novo e retoma o próprio arquivo (pid igual), em vez de ficar presa.
+      this.tomada = false;
       this.ultimaTentativa = { agenda: false, motivo: `a tentativa de tomar o agendador falhou: ${e.message}` };
       throw e;
     }
@@ -89,11 +93,16 @@ export class InstanciaAgendador {
       tentando = true;
       try {
         const r = await this.tomar();
-        if (r.agenda) { this.pararVigia(); await aoTomar(r); }
+        if (r.agenda) {
+          this.pararVigia();
+          // W4: falha ao ligar os laços não se confunde com falha ao tomar: vai a quem chamou e à tela.
+          try { await aoTomar(r); }
+          catch (e) { this.falhaAoLigar = e.message; e.aoLigar = true; throw e; }
+        }
         return r;
       } finally { tentando = false; }
     };
-    const r = await tentar().catch(() => this.ultimaTentativa);
+    const r = await tentar().catch((e) => { if (e.aoLigar) throw e; return this.ultimaTentativa; });
     if (!r.agenda && this.habilitado) {
       this.vigia = setInterval(() => { tentar().catch(() => {}); }, intervaloMs);
       this.vigia.unref?.();

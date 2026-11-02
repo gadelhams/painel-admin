@@ -78,8 +78,10 @@ ações: a liberação do jogo nativo, o play e o registro da encomenda de nave 
   agendador" e o popup diz "Mas nada roda", com o motivo da trava (`instancia` na mesma rota). O aviso
   também aparece antes de confirmar o ligar. Com o agendador de pé, o popup mostra a próxima volta
   (`proximoEm`; uma nave por volta, em rodízio), a volta pulada desta nave e o motivo global de nenhuma
-  rodar (teto, frota, consumo). O resumo traz o último job com o resultado (`ultimoJob`), a contagem e
-  cada PRONTA dele que não foi para o dev, inclusive o rebaixado pela validação (`prontaRecusadas`).
+  rodar (teto, frota, consumo). O resumo traz o último job com o resultado (`ultimoJob`, inclusive
+  INTERROMPIDO no arranque) e cada PRONTA dele que não foi para o dev, inclusive o rebaixado pela
+  validação (`prontaRecusadas`); o retrato das cartas e a contagem vêm com a data do job concluído que
+  os produziu (`retrato`), nunca colados ao último job.
   Resíduos: PRONTA que o job nem julgou (laço parado por play desligado, ocupação ou divergência) não
   aparece; job cujo `JOB_INICIO` caiu fora dos 3 dias lidos mostra só que os vereditos ficaram de fora.
 - **Conversa no popup** (`conversa.js`, 29/10/2026). Todo popup tem a caixa

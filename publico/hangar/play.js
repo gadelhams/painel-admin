@@ -25,22 +25,22 @@ const lista = (rotulo, itens) => (itens?.length ? `<li><b>${esc(rotulo)}</b> ${i
 
 // O fim do último job do zelador neste projeto (GET /api/orquestracao/zelador). As categorias são as
 // do último job concluído; `ultimoJob` é o último de qualquer resultado (PAINEL-61).
-function blocoBloqueio(fim) {
-  if (!fim) return '<p class="hg-vazio">O zelador ainda não passou por esta nave.</p>';
-  const c = fim.categorias ?? {};
-  const temRetrato = typeof fim.abertas === 'number' || fim.feita;
-  const topo = !temRetrato ? '<p>Sem retrato das cartas: nenhum job desta nave terminou com ele.</p>'
+function blocoBloqueio(resumo) {
+  if (!resumo) return '<p class="hg-vazio">O zelador ainda não passou por esta nave.</p>';
+  const fim = resumo.retrato;
+  const data = (iso) => new Date(iso).toLocaleString('pt-BR');
+  const c = fim?.categorias ?? {};
+  const topo = !fim ? '<p>Sem retrato das cartas: nenhum job desta nave terminou com ele.</p>'
     : fim.feita ? '<p>Feita: nenhuma carta aberta.</p>'
       : fim.soDono ? '<p class="hg-bloqueio-dono"><b>Bloqueada: só decisões e tarefas do dono seguram esta nave.</b></p>'
         : `<p>${fim.abertas} abertas, ${fim.emAndamento} em andamento.</p>`;
-  const k = fim.contagem;
-  const mudancas = k ? ` · ${k.aplicados ?? 0} mudança(s) aplicada(s), ${k.recusados ?? 0} recusada(s)` : '';
-  const recusadas = (fim.prontaRecusadas ?? []).map((r) => `<li><b>${esc(r.carta)} não foi para o dev:</b> ${esc(r.motivo ?? r.resultado ?? 'sem motivo')}</li>`).join('');
-  const u = fim.ultimoJob;
-  const ultimo = u ? `último job: ${new Date(u.quando).toLocaleString('pt-BR')} (${u.resultado ?? '?'})${u.inicioLido ? '' : ', início fora da janela lida: vereditos não mostrados'}`
-    : `último job: ${new Date(fim.quando).toLocaleString('pt-BR')}`;
+  const k = fim?.contagem;
+  const retrato = fim ? `retrato e contagem do job concluído em ${data(fim.quando)}${k ? `: ${k.aplicados ?? 0} mudança(s) aplicada(s), ${k.recusados ?? 0} recusada(s)` : ''}` : '';
+  const recusadas = (resumo.prontaRecusadas ?? []).map((r) => `<li><b>${esc(r.carta)} não foi para o dev:</b> ${esc(r.motivo ?? r.resultado ?? 'sem motivo')}</li>`).join('');
+  const u = resumo.ultimoJob;
+  const ultimo = u ? `último job: ${data(u.quando)} (${u.resultado ?? '?'})${u.inicioLido ? '' : ', início fora da janela lida: vereditos não mostrados'}` : '';
   return `${topo}<ul class="hg-linhas">${lista('Decisão:', c.decisao)}${lista('Tarefa do dono:', c.tarefaDono)}${lista('Espera outra carta:', c.esperaOutraCarta)}${lista('Espera puxar (F4):', c.esperaPuxar)}${lista('Espera integração:', c.esperaIntegracao)}${recusadas}</ul>`
-    + `<p class="hg-apagado hg-mono">${esc(ultimo)}${esc(mudancas)}</p>`;
+    + `<p class="hg-apagado hg-mono">${esc(ultimo)}</p>${retrato ? `<p class="hg-apagado hg-mono">${esc(retrato)}</p>` : ''}`;
 }
 
 // PAINEL-61: play ligado não basta; a nave diz quando nada vai rodar e quando sai a próxima volta.

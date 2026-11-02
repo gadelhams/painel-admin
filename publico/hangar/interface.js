@@ -177,7 +177,7 @@ export function atualizarPaineis(dt = 0) {
     if (alvo) {
       const k = n.chao.length + n.chaoExtra + n.produto.length; const aqui = H.droids.filter((d) => d.nave === n && !d.encerrar).length;
       // O destaque do bloqueio (F3): sem nada que a frota possa fazer, só o dono destrava.
-      const fim = H.zelador?.porProjeto?.[n.planePrj];
+      const fim = H.zelador?.porProjeto?.[n.planePrj]?.retrato;
       const s = n.estado === 'estacionada' ? [] : [`<span class="hg-chip" style="--c:var(--hg-realce)">${esc(situacao(n))}</span>`, `<span class="hg-chip" style="--c:var(--hg-ok)">${aqui} ${plural(aqui, 'droid', 'droids')}</span>`];
       if (n.play === 'ligado') s.push(H.zelador?.instancia && !H.zelador.instancia.agenda
         ? '<span class="hg-chip" style="--c:var(--hg-falha)">play sem agendador</span>'

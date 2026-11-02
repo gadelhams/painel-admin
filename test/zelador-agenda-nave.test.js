@@ -129,8 +129,8 @@ test('PAINEL-61: o resumo por projeto traz a contagem e os PRONTA que não virar
     { ...fimConcluido('j2', '2026-11-01T16:09:34Z', 15), contagem: { MANTER: 9, aplicados: 1, recusados: 1 } },
   ];
   const r = (await agendador({ linhas }).estado()).porProjeto[P];
-  assert.deepEqual(r, { quando: '2026-11-01T16:09:34Z', feita: false, abertas: 15, emAndamento: 0, categorias: {}, soDono: false,
-    contagem: { MANTER: 9, aplicados: 1, recusados: 1 },
+  assert.deepEqual(r, { retrato: { quando: '2026-11-01T16:09:34Z', feita: false, abertas: 15, emAndamento: 0, categorias: {}, soDono: false,
+    contagem: { MANTER: 9, aplicados: 1, recusados: 1 } },
     ultimoJob: { quando: '2026-11-01T16:09:34Z', resultado: 'CONCLUIDO', inicioLido: true },
     prontaRecusadas: [
       { carta: 'CAD-31', resultado: 'REBAIXADA', motivo: 'comentário curto ou longo demais' },
@@ -149,10 +149,66 @@ test('PAINEL-61 (V5): job que termina sem fim mostra a data e o resultado dele, 
     { tipo: 'JOB_FIM', jobId: 'j0', projetoId: 'p-3', quando: '2026-11-01T10:00:00Z', resultado: 'CONCLUIDO', fim: { feita: true, abertas: 0 } },
   ];
   const r = (await agendador({ linhas }).estado()).porProjeto;
-  assert.equal(r[P].quando, '2026-11-01T15:10:03Z', 'as categorias são as do último concluído');
-  assert.equal(r[P].abertas, 16);
+  assert.equal(r[P].retrato.quando, '2026-11-01T15:10:03Z', 'o retrato e a contagem levam a data do job que os produziu');
+  assert.equal(r[P].retrato.abertas, 16);
+  assert.deepEqual(r[P].retrato.contagem, { aplicados: 1 });
   assert.deepEqual(r[P].ultimoJob, { quando: '2026-11-01T16:09:00Z', resultado: 'ERRO', inicioLido: true });
   assert.deepEqual(r[P].prontaRecusadas, [{ carta: 'CAD-32', resultado: 'MANTER', motivo: 'recusada no job que caiu' }]);
   assert.deepEqual(r['p-3'].ultimoJob, { quando: '2026-11-01T10:00:00Z', resultado: 'CONCLUIDO', inicioLido: false });
   assert.deepEqual(r['p-3'].prontaRecusadas, []);
+});
+
+test('PAINEL-61 (W2): job interrompido no arranque aparece como último job, com as recusadas dele', async () => {
+  const linhas = [
+    { tipo: 'JOB_INICIO', jobId: 'j1', projetoId: P, quando: '2026-11-01T15:07:52Z' },
+    fimConcluido('j1', '2026-11-01T15:10:03Z', 16),
+    { tipo: 'JOB_INICIO', jobId: 'j2', projetoId: P, quando: '2026-11-01T16:07:53Z' },
+    { tipo: 'VEREDITO', jobId: 'j2', projetoId: P, carta: 'CAD-32', veredito: 'PRONTA', resultado: 'MANTER', motivo: 'recusada antes da queda' },
+    { tipo: 'JOB_INTERROMPIDO', jobId: 'j2', projetoId: P, quando: '2026-11-01T16:20:00Z', motivo: 'o painel caiu ou reiniciou durante o job' },
+  ];
+  const r = (await agendador({ linhas }).estado()).porProjeto[P];
+  assert.deepEqual(r.ultimoJob, { quando: '2026-11-01T16:20:00Z', resultado: 'INTERROMPIDO', inicioLido: true });
+  assert.deepEqual(r.prontaRecusadas, [{ carta: 'CAD-32', resultado: 'MANTER', motivo: 'recusada antes da queda' }]);
+  assert.equal(r.retrato.quando, '2026-11-01T15:10:03Z');
+});
+
+test('PAINEL-61 (W3): parar e iniciar durante a espera da primeira volta não deixa dois laços nem volta depois do parar', async () => {
+  let soltar;
+  const z = agendador({ primeiraVoltaMs: 5, intervaloMs: 30 });
+  let chamadas = 0;
+  z.ultimoInicioMs = () => { chamadas += 1; return chamadas === 1 ? new Promise(r => { soltar = r; }) : Promise.resolve(null); };
+  let voltas = 0;
+  z.rodarUmaVez = async () => { voltas += 1; return { rodou: false }; };
+  z.iniciar(async () => true);
+  await esperar(20);
+  z.parar();
+  z.iniciar(async () => true);
+  soltar(null);
+  await esperar(100);
+  z.parar();
+  const ate = voltas;
+  assert.ok(ate >= 2 && ate <= 5, `um laço só de 30 ms em ~95 ms (${ate} voltas)`);
+  await esperar(80);
+  assert.equal(voltas, ate, 'nada roda depois do parar');
+});
+
+test('PAINEL-61 (W4/W5): falha ao ligar aparece na situação; falha na soltura da trava não prende a instância', async () => {
+  const dir = await temp('zel-ligar-');
+  try {
+    const comTrava = acao => new TravaDisco(dir).segurar(acao);
+    const i = new InstanciaAgendador({ diretorio: dir, comTrava, habilitado: true, pid: 444, processoVivo: () => false });
+    await assert.rejects(i.tomarEVigiar(async () => { throw new Error('vigília não subiu'); }, 15), /vigília não subiu/);
+    assert.deepEqual(await i.situacao(), { agenda: false, motivo: 'o agendador foi tomado mas não ligou: vigília não subiu; reinicie o serviço' });
+    // W5: o arquivo é gravado e só a soltura da trava lança; a vigia retoma e liga.
+    let soltura = 0;
+    const comTravaQueFalha = async acao => { const r = await new TravaDisco(dir).segurar(acao); soltura += 1; if (soltura === 1) throw new Error('rmdir da trava falhou'); return r; };
+    const j = new InstanciaAgendador({ diretorio: dir, comTrava: comTravaQueFalha, habilitado: true, pid: 555, processoVivo: () => false });
+    let ligou = 0;
+    const r = await j.tomarEVigiar(async () => { ligou += 1; }, 15);
+    assert.equal(r.agenda, false);
+    await esperar(60);
+    assert.equal(ligou, 1, 'a vigia retomou o próprio arquivo e ligou');
+    assert.deepEqual(await j.situacao(), { agenda: true, motivo: null });
+    j.pararVigia();
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
 });

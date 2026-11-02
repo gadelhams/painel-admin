@@ -300,7 +300,7 @@ test('play da nave (F3): marcar só prepara, confirmar liga por SSO; o droid zel
   const fim = { quando: agora(), feita: false, abertas: 2, emAndamento: 0, soDono: true,
     categorias: { esperaPuxar: [], tarefaDono: ['ALFA-5'], decisao: ['ALFA-3', 'ALFA-4'], esperaOutraCarta: [], esperaIntegracao: [] } };
   const audit = await fixtures(page, { zelador: { atual: { jobId: 'job-zel-1', projetoId: 'P', pasta: 'alfa', sigla: 'ALFA', provedor: 'claude', fase: 'cli', desde: agora() },
-    porProjeto: { P: fim }, diario: [{ tipo: 'JOB_INICIO', jobId: 'job-zel-1', projetoId: 'P', quando: agora() }] } });
+    porProjeto: { P: { retrato: fim, ultimoJob: { quando: fim.quando, resultado: 'CONCLUIDO', inicioLido: true }, prontaRecusadas: [] } }, diario: [{ tipo: 'JOB_INICIO', jobId: 'job-zel-1', projetoId: 'P', quando: agora() }] } });
   await page.goto('/');
   // O droid zelador aparece na lista com a cor do papel, não a da fábrica.
   const zel = page.locator('#hg-droids [data-droid="zelador:job-zel-1"]');
@@ -335,8 +335,10 @@ test('play da nave (F3): marcar só prepara, confirmar liga por SSO; o droid zel
 });
 
 test('PAINEL-61: play ligado sem agendador diz que nada roda; com agendador, mostra o próximo job e o PRONTA que não foi para o dev', async ({ page }) => {
-  const fim = { quando: agora(), feita: false, abertas: 3, emAndamento: 0, soDono: false, contagem: { aplicados: 1, recusados: 1 }, ultimoJob: { quando: agora(), resultado: 'CONCLUIDO', inicioLido: true },
-    categorias: { esperaPuxar: ['ALFA-2'], tarefaDono: [], decisao: [], esperaOutraCarta: [], esperaIntegracao: [] },
+  const concluido = new Date(Date.now() - 3_600_000).toISOString();
+  const fim = { retrato: { quando: concluido, feita: false, abertas: 3, emAndamento: 0, soDono: false, contagem: { aplicados: 1, recusados: 1 },
+    categorias: { esperaPuxar: ['ALFA-2'], tarefaDono: [], decisao: [], esperaOutraCarta: [], esperaIntegracao: [] } },
+    ultimoJob: { quando: agora(), resultado: 'CLI_FALHOU', inicioLido: true },
     prontaRecusadas: [{ carta: 'ALFA-2', resultado: 'MANTER', motivo: 'prontidão ao vivo recusou: estado inadequado para desenvolvimento' }] };
   const zelador = { atual: null, porProjeto: { P: fim }, diario: [], agendando: false, proximoEm: null, motivoOcioso: null,
     instancia: { agenda: false, motivo: 'ORQ_AGENDADOR ausente: esta instância não agenda vigília nem zelador' } };
@@ -346,7 +348,9 @@ test('PAINEL-61: play ligado sem agendador diz que nada roda; com agendador, mos
   await page.locator('#hg-projetos [data-proj="alfa"]').click();
   await expect(page.locator('#hg-play-estado')).toContainText('Mas nada roda: ORQ_AGENDADOR ausente');
   await expect(page.locator('#hg-play-bloqueio')).toContainText('ALFA-2 não foi para o dev: prontidão ao vivo recusou: estado inadequado para desenvolvimento');
-  await expect(page.locator('#hg-play-bloqueio')).toContainText('1 mudança(s) aplicada(s), 1 recusada(s)');
+  // A contagem leva a data do job concluído que a produziu, nunca a do último job (que falhou).
+  await expect(page.locator('#hg-play-bloqueio')).toContainText('(CLI_FALHOU)');
+  await expect(page.locator('#hg-play-bloqueio')).toContainText(`retrato e contagem do job concluído em ${new Date(concluido).toLocaleString('pt-BR')}: 1 mudança(s) aplicada(s), 1 recusada(s)`);
   // Agendador de pé: a nave diz quando sai o próximo job e por que a última volta pulou.
   const proximo = new Date(Date.now() + 120_000).toISOString();
   Object.assign(zelador, { agendando: true, proximoEm: proximo, motivoOcioso: 'ALFA: ocupado: sessão claude tocou o projeto nas últimas 120 min',

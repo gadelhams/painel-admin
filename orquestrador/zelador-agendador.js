@@ -39,14 +39,18 @@ function resumoPorProjeto(linhas) {
   const porProjeto = {};
   const vereditos = new Map();
   const recusada = l => l.tipo === 'VEREDITO' && ((l.veredito === 'PRONTA' && l.resultado !== 'APLICADO') || (l.veredito === 'MANTER' && l.proposto === 'PRONTA'));
+  // JOB_INTERROMPIDO (gravado pelo recuperar no arranque) também encerra o job, para a tela.
+  const fecha = l => l.tipo === 'JOB_FIM' || l.tipo === 'JOB_INTERROMPIDO';
   for (const l of linhas) {
     if (l.tipo === 'JOB_INICIO') vereditos.set(l.jobId, []);
     else if (recusada(l)) vereditos.get(l.jobId)?.push({ carta: l.carta, resultado: l.veredito === 'PRONTA' ? l.resultado ?? null : 'REBAIXADA',
       motivo: typeof l.motivo === 'string' ? l.motivo.slice(0, 200) : null });
-    else if (l.tipo === 'JOB_FIM') {
+    else if (fecha(l)) {
       const antes = porProjeto[l.projetoId] ?? {};
-      porProjeto[l.projetoId] = { ...(l.fim ? { quando: l.quando, ...l.fim, ...(l.contagem ? { contagem: l.contagem } : {}) } : antes),
-        ultimoJob: { quando: l.quando, resultado: l.resultado ?? null, inicioLido: vereditos.has(l.jobId) },
+      // O retrato e a contagem levam a data do job que os produziu: nunca aparecem como do job seguinte.
+      const retrato = l.tipo === 'JOB_FIM' && l.fim ? { quando: l.quando, ...l.fim, ...(l.contagem ? { contagem: l.contagem } : {}) } : antes.retrato ?? null;
+      porProjeto[l.projetoId] = { retrato,
+        ultimoJob: { quando: l.quando, resultado: l.tipo === 'JOB_INTERROMPIDO' ? 'INTERROMPIDO' : l.resultado ?? null, inicioLido: vereditos.has(l.jobId) },
         prontaRecusadas: (vereditos.get(l.jobId) ?? []).slice(0, 10) };
     }
   }
@@ -142,7 +146,8 @@ export class AgendadorZelador {
     let jobsHoje = null;
     try { ({ linhas, avisos } = await this.diario.linhas({ janelaMs: 3 * 24 * 60 * 60_000 })); jobsHoje = await this.diario.jobs24h(); }
     catch (e) { avisos = [`diário do zelador ilegível: ${e.message}`]; }
-    return { atual: this.atual, motivoOcioso: this.ultimoMotivo, intervaloMinutos: Math.round(this.intervaloMs / 60_000), tetoDia: this.tetoDia,
+    const motivoOcioso = !this.atual && this.ultimoMotivo === 'job do zelador em curso' ? null : this.ultimoMotivo;
+    return { atual: this.atual, motivoOcioso, intervaloMinutos: Math.round(this.intervaloMs / 60_000), tetoDia: this.tetoDia,
       jobsHoje, agendando: Boolean(this.temporizador), proximoEm: this.proximoEm ? new Date(this.proximoEm).toISOString() : null,
       porProjeto: resumoPorProjeto(linhas), avisos, diario: linhas.slice(-60).reverse().map(projecaoDaLinha) };
   }
@@ -154,15 +159,19 @@ export class AgendadorZelador {
   // volta: o rodarUmaVez cai ocioso pelo teto ilegível.
   iniciar(podeAgendar = async () => false) {
     if (this.temporizador) return;
+    // A primeira volta é assíncrona: um parar() + iniciar() durante o await dela não pode deixar
+    // dois laços. Cada iniciar tem a sua geração, e a primeira confere que ainda é a dela.
+    const geracao = this.geracao = (this.geracao ?? 0) + 1;
+    const minha = () => this.temporizador && this.geracao === geracao;
     const volta = async () => {
       this.proximoEm = this.agora() + this.intervaloMs;
       try { if (await podeAgendar()) await this.rodarUmaVez(); }
       catch (e) { this.registrarLog(`[zelador] ${e.message}`); }
     };
     const primeira = async () => {
-      if (!this.temporizador) return;
+      if (!minha()) return;
       const ultimo = await this.ultimoInicioMs().catch(() => null);
-      if (!this.temporizador) return;
+      if (!minha()) return;
       const espera = Number.isFinite(ultimo) ? ultimo + this.intervaloMs - this.agora() : 0;
       if (espera > 0) {
         this.proximoEm = this.agora() + espera;
@@ -184,5 +193,5 @@ export class AgendadorZelador {
     return inicios.length ? Math.max(...inicios) : null;
   }
 
-  parar() { if (this.temporizador) { clearTimeout(this.temporizador); clearInterval(this.temporizador); } this.temporizador = null; this.proximoEm = null; }
+  parar() { if (this.temporizador) { clearTimeout(this.temporizador); clearInterval(this.temporizador); } this.temporizador = null; this.proximoEm = null; this.geracao = (this.geracao ?? 0) + 1; }
 }

@@ -69,6 +69,6 @@ test('simulação: um job em 5 cartas — feita no git FECHA, ASTARGNE tirada po
     assert.deepEqual(await c.zelador.diario.pendentes(), [], 'nada pela metade');
     const tela = await c.zelador.estado();
     assert.equal(tela.atual, null, 'o droid volta quando o job termina');
-    assert.equal(tela.porProjeto[PROJETO_FALSO].abertas, 4);
+    assert.equal(tela.porProjeto[PROJETO_FALSO].retrato.abertas, 4);
   } finally { await c.limpar(); }
 });
