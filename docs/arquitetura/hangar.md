@@ -74,6 +74,18 @@ ações: a liberação do jogo nativo, o play e o registro da encomenda de nave 
   poll de 5 s das sessões): sai da fábrica do provedor, vai à vaga do projeto no pátio (não reboca
   a nave para a doca) e volta quando o job termina; pinta pela cor `COR_PAPEL.zelador` e o popup dele
   mostra a fase e o diário do job.
+  Play ligado não basta (PAINEL-61, 02/11/2026). Se a instância não agenda, o chip vira "play sem
+  agendador" e o popup diz "Mas nada roda", com o motivo da trava (`instancia` na mesma rota). O aviso
+  também aparece antes de confirmar o ligar. Com o agendador de pé, o popup mostra a próxima volta
+  (`proximoEm`; uma nave por volta, em rodízio), a volta pulada desta nave e o motivo global de nenhuma
+  rodar (teto, frota, consumo). O resumo traz o último job com o resultado (`ultimoJob`, inclusive
+  INTERROMPIDO no arranque) e cada PRONTA dele que não foi para o dev, inclusive o rebaixado pela
+  validação (`prontaRecusadas`); o retrato das cartas e a contagem vêm com a data do job concluído que
+  os produziu (`retrato`), nunca colados ao último job.
+  Resíduos: PRONTA que o job nem julgou (laço parado por play desligado, ocupação ou divergência) não
+  aparece; job cujo `JOB_INICIO` caiu fora dos 3 dias lidos mostra só que os vereditos ficaram de fora;
+  um `JOB_INTERROMPIDO` gravado no arranque depois de um job mais novo (JOB_FIM que falhou duas vezes
+  em disco) vira o "último job", porque o resumo segue a ordem das linhas do diário.
 - **Conversa no popup** (`conversa.js`, 29/10/2026). Todo popup tem a caixa
   "Pergunte ao C-3PO sobre isto": a pergunta vai a `POST /api/conversa` com o
   olho e o título do popup na frente, como texto (o C-3PO não vê a cena), e a

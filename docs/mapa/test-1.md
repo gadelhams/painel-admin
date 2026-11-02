@@ -62,6 +62,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `vigilia.test.js` — Vigília com Plane, escritores e executor falsos: freios, avanço de gate/estado e, desde a F3, o play por nave no lugar do toggle (J11–J14, J66).
 - `voz-eleven.test.js`
 - `voz-xai.test.js`
+- `zelador-agenda-nave.test.js` — PAINEL-61: o que a nave precisa para dizer que o play está ligado mas nada roda — a situação da instância do agendador, o próximo job (com a primeira volta logo após o arranque, contida pelo último job do diário) e o resumo do último job por projeto, com os PRONTA que não viraram gate.
 - `zelador-correcao-job.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B1–B26): cada teste fecha um achado no job do zelador, pelas portas reais, com Plane, CLI, sessões e relógio falsos.
 - `zelador-correcao-pecas.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B6–B28): peças do zelador uma a uma — escritor, trava, sessões, diário, agendador, CLI e o play pela HTTP. Sem rede, sem CLI real.
 - `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.

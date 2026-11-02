@@ -20,7 +20,7 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
   pid vivo de outro recusa, pid morto ou arquivo ilegível é tomado sob a trava (J52). Quem não tomou
   no arranque tenta de novo a cada 5 min (`tomarEVigiar`) e liga quando o dono antigo morre.
 - **Job do zelador** (`zelador.js` compõe; `zelador-agendador.js`, `zelador-job.js`,
-  `zelador-aplicacao.js`; o gate em `zelador-gate.js`, F4b): a cada `ZELADOR_INTERVALO_MIN`, o projeto com play que teve a vez há mais
+  `zelador-aplicacao.js`; o gate em `zelador-gate.js`, F4b): a cada `ZELADOR_INTERVALO_MIN`, com a primeira volta 2 min depois do arranque, mas nunca antes de um intervalo depois do último `JOB_INICIO` do diário (PAINEL-61: os 30 min eram a contenção contra reinício em laço e contra a CLI órfã de job interrompido, que vive até 15 min, esta só com intervalo ≥ 15 min, e na unit o KillMode control-group a derruba; a trava e o lease não contêm, porque o processo novo toma os dois), o projeto com play que teve a vez há mais
   tempo (pelo diário) — antes dele, o projeto elegível com PENDENTE e play desligado ou suspenso, num
   job que só fecha recibos, sem CLI nem consumo —, se a frota do zelador está ok e o provedor do bloco
   é `claude` (o Codex sob sandbox só-leitura lê o disco, e o bwrap da F4b embrulha só o executor), sem
