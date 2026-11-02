@@ -5,8 +5,8 @@
 // - o preparo só nasce do juiz real (`preavaliar`): identidade de gate, nenhum gate na carta e
 //   pendências contidas nos dois motivos do preparo (D4); o estado só sai do grupo backlog;
 // - veto automático (D6, J1; decisão do dono de 01/11/2026, "o zelador julga a prosa"), em todo
-//   preparo, só no que é certo: código de carta de sigla do catálogo (o mesmo conjunto do juiz),
-//   que não é a própria nem está formalizado como relação, no título, na descrição ou num
+//   PRONTA, com ou sem preparo (X1), só no que é certo: código de carta de sigla do catálogo (o mesmo conjunto do juiz),
+//   que não é a própria nem está formalizado como dependência desta carta (X2), no título, na descrição ou num
 //   comentário de não-zelador; relação não formal (relates_to, duplicate…) ou fora da forma;
 // - prosa com o vocabulário de dependência (título, descrição fora das linhas que declaram "sem
 //   dependências", comentários de não-zelador) não veta: vira linha suspeita, que a CLI tem de
@@ -77,26 +77,33 @@ export function planoDoPreparo(pre, carta) {
 // As siglas do catálogo, o mesmo conjunto que o juiz (dependencias-carta.js) usa para o texto.
 export const siglasDoCatalogo = porId => new Set([...porId.values()].map(c => c.sigla?.toUpperCase()).filter(Boolean));
 
-// D6/J1, veto: motivo certo para NÃO preparar, ou null. `codigo` = SIGLA-N da própria carta;
-// `siglas` = as do catálogo; `porId` resolve as relações formais em códigos (citação formalizada
-// não veta). Código fora do catálogo (AST-181, ADR-0005, READY-20261022) não veta.
-export function motivoContraOPreparo({ carta, codigo, comentarios, relacoes, siglas, porId }) {
+// Os códigos (SIGLA-N) das cartas nas relações `tipos`, resolvidas pelo catálogo.
+const codigosDasRelacoes = (relacoes, tipos, porId) => new Set(tipos.flatMap(t => relacoes[t] ?? []).map(r => porId.get(formais.idDe(r))).filter(Boolean)
+  .map(c => `${c.sigla}-${c.sequence_id}`.toUpperCase()));
+
+// D6/J1, veto de todo PRONTA (X1: com ou sem preparo): motivo certo para MANTER, ou null.
+// `codigo` = SIGLA-N da própria carta; `siglas` = as do catálogo. Só dispensa o veto a citação
+// formalizada como dependência desta carta (blocked_by, start_after, finish_after, X2); a formalizada
+// só no sentido inverso (esta carta bloqueia a citada) veta, com o motivo. Código fora do catálogo
+// (AST-181, ADR-0005, READY-20261022) não veta.
+export function motivoDeVeto({ carta, codigo, comentarios, relacoes, siglas, porId }) {
   const formalize = 'formalize a relação no Plane';
-  if (assinaturaRelacoes(relacoes) === null) return 'relações do Plane ilegíveis ou fora da forma; o preparo não sai';
+  if (assinaturaRelacoes(relacoes) === null) return 'relações do Plane ilegíveis ou fora da forma; o gate não sai';
   const outra = Object.keys(relacoes).find(k => relacoes[k].length && !RELACOES_ACEITAS.has(k));
   if (outra) return `relação ${outra} na carta; ${formalize}`;
-  const formalizados = new Set(Object.values(relacoes).flat().map(r => porId.get(formais.idDe(r))).filter(Boolean)
-    .map(c => `${c.sigla}-${c.sequence_id}`.toUpperCase()));
+  const dependencias = codigosDasRelacoes(relacoes, RELACOES_DE_DEPENDENCIA, porId);
+  const inversas = codigosDasRelacoes(relacoes, ['blocking', 'start_before', 'finish_before'], porId);
   const proprio = String(codigo).toUpperCase();
-  const vetados = texto => codigosEm(texto).filter(c => c !== proprio && siglas.has(c.split('-')[0]) && !formalizados.has(c));
+  const vetados = texto => codigosEm(texto).filter(c => c !== proprio && siglas.has(c.split('-')[0]) && !dependencias.has(c));
+  const porque = c => (inversas.has(c) ? `, mas a relação está no sentido inverso (esta carta bloqueia ${c}); ${formalize}` : `; ${formalize}`);
   const noTitulo = vetados(carta.name);
-  if (noTitulo.length) return `o título cita ${noTitulo[0]}; ${formalize}`;
+  if (noTitulo.length) return `o título cita ${noTitulo[0]}${porque(noTitulo[0])}`;
   const naDescricao = vetados(textoDoHtml(carta.description_html));
-  if (naDescricao.length) return `a descrição cita ${naDescricao[0]}; ${formalize}`;
-  if (!Array.isArray(comentarios)) return 'comentários ilegíveis; o preparo não sai';
+  if (naDescricao.length) return `a descrição cita ${naDescricao[0]}${porque(naDescricao[0])}`;
+  if (!Array.isArray(comentarios)) return 'comentários ilegíveis; o gate não sai';
   for (const c of comentarios.filter(x => !ehZelador(x))) {
     const noComentario = vetados(textoDoHtml(c.comment_html));
-    if (noComentario.length) return `um comentário cita ${noComentario[0]}; ${formalize}`;
+    if (noComentario.length) return `um comentário cita ${noComentario[0]}${porque(noComentario[0])}`;
   }
   return null;
 }
@@ -109,11 +116,19 @@ export function linhasSuspeitas({ carta, comentarios }) {
   return [...new Set(linhas.filter(l => l && VOCABULARIO_DEPENDENCIA.test(l)))];
 }
 
-// A primeira linha suspeita sem julgamento da CLI (comparada pelo texto normalizado), ou null.
-export function linhaSemJulgamento(suspeitas, prosaJulgada) {
-  const julgadas = new Set((Array.isArray(prosaJulgada) ? prosaJulgada : []).map(j => normalizarLinha(j?.linha)));
-  return suspeitas.find(l => !julgadas.has(l)) ?? null;
+// O julgamento da CLI contra as linhas suspeitas, nos dois sentidos (X3), pelo texto normalizado:
+// motivo para MANTER ou null.
+export function motivoDaProsa(suspeitas, prosaJulgada) {
+  const julgadas = (Array.isArray(prosaJulgada) ? prosaJulgada : []).map(j => normalizarLinha(j?.linha));
+  const falta = suspeitas.find(l => !julgadas.includes(l));
+  if (falta !== undefined) return `o zelador não julgou: ${falta}`;
+  const inventada = julgadas.find(l => !suspeitas.includes(l));
+  return inventada === undefined ? null : `julgamento de linha que não está na carta: ${inventada}`;
 }
+
+// Tudo o que segura um PRONTA antes do gate (X1): o veto certo e a prosa julgada, com dados ao vivo.
+export const motivoContraOPronta = ({ carta, codigo, comentarios, relacoes, siglas, porId, prosaJulgada }) =>
+  motivoDeVeto({ carta, codigo, comentarios, relacoes, siglas, porId }) ?? motivoDaProsa(linhasSuspeitas({ carta, comentarios }), prosaJulgada);
 
 // D14: para a CLI, o que a carta em Backlog cita e as relações dela, cada uma com o estado.
 export function resumoDasDependencias(carta, relacoes, porId, porCodigo) {

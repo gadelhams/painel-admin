@@ -24,7 +24,7 @@ test('L1: a forma da CAD-31 (AST-181, ADR-0005, dependências do npm) sem julgam
   const r = await jobBacklog({ nome: 'Atualizar pacotes do cadastro', descricao: CAD31, comCad: true });
   try {
     assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
-    assert.equal(r.v.motivo, `preparo recusado: o zelador não julgou: ${NPM}`);
+    assert.equal(r.v.motivo, `o zelador não julgou: ${NPM}`);
     assert.deepEqual(r.c.plane.escritas, []);
     const candidata = JSON.parse(r.c.pedidos[0].split('--- RETRATO ---\n')[1]).candidatas.find(x => x.carta === `PAINEL-${r.alvo.sequence_id}`);
     assert.deepEqual(candidata.linhasSuspeitas, [NPM]);
@@ -185,5 +185,95 @@ test('W4: sem a etiqueta na releitura, o aviso afirma "não saiu" (o resto do fl
     assert.equal(r.v.resultado, 'PREPARADO_SEM_GATE', JSON.stringify(r.v));
     assert.deepEqual(patches(r.c.plane).length, 1);
     assert.equal(avisos(r, 'PREPARADO_SEM_GATE').length, 1);
+  } finally { await r.c.limpar(); }
+});
+
+// ---------- 5ª rodada: X1–X3, X5 ----------
+
+test('X1: a passada seguinte a um PREPARADO_SEM_GATE (preparo vazio) também veta o código do catálogo citado em comentário', async () => {
+  let outra;
+  const r = await jobBacklog({ preparar: (c, alvo) => {
+    outra = c.plane.novaCarta({ nome: 'Migração', estadoNome: 'Todo' });
+    c.plane.falhas.antesDoComentario = async (carta, corpo) => {
+      if (carta.id === alvo.id && String(corpo.external_id).endsWith(':recibo:APLICADO')) {
+        c.plane.comentar(alvo.id, { html: `<p>Atenção: só com o PAINEL-${outra.sequence_id} no ar.</p>`, autor: HUMANO });
+      }
+    };
+  } });
+  try {
+    assert.equal(r.v.resultado, 'PREPARADO_SEM_GATE', JSON.stringify(r.v));
+    r.c.plane.falhas.antesDoComentario = null;
+    r.c.avancar(3 * 60 * 60_000);
+    await r.c.zelador.rodarUmaVez();
+    const v = (await r.c.lerDiario()).filter(l => l.tipo === 'VEREDITO' && l.carta === `PAINEL-${r.alvo.sequence_id}`).at(-1);
+    assert.equal(v.resultado, 'MANTER', JSON.stringify(v));
+    assert.match(v.motivo, new RegExp(`um comentário cita PAINEL-${outra.sequence_id}`));
+    assert.deepEqual(r.alvo.labels, []);
+  } finally { await r.c.limpar(); }
+});
+
+test('X1: carta já em Todo e declarada — comentário "Isso depende do PAINEL-N." veta; sem prosa nem código, segue para o gate', async () => {
+  const vetada = await jobBacklog({ estadoNome: 'Todo', descricao: SEM, preparar: (c, alvo) => {
+    const outra = c.plane.novaCarta({ nome: 'Migração', estadoNome: 'Todo' });
+    c.plane.comentar(alvo.id, { html: `<p>Isso depende do PAINEL-${outra.sequence_id}.</p>`, autor: HUMANO });
+  } });
+  try {
+    assert.equal(vetada.v.resultado, 'MANTER', JSON.stringify(vetada.v));
+    assert.match(vetada.v.motivo, /um comentário cita PAINEL-\d+; formalize a relação no Plane/);
+    assert.deepEqual(vetada.c.plane.escritas, []);
+  } finally { await vetada.c.limpar(); }
+  const limpa = await jobBacklog({ estadoNome: 'Todo', descricao: SEM });
+  try {
+    assert.equal(limpa.v.resultado, 'APLICADO', JSON.stringify(limpa.v));
+    assert.deepEqual(limpa.alvo.labels.map(l => l.name), ['READY TO DEV']);
+  } finally { await limpa.c.limpar(); }
+});
+
+test('X2: a carta bloqueia PAINEL-N e o texto diz "Primeiro o PAINEL-N no ar." — o sentido inverso veta', async () => {
+  const r = await jobBacklog({ preparar: (c, alvo) => {
+    const outra = c.plane.novaCarta({ nome: 'Servidor novo', estadoNome: 'Todo', descricao: '<p>Escopo X.</p>' });
+    alvo.description_html = `${ESCOPO}<p>Primeiro o PAINEL-${outra.sequence_id} no ar.</p>`;
+    c.plane.relacionar(outra, alvo);
+  } });
+  try {
+    assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
+    assert.match(r.v.motivo, /a descrição cita PAINEL-\d+, mas a relação está no sentido inverso/);
+    assert.deepEqual(r.c.plane.escritas, []);
+  } finally { await r.c.limpar(); }
+});
+
+test('X3: julgamento de linha que não está na carta → MANTER, nada escrito', async () => {
+  const frase = 'Bloqueada pela migração do banco.';
+  const r = await jobBacklog({ descricao: `${ESCOPO}<p>${frase}</p>`, responder: alvo => ({ vereditos: [{ ...pronta(alvo),
+    prosaJulgada: [julgada(frase, 'A migração já terminou, conforme o docs/current.md.'), julgada('Linha que não existe na carta', 'Texto inventado pela CLI, sem lastro na carta.')] }] }) });
+  try {
+    assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
+    assert.equal(r.v.motivo, 'julgamento de linha que não está na carta: Linha que não existe na carta');
+    assert.deepEqual(r.c.plane.escritas, []);
+  } finally { await r.c.limpar(); }
+});
+
+test('preparo: relação não formal criada depois da conferência do gate e antes do PATCH é vista na leitura que precede a escrita', async () => {
+  const r = await jobBacklog({ preparar: (c, alvo) => {
+    const original = c.servico.preavaliar;
+    c.servico.preavaliar = async (...a) => { const pre = await original(...a); c.plane.relacoes.get(alvo.id).relates_to.push(c.plane.novaCarta({ nome: 'Parente' }).id); return pre; };
+  } });
+  try {
+    assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
+    assert.match(r.v.motivo, /^preparo recusado: relação relates_to na carta/);
+    assert.deepEqual(r.c.plane.escritas, []);
+  } finally { await r.c.limpar(); }
+});
+
+test('X5 (W3-editado): decisão da mesa do Painel Admin, mas editada, não destrava', async () => {
+  const tirou = (c, carta) => c.plane.atividade(carta.id, { field: 'labels', old_value: 'ASTARGNE', new_value: '', old_identifier: c.plane.label('ASTARGNE').id, actor: ZELADOR_ATOR });
+  const r = await jobBacklog({ autorDecisao: ADMIN, estadoNome: 'Todo', descricao: SEM, preparar: (c, carta) => {
+    tirou(c, carta); c.avancar(60_000);
+    decidir(c, carta).edited_at = new Date(c.agora()).toISOString();
+    c.avancar(25 * 60 * 60_000);
+  } });
+  try {
+    assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
+    assert.match(r.v.motivo, /ASTARGNE tirada pelo zelador; o zelador não marca gate até o dono reconhecer/);
   } finally { await r.c.limpar(); }
 });

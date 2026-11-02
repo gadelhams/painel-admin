@@ -22,7 +22,7 @@ import { digitalDaCarta, ehZelador, motivoIntocavel, nomesDe, prontidaoDoProjeto
 import { RESULTADOS_RECIBO, chaveDaMudanca, htmlIntencao, htmlRecibo, mesmoTexto, mudancaNaListaFechada, novaDescricao } from './zelador-veredito.js';
 import { ORIGEM_ZELADOR } from './escritor-zelador-plane.js';
 import { listar } from './zelador-retrato.js';
-import { COMENTARIO_PREPARO, assinaturaRelacoes, estadoAlvoDoPreparo, linhaSemJulgamento, linhasSuspeitas, motivoContraOPreparo, siglasDoCatalogo } from './zelador-preparo.js';
+import { COMENTARIO_PREPARO, assinaturaRelacoes, estadoAlvoDoPreparo, motivoContraOPronta, siglasDoCatalogo } from './zelador-preparo.js';
 
 const DIA_MS = 24 * 60 * 60_000;
 const TERMINAIS = ['completed', 'cancelled', 'canceled'];
@@ -110,13 +110,13 @@ export class AplicacaoZelador {
     const relacoes = preparo ? assinaturaRelacoes(d.relacoes) : null;
     if (preparo && relacoes === null) throw abortar('relações do Plane ilegíveis ou fora da forma; o preparo não sai');
     // J1: a validação das dependências acompanha toda saída do Backlog. Decisão do dono (01/11/2026):
-    // o painel veta só o certo; a prosa com o vocabulário a CLI julga, linha por linha.
+    // o painel veta só o certo; a prosa com o vocabulário a CLI julga, linha por linha. O gate já
+    // conferiu antes do juiz; aqui é de novo, na leitura que precede a escrita (uma relação nova
+    // não muda a digital).
     if (preparo) {
-      const contra = motivoContraOPreparo({ carta, codigo: identificadorDe(carta), comentarios: d.comentarios, relacoes: d.relacoes,
-        siglas: siglasDoCatalogo(porId), porId });
+      const contra = motivoContraOPronta({ carta, codigo: identificadorDe(carta), comentarios: d.comentarios, relacoes: d.relacoes,
+        siglas: siglasDoCatalogo(porId), porId, prosaJulgada });
       if (contra) throw abortar(contra);
-      const falta = linhaSemJulgamento(linhasSuspeitas({ carta, comentarios: d.comentarios }), prosaJulgada);
-      if (falta !== null) throw abortar(`o zelador não julgou: ${falta}`);
     }
     // J58: o universo é toda carta aberta do projeto mais as que esperam por esta, de qualquer
     // projeto do catálogo (o motivoIntocavel já recusou relação fora da leitura).

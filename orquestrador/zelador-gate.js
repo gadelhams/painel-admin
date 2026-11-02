@@ -24,7 +24,7 @@ import { CABECALHO_DECISAO, FONTE_DECISAO } from '../decisao.js';
 import { tocaMarcadorHumano } from './zelador-veredito.js';
 import { listar } from './zelador-retrato.js';
 import { uuidV5 } from './uuid.js';
-import { codigosEm, htmlPreparado, planoDoPreparo, textoRemovido } from './zelador-preparo.js';
+import { codigosEm, htmlPreparado, motivoContraOPronta, planoDoPreparo, siglasDoCatalogo, textoRemovido } from './zelador-preparo.js';
 import { textoDoHtml } from './zelador-veredito.js';
 import { VOCABULARIO_DEPENDENCIA } from './texto-dependencia.js';
 
@@ -156,6 +156,10 @@ export class GateZelador {
     if (levantados.length) return { manter: `${levantados[0].motivo}; o zelador não marca gate até o dono reconhecer (DECISAO/v1)` };
     const digital = digitalDaCarta(atual, d.comentarios);
     if (digital !== digitalEsperada) return { manter: `a carta mudou desde ${mudouDesde}` };
+    // X1: o veto certo e a prosa julgada valem para TODO PRONTA, com ou sem preparo, ao vivo.
+    const contra = motivoContraOPronta({ carta: atual, codigo: `${atual.sigla}-${atual.sequence_id}`, comentarios: d.comentarios, relacoes: d.relacoes,
+      siglas: siglasDoCatalogo(porId), porId, prosaJulgada: v.prosaJulgada ?? null });
+    if (contra) return { manter: contra };
     return { atual, digital };
   }
 
