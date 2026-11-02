@@ -52,13 +52,28 @@ test('J2: a segunda passada lê o mesmo vocabulário — ATUALIZAR tira "Bloquea
   }
 });
 
-test('J8: o vocabulário cobre os termos novos e os do estado bloqueado; "Escopo: depois do almoço" não é falso positivo', async () => {
+test('J8/X4: o vocabulário cobre os termos novos e os do estado bloqueado; "depois do almoço" vira linha suspeita, julgável', async () => {
   for (const t of ['blocked by PAINEL', 'requires the new server', 'waiting on infra', 'ship after the migration', 'em espera do banco', 'antes de subir',
-    'necessita do banco', 'pendente de revisão', 'Bloqueada', 'Blocked', 'Em espera', 'Aguardando']) assert.match(t, VOCABULARIO_DEPENDENCIA, t);
+    'necessita do banco', 'pendente de revisão', 'Bloqueada', 'Blocked', 'Em espera', 'Aguardando',
+    'depois do deploy', 'depois das 18 h', 'antes da migração', 'antes dos testes', 'Só quando o banco migrar', 'assim que sair', 'até que termine',
+    'Primeiro o PAINEL-1 no ar', 'primeiro a migração']) assert.match(t, VOCABULARIO_DEPENDENCIA, t);
   for (const t of ['bloqueada', 'blocked', 'em espera', 'aguardando']) assert.match(t, ESTADO_BLOQUEADO);
-  assert.doesNotMatch('Escopo: depois do almoço, exportar CSV. Aceite: suíte verde.', VOCABULARIO_DEPENDENCIA);
-  const r = await jobBacklog({ descricao: '<p>Escopo: depois do almoço, exportar CSV. Aceite: suíte verde.</p>' });
-  try { assert.equal(r.v.resultado, 'APLICADO', JSON.stringify(r.v)); } finally { await r.c.limpar(); }
+  for (const t of ['Escopo: exportar CSV. Aceite: suíte verde.', 'O primeiro passo é ler o CSV.', 'Depoimento do cliente.']) assert.doesNotMatch(t, VOCABULARIO_DEPENDENCIA, t);
+  const almoco = '<p>Escopo: depois do almoço, exportar CSV. Aceite: suíte verde.</p>';
+  const linha = 'Escopo: depois do almoço, exportar CSV. Aceite: suíte verde.';
+  const sem = await jobBacklog({ descricao: almoco });
+  try {
+    assert.equal(sem.v.resultado, 'MANTER', JSON.stringify(sem.v));
+    assert.equal(sem.v.motivo, `o zelador não julgou: ${linha}`);
+  } finally { await sem.c.limpar(); }
+  const com = await jobBacklog({ descricao: almoco, responder: alvo => ({ vereditos: [{ ...pronta(alvo),
+    prosaJulgada: [{ linha, porque: '"Depois do almoço" é hora do dia, não outra carta nem trabalho de outro time.' }] }] }) });
+  try { assert.equal(com.v.resultado, 'APLICADO', JSON.stringify(com.v)); } finally { await com.c.limpar(); }
+  const soQuando = await jobBacklog({ estadoNome: 'Todo', descricao: `${SEM}<p>Só quando a migração do banco terminar.</p>` });
+  try {
+    assert.equal(soQuando.v.resultado, 'MANTER', JSON.stringify(soQuando.v));
+    assert.match(soQuando.v.motivo, /o zelador não julgou: Só quando a migração do banco terminar\./);
+  } finally { await soQuando.c.limpar(); }
 });
 
 test('J3: erro comum no gate depois do preparo aplicado — PREPARADO_SEM_GATE no diário e na carta, e o erro segue', async () => {

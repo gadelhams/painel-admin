@@ -6,9 +6,10 @@ const DECLAROU_SEM = /(?:^|\n)[ \t]*(?:[-*•][ \t]*)?(?:sem depend[eê]ncias|de
 
 // PAINEL-62 (J2, J8 da correção): fonte única do vocabulário de dependência em prosa, lido pela
 // anti-lavagem do preparo e pela segunda passada do gate. Contém os termos de ESTADO_BLOQUEADO.
-// É conservador: "resultado esperado" cai em "espera" e recusa; "depois do almoço" não cai.
+// Prosa não veta: marca linha suspeita, que a CLI julga. Por isso o vocabulário é largo (X4):
+// "depois do almoço" e "resultado esperado" também viram linha a julgar, e o custo é só esse.
 export const ESTADO_BLOQUEADO = /bloquead|blocked|em espera|aguardando/i;
-export const VOCABULARIO_DEPENDENCIA = /depend|bloque|blocked|requer|requires|pr[eé]-?requisit|depois de|ap[oó]s|\bafter\b|aguard|waiting|espera|antes de|necessita|pendente de|precisa d/i;
+export const VOCABULARIO_DEPENDENCIA = /depend|bloque|blocked|requer|requires|pr[eé]-?requisit|depois d(?:e|o|a|os|as)\b|ap[oó]s|\bafter\b|aguard|waiting|espera|antes d(?:e|o|a|os|as)\b|necessita|pendente de|precisa d|s[óo] quando|assim que|at[ée] que|primeiro [oa]\b/i;
 
 // A linha de texto (já visível) declara a ausência de dependências.
 export const linhaDeclaraSem = linha => DECLAROU_SEM.test(String(linha ?? ''));
