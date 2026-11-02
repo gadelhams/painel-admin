@@ -35,8 +35,9 @@ e "dependência declaração: ausência de dependências não declarada na carta
   suspeita, comparada pelo texto normalizado; faltou uma, MANTER "o zelador não julgou: <linha>", e
   julgou uma que não está na carta, MANTER "julgamento de linha que não está na carta" (X3).
   O campo só vale no PRONTA; o `porque` passa pelo filtro e pelos tetos do `comentario` da CLI, e cada
-  julgamento entra inteiro como evidência do recibo GATE/v1 (até 8, de 500 caracteres; o que não cabe
-  recusa antes do preparo). A intenção do preparo segue com texto fixo. O vocabulário tem fonte única
+  julgamento entra como evidência do recibo GATE/v1: a linha pelo começo (120 caracteres) e por um
+  `sha256` curto do texto normalizado, e o `porque` inteiro (até 8, de 500 caracteres; o que não cabe
+  recusa antes do preparo). A linha da CAD-32 real, um trecho de log, passava sozinha dos 500 (02/11). A intenção do preparo segue com texto fixo. O vocabulário tem fonte única
   (`texto-dependencia.js`, com os termos do estado bloqueado) e é largo de propósito (X4: "depois
   do/da", "antes do/da", "só quando", "assim que", "até que", "primeiro o/a"), porque o custo é só
   mais linhas a julgar;

@@ -23,6 +23,7 @@ import { atorDe, digitalDaCarta, motivoIntocavel, nomesDe, ZELADOR_ATOR } from '
 import { CABECALHO_DECISAO, FONTE_DECISAO } from '../decisao.js';
 import { tocaMarcadorHumano } from './zelador-veredito.js';
 import { listar } from './zelador-retrato.js';
+import { createHash } from 'node:crypto';
 import { uuidV5 } from './uuid.js';
 import { codigosEm, htmlPreparado, motivoContraOPronta, planoDoPreparo, siglasDoCatalogo, textoRemovido } from './zelador-preparo.js';
 import { textoDoHtml } from './zelador-veredito.js';
@@ -107,10 +108,16 @@ const reconhecido = (levantamento, comentarios, autorDecisao) => comentarios.som
 const FIXO_RECIBO = 'prontidão READY TO DEV, preavaliação e relações conferidas ao vivo; ancestrais sem trava';
 // As evidências do recibo GATE/v1: { evidencias } ou { manter }. Com a prosa julgada pela CLI
 // (PAINEL-62), cada julgamento entra inteiro como evidência; o que não cabe recusa, nunca corta.
+const resumoDaLinha = linha => (linha.length <= 120 ? linha : `${linha.slice(0, 117)}…`);
+const hashDaLinha = linha => `sha256:${createHash('sha256').update(linha).digest('hex').slice(0, 12)}`;
+
 function evidenciasDoRecibo(v) {
   const conferidas = v.evidencias.map(e => e.texto);
   if (!v.prosaJulgada?.length) return { evidencias: [...conferidas, FIXO_RECIBO].slice(0, 10).map(x => String(x).slice(0, 500)) };
-  const julgadas = v.prosaJulgada.map(x => `prosa julgada pelo zelador «${x.linha}»: ${x.porque}`);
+  // A linha inteira já está na carta: o recibo a identifica pelo começo e por um hash curto do texto
+  // normalizado (a linha da CAD-32 real, um trecho de log, passava sozinha dos 500 caracteres). O
+  // porquê da CLI vai inteiro; o que não cabe recusa, nunca é cortado.
+  const julgadas = v.prosaJulgada.map(x => `prosa julgada pelo zelador «${resumoDaLinha(x.linha)}» [${hashDaLinha(x.linha)}]: ${x.porque}`);
   if (julgadas.length > 8 || julgadas.some(x => x.length > 500)) return { manter: 'o julgamento da prosa não cabe no recibo GATE/v1 (até 8 linhas de 500 caracteres)' };
   return { evidencias: [`evidências conferidas pelo painel: ${conferidas.join('; ')}`.slice(0, 500), FIXO_RECIBO, ...julgadas] };
 }

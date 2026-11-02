@@ -3,6 +3,7 @@
 // vira linha suspeita que o PRONTA tem de julgar. Destrave só pela mesa de verdade (W3); aviso honesto depois de erro (W4).
 // Textos na forma das cartas reais do CAD (01/11). Cada teste fica vermelho com a mutação nomeada em docs/plano-frota-preparo.md.
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { CAD, HUMANO } from './fixtures/frota-f4b.js';
 import { ZELADOR_ATOR } from '../orquestrador/zelador-politica.js';
@@ -43,6 +44,21 @@ test('L1: com toda linha julgada, a CAD-31 sai do Backlog com a linha e o gate; 
     assert.ok(recibo.comment_html.includes('São pacotes npm do próprio repositório'), 'o porquê da CLI está no recibo');
     const intencao = r.c.plane.comentarios.get(r.alvo.id).find(x => /^<p>\[ZELADOR\/v1 veredito=PRONTA /.test(x.comment_html));
     assert.ok(!intencao.comment_html.includes('pacotes npm'), 'a intenção do preparo segue com texto fixo');
+  } finally { await r.c.limpar(); }
+});
+
+test('L1: linha suspeita longa (forma da CAD-32 real) cabe no recibo pelo começo e pelo hash; o porquê vai inteiro', async () => {
+  const longa = `test/email.test.js:52 sai cancelado no Node 22 depois do timeout; ${'detalhe do log '.repeat(25)}fim`;
+  const porque = 'É o relato do sintoma do teste, não uma carta ou entrega de que esta dependa.';
+  const r = await jobBacklog({ descricao: `${ESCOPO}<p>${longa}</p><p>Só quando o Node 22 entrar.</p>`, comCad: true,
+    responder: alvo => ({ vereditos: [{ ...pronta(alvo), prosaJulgada: [julgada(longa, porque), julgada('Só quando o Node 22 entrar.', porque)] }] }) });
+  try {
+    assert.equal(r.v.resultado, 'APLICADO', JSON.stringify(r.v));
+    const recibo = r.c.plane.comentarios.get(r.alvo.id).find(x => x.external_source === 'zelador-gate-v1');
+    const hash = createHash('sha256').update(longa).digest('hex').slice(0, 12);
+    assert.ok(recibo.comment_html.includes(`[sha256:${hash}]`), recibo.comment_html);
+    assert.ok(recibo.comment_html.includes(longa.slice(0, 60)), 'o começo da linha identifica a frase na carta');
+    assert.ok(recibo.comment_html.includes(porque), 'o porquê da CLI vai inteiro');
   } finally { await r.c.limpar(); }
 });
 
