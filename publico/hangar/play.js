@@ -23,28 +23,38 @@ async function json(url, opcoes) {
 const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 const lista = (rotulo, itens) => (itens?.length ? `<li><b>${esc(rotulo)}</b> ${itens.map(esc).join(', ')}</li>` : '');
 
-// O fim do último job do zelador neste projeto (GET /api/orquestracao/zelador).
+// O fim do último job do zelador neste projeto (GET /api/orquestracao/zelador). As categorias são as
+// do último job concluído; `ultimoJob` é o último de qualquer resultado (PAINEL-61).
 function blocoBloqueio(fim) {
   if (!fim) return '<p class="hg-vazio">O zelador ainda não passou por esta nave.</p>';
   const c = fim.categorias ?? {};
-  const topo = fim.feita ? '<p>Feita: nenhuma carta aberta.</p>'
-    : fim.soDono ? '<p class="hg-bloqueio-dono"><b>Bloqueada: só decisões e tarefas do dono seguram esta nave.</b></p>'
-      : `<p>${fim.abertas} abertas, ${fim.emAndamento} em andamento.</p>`;
+  const temRetrato = typeof fim.abertas === 'number' || fim.feita;
+  const topo = !temRetrato ? '<p>Sem retrato das cartas: nenhum job desta nave terminou com ele.</p>'
+    : fim.feita ? '<p>Feita: nenhuma carta aberta.</p>'
+      : fim.soDono ? '<p class="hg-bloqueio-dono"><b>Bloqueada: só decisões e tarefas do dono seguram esta nave.</b></p>'
+        : `<p>${fim.abertas} abertas, ${fim.emAndamento} em andamento.</p>`;
   const k = fim.contagem;
   const mudancas = k ? ` · ${k.aplicados ?? 0} mudança(s) aplicada(s), ${k.recusados ?? 0} recusada(s)` : '';
   const recusadas = (fim.prontaRecusadas ?? []).map((r) => `<li><b>${esc(r.carta)} não foi para o dev:</b> ${esc(r.motivo ?? r.resultado ?? 'sem motivo')}</li>`).join('');
+  const u = fim.ultimoJob;
+  const ultimo = u ? `último job: ${new Date(u.quando).toLocaleString('pt-BR')} (${u.resultado ?? '?'})${u.inicioLido ? '' : ', início fora da janela lida: vereditos não mostrados'}`
+    : `último job: ${new Date(fim.quando).toLocaleString('pt-BR')}`;
   return `${topo}<ul class="hg-linhas">${lista('Decisão:', c.decisao)}${lista('Tarefa do dono:', c.tarefaDono)}${lista('Espera outra carta:', c.esperaOutraCarta)}${lista('Espera puxar (F4):', c.esperaPuxar)}${lista('Espera integração:', c.esperaIntegracao)}${recusadas}</ul>`
-    + `<p class="hg-apagado hg-mono">último job: ${esc(new Date(fim.quando).toLocaleString('pt-BR'))}${esc(mudancas)}</p>`;
+    + `<p class="hg-apagado hg-mono">${esc(ultimo)}${esc(mudancas)}</p>`;
 }
 
-// PAINEL-61: play ligado não basta; a nave diz quando nada vai rodar e quando sai o próximo job.
+// PAINEL-61: play ligado não basta; a nave diz quando nada vai rodar e quando sai a próxima volta.
+// Motivo com prefixo de sigla é de uma nave; sem prefixo, vale para todas (teto, frota, consumo).
+const DE_UMA_NAVE = /^[A-Z][A-Z0-9]*: /;
 export function agendaDoZelador(z, sigla) {
   if (!z) return '';
   if (z.instancia && !z.instancia.agenda) return ` Mas nada roda: ${z.instancia.motivo}.`;
+  if (z.atual?.sigla === sigla) return ' O zelador está nesta nave agora.';
   const partes = [];
-  if (z.atual?.sigla === sigla) partes.push(' O zelador está nesta nave agora.');
-  else if (z.agendando && z.proximoEm) partes.push(` Próximo job do zelador às ${hora(z.proximoEm)}.`);
-  if (z.motivoOcioso && z.motivoOcioso.startsWith(`${sigla}:`)) partes.push(` Última volta pulada: ${z.motivoOcioso.slice(sigla.length + 1).trim()}.`);
+  const motivo = z.motivoOcioso ?? '';
+  if (motivo && !DE_UMA_NAVE.test(motivo)) partes.push(` A última volta não rodou em nave nenhuma: ${motivo}.`);
+  else if (sigla && motivo.startsWith(`${sigla}: `)) partes.push(` Última volta pulada nesta nave: ${motivo.slice(sigla.length + 2)}.`);
+  if (z.agendando && z.proximoEm) partes.push(` Próxima volta do zelador às ${hora(z.proximoEm)} (uma nave por volta, em rodízio).`);
   return partes.join('');
 }
 

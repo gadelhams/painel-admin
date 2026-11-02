@@ -30,7 +30,11 @@ export class InstanciaAgendador {
   // PAINEL-61: a nave diz quando o play está ligado mas esta instância não agenda (e por quê).
   async situacao() {
     if (await this.podeAgendar()) return { agenda: true, motivo: null };
-    if (this.tomada) return { agenda: false, motivo: 'outro processo tomou o arquivo do agendador; esta instância parou de agendar' };
+    if (this.tomada) {
+      const dono = await this.lerDono();
+      return { agenda: false, motivo: dono && !dono.ilegivel ? `outro processo (pid ${dono.pid}) tomou o arquivo do agendador; esta instância parou de agendar`
+        : 'o arquivo do agendador sumiu ou ficou ilegível; esta instância parou de agendar (reinicie o serviço)' };
+    }
     return { agenda: false, motivo: this.ultimaTentativa?.motivo ?? (this.habilitado ? 'a instância ainda não tentou tomar o agendador' : 'ORQ_AGENDADOR ausente: esta instância não agenda vigília nem zelador') };
   }
 
@@ -43,9 +47,14 @@ export class InstanciaAgendador {
 
   // Devolve { agenda, motivo }. Sem a flag nem tenta: o arquivo de quem agenda fica intacto.
   async tomar() {
-    const r = await this.tomarSemRegistro();
-    this.ultimaTentativa = r;
-    return r;
+    try {
+      const r = await this.tomarSemRegistro();
+      this.ultimaTentativa = r;
+      return r;
+    } catch (e) {
+      this.ultimaTentativa = { agenda: false, motivo: `a tentativa de tomar o agendador falhou: ${e.message}` };
+      throw e;
+    }
   }
 
   async tomarSemRegistro() {
@@ -84,7 +93,7 @@ export class InstanciaAgendador {
         return r;
       } finally { tentando = false; }
     };
-    const r = await tentar();
+    const r = await tentar().catch(() => this.ultimaTentativa);
     if (!r.agenda && this.habilitado) {
       this.vigia = setInterval(() => { tentar().catch(() => {}); }, intervaloMs);
       this.vigia.unref?.();

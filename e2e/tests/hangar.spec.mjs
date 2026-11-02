@@ -335,7 +335,7 @@ test('play da nave (F3): marcar só prepara, confirmar liga por SSO; o droid zel
 });
 
 test('PAINEL-61: play ligado sem agendador diz que nada roda; com agendador, mostra o próximo job e o PRONTA que não foi para o dev', async ({ page }) => {
-  const fim = { quando: agora(), feita: false, abertas: 3, emAndamento: 0, soDono: false, contagem: { aplicados: 1, recusados: 1 },
+  const fim = { quando: agora(), feita: false, abertas: 3, emAndamento: 0, soDono: false, contagem: { aplicados: 1, recusados: 1 }, ultimoJob: { quando: agora(), resultado: 'CONCLUIDO', inicioLido: true },
     categorias: { esperaPuxar: ['ALFA-2'], tarefaDono: [], decisao: [], esperaOutraCarta: [], esperaIntegracao: [] },
     prontaRecusadas: [{ carta: 'ALFA-2', resultado: 'MANTER', motivo: 'prontidão ao vivo recusou: estado inadequado para desenvolvimento' }] };
   const zelador = { atual: null, porProjeto: { P: fim }, diario: [], agendando: false, proximoEm: null, motivoOcioso: null,
@@ -355,8 +355,13 @@ test('PAINEL-61: play ligado sem agendador diz que nada roda; com agendador, mos
   await expect(page.locator('#hg-projetos [data-proj="alfa"]')).not.toContainText('play sem agendador');
   await page.locator('#hg-projetos [data-proj="alfa"]').click();
   const hhmm = new Date(proximo).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  await expect(page.locator('#hg-play-estado')).toContainText(`Próximo job do zelador às ${hhmm}.`);
-  await expect(page.locator('#hg-play-estado')).toContainText('Última volta pulada: ocupado: sessão claude tocou o projeto nas últimas 120 min.');
+  await expect(page.locator('#hg-play-estado')).toContainText(`Próxima volta do zelador às ${hhmm} (uma nave por volta, em rodízio).`);
+  await expect(page.locator('#hg-play-estado')).toContainText('Última volta pulada nesta nave: ocupado: sessão claude tocou o projeto nas últimas 120 min.');
+  // Motivo global (teto, frota, consumo) vale para toda nave: a próxima volta não promete job.
+  Object.assign(zelador, { motivoOcioso: 'teto diário de jobs atingido (12/12)' });
+  await page.reload();
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-play-estado')).toContainText('A última volta não rodou em nave nenhuma: teto diário de jobs atingido (12/12).');
   expect(audit.chamadas.filter((c) => c.metodo !== 'GET')).toEqual([]);
   expect(audit.errosPagina).toEqual([]);
 });
