@@ -20,20 +20,26 @@ e "dependência declaração: ausência de dependências não declarada na carta
   o produz e a prosa da CLI não entra nele;
 - **o painel veta só o certo; o zelador julga a prosa** (decisão do dono, 01/11/2026, depois de a
   anti-lavagem anterior recusar 0 de 15 cartas reais do CAD por "Migrado do Linear: AST-181",
-  ADR-0005, READY-20261022, "dependências" do npm e prosa comum). Em **todo** preparo, também no
-  que só tira do Backlog (J1), MANTER sem escrita quando: há código de carta de sigla do catálogo (o
-  mesmo conjunto do juiz), que não é a própria nem está formalizado como relação, no título (W1), na
+  ADR-0005, READY-20261022, "dependências" do npm e prosa comum). Em **todo PRONTA**, com ou sem
+  preparo (X1: também a carta já em Todo e declarada, e a passada seguinte a um PREPARADO_SEM_GATE),
+  conferido ao vivo antes do juiz e de novo na leitura que precede o PATCH do preparo, MANTER sem
+  escrita quando: há código de carta de sigla do catálogo (o mesmo conjunto do juiz), que não é a
+  própria nem está formalizado como dependência desta carta (`blocked_by`, `start_after`,
+  `finish_after`; formalizado só no sentido inverso veta, com o motivo, X2), no título (W1), na
   descrição ou num comentário de não-zelador (W2); há relação não formal (`relates_to`,
   `duplicate`…) ou relações fora da forma (as três listas de dependência ausentes); as relações são
   relidas sob a trava. Código de fora do catálogo (AST-, ADR-, READY-, ID3-) não veta;
 - **linhas suspeitas:** prosa com o vocabulário de dependência no título, na descrição (fora das
   linhas que já declaram "sem dependências") ou num comentário de não-zelador não veta; vai ao
   retrato da CLI, e o PRONTA tem de trazer `prosaJulgada: [{linha, porque}]` para TODA linha
-  suspeita, comparada pelo texto normalizado; faltou uma, MANTER "o zelador não julgou: <linha>".
+  suspeita, comparada pelo texto normalizado; faltou uma, MANTER "o zelador não julgou: <linha>", e
+  julgou uma que não está na carta, MANTER "julgamento de linha que não está na carta" (X3).
   O campo só vale no PRONTA; o `porque` passa pelo filtro e pelos tetos do `comentario` da CLI, e cada
   julgamento entra inteiro como evidência do recibo GATE/v1 (até 8, de 500 caracteres; o que não cabe
   recusa antes do preparo). A intenção do preparo segue com texto fixo. O vocabulário tem fonte única
-  (`texto-dependencia.js`, com os termos do estado bloqueado);
+  (`texto-dependencia.js`, com os termos do estado bloqueado) e é largo de propósito (X4: "depois
+  do/da", "antes do/da", "só quando", "assim que", "até que", "primeiro o/a"), porque o custo é só
+  mais linhas a julgar;
 - tirar da descrição um código de carta ou uma linha com esse vocabulário conta como trava levantada
   pelo zelador (J58, segunda passada), até o `DECISAO/v1`. **Só destrava a mesa de verdade (W3):**
   `external_source` da mesa, autoria do Painel Admin (`PLANE_ADMIN_ACTOR_ID`, injetado pela montagem
@@ -74,7 +80,7 @@ em `test/frota-f4b-simulacao.test.js`):
 | 7 | humano Todo → Backlog → MANTER | J57 do estado só olhando terminal |
 | J1 | só estado: CAD-31, comentário com código, `relates_to` vetam; "Bloqueada pela migração" sem julgamento → MANTER | defesas só quando declara |
 | J2 | ATUALIZAR tira "Bloqueada pela migração…" ou "Requer o deploy…" → PRONTA seguinte MANTER | segunda passada sem o vocabulário |
-| J8 | termos novos e os do estado bloqueado casam (hoje marcam linha suspeita, não vetam); "depois do almoço" passa | vocabulário antigo |
+| J8, X4 | termos novos e os do estado bloqueado casam; "depois do almoço" vira linha suspeita: sem julgamento MANTER, julgada segue; "Só quando…" em carta já em Todo exige julgamento | vocabulário antigo; vocabulário sem os termos da X4 |
 | J3 | `marcarGate` lança erro comum → `PREPARADO_SEM_GATE` no diário e na carta, job ERRO | erro relançado sem diário nem carta |
 | J4 | rascunho surgido depois do juiz → MANTER (a cópia tem de sair pronta) | sem a exigência de pronta |
 | J4 | carta em triage não vai para Todo | estado sai de qualquer grupo |
@@ -95,6 +101,11 @@ em `test/frota-f4b-simulacao.test.js`):
 | W3 | DECISAO/v1 de humano não destrava; sem `PLANE_ADMIN_ACTOR_ID` nada destrava; o do Painel Admin destrava | destrave pelo texto de qualquer ator |
 | W4 | erro depois da etiqueta → `PREPARADO_GATE_INCERTO` "gate presente"; releitura falha → "incerto"; sem etiqueta → "não saiu" | aviso sem a releitura |
 | W5 | preparo ABORTADO há menos de 24 h → MANTER sem intenção nem escrita; depois de 24 h volta; diário ilegível → MANTER | freio ignorado; diário ilegível segue |
+| X1 | passada seguinte a um PREPARADO_SEM_GATE com comentário que cita PAINEL-N → MANTER; carta em Todo declarada com "Isso depende do PAINEL-N." → MANTER; sem prosa nem código → gate | veto e julgamento só no preparo |
+| X1 | relação não formal criada depois da conferência do gate e antes do PATCH → MANTER pela leitura que precede a escrita | sem a conferência no preparo |
+| X2 | a carta bloqueia PAINEL-N e diz "Primeiro o PAINEL-N no ar." → MANTER "sentido inverso" | relação inversa dispensa o veto |
+| X3 | julgamento de linha que não está na carta → MANTER | julgamento conferido num sentido só |
+| X5 | decisão da mesa do Painel Admin editada não destrava | W3-editado (sem o `edited_at`) |
 | 8 | humano tirou a linha (de 30/10) → MANTER | comparação pelo texto exato com a data de hoje |
 | 4 | A bloqueia B: preparo de A passa com B só trocando o estado; outra mudança em B recusa | comparador de string inteira; vizinha ignorada |
 | escopo | ATUALIZAR anexar "Sem dependências." segue recusado | exceção ligada ao motivo, não ao tipo |
@@ -102,7 +113,7 @@ em `test/frota-f4b-simulacao.test.js`):
 | 9 | identidade sem `escritorGate` → 0 PATCH | `podeRegistrarGate` ignorado (preparo sem o juiz) |
 | 11 | humano comenta entre o preparo e o gate → `PREPARADO_SEM_GATE`, motivo e comentário | MANTER genérico |
 | 10 | queda entre intenção e PATCH → reconciliação ABORTADO, sem PATCH | rolar para a frente |
-| 10 | queda entre PATCH e recibo → reconciliação APLICADO; PRONTA seguinte com preparo vazio marca o gate | `jaAplicada` sem o tipo |
+| 10 | queda entre PATCH e recibo → reconciliação APLICADO; o PRONTA seguinte, de preparo vazio, passa também pelo veto e pelo julgamento e marca o gate | `jaAplicada` sem o tipo |
 | D11 | PENDENTE adulterado (`descricaoNova` diferente) → ABORTADO | reconciliação sem a comparação |
 | D3 | marcadas depois = antes + a linha fixa | aceita qualquer linha marcada nova |
 | D1 | nenhum JSON da CLI produz o preparo | tipo aceito em `validarVeredito` |
@@ -121,7 +132,12 @@ um humano tirou; janela 19 — `<p>Sem dependências.</p><p>Depende de CAD-31</p
 
 **Resíduos declarados:**
 - **a prosa é julgada pela IA, com o julgamento no recibo:** a linha suspeita que a CLI julgar como
-  não-dependência passa; o painel só garante que ela foi julgada e que o porquê ficou registrado;
+  não-dependência passa; o painel só garante que toda linha suspeita foi julgada, que nenhum
+  julgamento é de linha inventada e que o porquê ficou registrado. Isso vale para todo PRONTA;
+- vocabulário largo (X4): mais linhas a julgar, inclusive falsos positivos como "depois do almoço"
+  ou "resultado esperado"; uma linha que a CLI não julgar segura o gate da carta;
+- veto e julgamento num PRONTA sem preparo dependem das relações na forma do Plane (as três listas de
+  dependência): uma carta em Todo cujas relações vierem sem essa forma passa a ser recusada;
 - a decisão da mesa que destrava é conferida pela fonte, pelo ator, pelo `edited_at` e pelo
   cabeçalho, não pelos campos do corpo (`lerDecisao` mora atrás da porta `decisao.js`, que só exporta
   a fonte e o cabeçalho);

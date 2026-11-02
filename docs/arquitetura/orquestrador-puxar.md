@@ -68,10 +68,12 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
   `preavaliar`; se o juiz só aponta "estado inadequado para desenvolvimento" (carta no grupo backlog)
   e/ou a declaração de dependências ausente, e há identidade de gate e nenhum gate, o PRONTA vira
   `{ tipo: 'preparo', estado, declarar }` e passa pela sequência da limpeza (`zelador-aplicacao.js`:
-  J57 de estado e de declaração; em todo preparo, veto só no certo — código de sigla do catálogo não
-  formalizado no título, na descrição ou em comentário de não-zelador, relação não formal ou fora da
-  forma — e as linhas suspeitas (prosa com o vocabulário de dependência) julgadas uma a uma pela CLI
-  no `prosaJulgada` do PRONTA, com o julgamento nas evidências do recibo GATE/v1;
+  J57 de estado e de declaração; veto só no certo — código de sigla do catálogo não formalizado como
+  dependência desta carta, no título, na descrição ou em comentário de não-zelador, relação não
+  formal ou fora da forma — e as linhas suspeitas (prosa com o vocabulário de dependência) julgadas
+  uma a uma pela CLI no `prosaJulgada` do PRONTA, nos dois sentidos, com o julgamento nas evidências
+  do recibo GATE/v1. Veto e julgamento valem para todo PRONTA, com ou sem preparo: o gate os confere
+  ao vivo antes do juiz;
   prontidão simulada que tem de dar pronta, J58 com a exceção do tipo, PENDENTE → intenção com texto
   fixo → um PATCH com estado e descrição → verificação → recibo). O escritor resolve o estado (unstarted
   de menor `sequence`) e relê as relações sob a trava, no mesmo teto; relação nova aborta, e o preparo
