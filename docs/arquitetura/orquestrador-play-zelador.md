@@ -26,7 +26,11 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
   é `claude` (o Codex sob sandbox só-leitura lê o disco, e o bwrap da F4b embrulha só o executor), sem
   pausa de versão do bloco zelador nem do provedor, abaixo do teto diário (`ZELADOR_TETO_DIA`, contado
   do diário; job parado por CLI ou limite não conta), com consumo do provedor abaixo de 85% e leitura
-  com menos de 6 h (`consumo.js`; sem leitura, não roda), sem sessão viva tocando o projeto nas
+  com menos de 6 h (`consumo.js`; sem leitura, não roda. A leitura vem da barra de status de uma
+  sessão interativa do Claude Code ou do cache em `~/.claude.json`. O `claude -p` do job não renova
+  nenhuma das duas, e a extensão do VS Code renova o cache só de vez em quando: em 02/11/2026, uma
+  sessão dela ficou das 11:04 às 19:00 sem renovar. Sem sessão de terminal, o zelador para depois
+  de 6 h, e a nave diz o motivo), sem sessão viva tocando o projeto nas
   últimas 2 h (`coletores/sessoes-estritas.js`, subagentes em `<sessão>/subagents/` incluídos; erro ou
   transcript sem instante legível = ocupado) e com os leases tomados (`zelador-lease.js`: global e por
   projeto, `jobId`, TTL 20 min renovado a cada 5, fencing sob a trava antes de cada escrita, ilegível
