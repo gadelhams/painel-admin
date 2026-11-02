@@ -25,5 +25,5 @@ cada mecanismo está em [`arquitetura.md`](arquitetura.md); o estado, em
 - [`mapa/publico-1.md`](mapa/publico-1.md) — `publico/`, `publico/c3po/`, `publico/hangar/`
 - [`mapa/publico-2.md`](mapa/publico-2.md) — `publico/orquestracao/`
 - [`mapa/scripts.md`](mapa/scripts.md) — `scripts/`
-- [`mapa/test-1.md`](mapa/test-1.md) — `test/`, `test/fixtures/`
-- [`mapa/test-2.md`](mapa/test-2.md) — `test/fixtures/canal-legado/`, `test/fixtures/executor-cli/`, `test/fixtures/frota/`, `test/fixtures/zelador/`
+- [`mapa/test-1.md`](mapa/test-1.md) — `test/`
+- [`mapa/test-2.md`](mapa/test-2.md) — `test/fixtures/`, `test/fixtures/canal-legado/`, `test/fixtures/executor-cli/`, `test/fixtures/frota/`, `test/fixtures/zelador/`

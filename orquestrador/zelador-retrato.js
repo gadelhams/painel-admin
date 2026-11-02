@@ -7,12 +7,13 @@
 // com aplicação pendente na mesa é intocável; o diário da mesa ilegível deixa todas intocáveis.
 // Para a CLI sai um texto: só as candidatas, com a descrição e os últimos comentários truncados,
 // e uma linha por outra carta aberta. A candidata em Backlog leva também as relações e os códigos
-// que cita, com o estado de cada um (PAINEL-62, D14): conselho à CLI, não controle.
+// que cita, com o estado de cada um (PAINEL-62, D14): conselho à CLI, não controle. Cada candidata
+// leva as linhas suspeitas exatas (prosa com o vocabulário de dependência), que o PRONTA tem de julgar.
 import { PROJETOS } from '../projetos.js';
 import { todas } from './contrato-local.js';
 import { normalizarInteracao } from './interacao-canal.js';
 import { digitalDaCarta, ehZelador, motivoIntocavel, nomesDe } from './zelador-politica.js';
-import { resumoDasDependencias } from './zelador-preparo.js';
+import { linhasSuspeitas, resumoDasDependencias } from './zelador-preparo.js';
 
 const ABERTA = c => !['completed', 'cancelled', 'canceled'].includes(c.state?.group);
 
@@ -91,6 +92,7 @@ export class RetratoZelador {
       candidatas: candidatas.map(c => ({ carta: identificador(c), titulo: c.name, estado: c.state?.name ?? '?', etiquetas: nomesDe(c),
         pai: c.parent && porId.has(c.parent) ? identificador(porId.get(c.parent)) : null,
         descricaoHtml: String(c.description_html ?? '').slice(0, 4000),
+        linhasSuspeitas: linhasSuspeitas({ carta: c, comentarios: detalhes.get(c.id).comentarios }),
         ...(c.state?.group === 'backlog' ? { conferenciaDeDependencias: resumoDasDependencias(c, detalhes.get(c.id).relacoes, porId, porCodigo) } : {}),
         comentarios: (detalhes.get(c.id).comentarios ?? []).slice(-8).map(x => ({ autor: ehZelador(x) ? 'zelador' : 'outro',
           quando: x.created_at ?? null, texto: normalizarInteracao(x).texto.slice(0, 600) })) })),

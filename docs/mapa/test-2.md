@@ -2,6 +2,12 @@
 
 Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 
+## test/fixtures/
+
+- `frota-f4b.js` — Cenário da F4b montado pelas portas reais: dois projetos do catálogo (PAINEL e CAD) num Plane falso, fila, despacho, vigília, play, zelador (com o escritor de verdade) e reservas; CLIs, executor, sandbox e sessões falsos. Nada de rede nem de CLI paga.
+- `frota-preparo.js` — Cenário do preparo do PRONTA (PAINEL-62): uma carta (por padrão em Backlog, a forma da CAD-32) e um job do zelador que a propõe PRONTA, montados sobre o cenário F4b. Plane, CLI e executor falsos.
+- `recibo-gate.js` — Recibo GATE/v1 e atividade de etiqueta no formato que o Plane real devolve (F4a: J54, J55, J74), para os Planes falsos dos testes.
+
 ## test/fixtures/canal-legado/
 
 - `leitor-falso.mjs` — Dublê do scripts/estado_canal.py: o roteiro vem do nome do config pedido.

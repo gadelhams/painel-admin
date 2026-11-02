@@ -72,10 +72,11 @@ export function promptZelador(retratoTexto) {
     'IA_DECIDE (decisão já registrada resolve; tira ASTARGNE); DONO (só produto, conta externa, dinheiro, credencial, risco aceito ou o que contradiz decisão do dono: põe ASTARGNE, mais PRODUTO se é rumo; prova humana é TAREFA DONO);',
     'PRONTA (carta folha com escopo e critério de aceite escritos, dependências resolvidas e sem trava: é só PROPOSTA; o painel confere tudo ao vivo e, se passar, marca READY TO DEV).',
     'PRONTA de carta em Backlog: o painel tira do Backlog e escreve "Dependências: nenhuma" só se o juiz não apontar mais nada; proponha só com evidência da conferência de dependências (conferenciaDeDependencias do retrato: nenhuma relação de dependência e nenhum código citado em aberto). Na dúvida, MANTER.',
+    'Prosa: cada candidata traz linhasSuspeitas (título, descrição ou comentário que fala de dependência, bloqueio, espera). No PRONTA, julgue TODA linha suspeita em "prosaJulgada": [{"linha": a linha exata, "porque": por que ela não é dependência real}]; faltou uma, o painel mantém. Dependência real em prosa → MANTER ou ATUALIZAR, nunca PRONTA. prosaJulgada só vale no PRONTA.',
     'Nunca proponha READY TO TEST, módulo, pai, apagar carta ou tirar PRODUTO. Não toque marcador (DONO/(ASTARGNE nem linha "Depende de:".',
     'Escreva texto puro em português, sem HTML, sem segredo, sem marcadores de protocolo (GATE/, HANDOFF/, ZELADOR/, DECISAO/, [ORQ/).',
     'Responda SÓ com um objeto JSON, sem texto em volta:',
-    '{"vereditos":[{"carta":"SIGLA-N","veredito":"MANTER|ATUALIZAR|FECHAR|CANCELAR|IA_DECIDE|DONO|PRONTA","evidencias":[{"tipo":"commit","sha":"…"},{"tipo":"arquivo","caminho":"docs/x.md","linha":12},{"tipo":"carta","carta":"SIGLA-N"}],"comentario":"o porquê, com a fonte","trecho":"opcional","novoTrecho":"opcional","labelsTrava":["ASTARGNE"]}]}',
+    '{"vereditos":[{"carta":"SIGLA-N","veredito":"MANTER|ATUALIZAR|FECHAR|CANCELAR|IA_DECIDE|DONO|PRONTA","evidencias":[{"tipo":"commit","sha":"…"},{"tipo":"arquivo","caminho":"docs/x.md","linha":12},{"tipo":"carta","carta":"SIGLA-N"}],"comentario":"o porquê, com a fonte","trecho":"opcional","novoTrecho":"opcional","labelsTrava":["ASTARGNE"],"prosaJulgada":[{"linha":"…","porque":"…"}]}]}',
     '', '--- RETRATO ---', retratoTexto,
   ].join('\n');
 }
