@@ -14,7 +14,7 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
   (`scripts/reservar.mjs`), READY TO DEV pelo zelador, despacho do Hangar
   inteiro, CLIs e aceite sob bwrap ([plano](plano-frota-do-hangar.md)).
   Com `.orquestrador.json`: CAD, CKBL, EMU, PAINEL, PLAYER, SUPER. Plays desligados.
-  O PRONTA tira do Backlog e declara "Dependências: nenhuma" (PAINEL-62, [preparo](plano-frota-preparo.md)).
+  O PRONTA tira do Backlog e declara "Dependências: nenhuma"; a prosa o zelador julga (PAINEL-62, [preparo](plano-frota-preparo.md)).
 - **Mesa de decisão** grava como Painel Admin por SSO
   ([plano](plano-mesa-de-decisao.md)). **Memória L1** do C-3PO editável em
   `/c3po/#memoria`; reflexão 03:30 por timer.
@@ -34,6 +34,6 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
 
 ## Portão
 
-`npm test` 479 e Playwright 38 (01/11), check-docs com acervo (teto 30 mil
+`npm test` 490 e Playwright 38 (01/11), check-docs com acervo (teto 30 mil
 por doc). Sem linter: o portão monta o painel real com falsos e confere
 mapa, imports e tamanho. `main` no GitHub.

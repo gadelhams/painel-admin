@@ -87,7 +87,10 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   de menor `sequence` e/ou a linha `Dependências: nenhuma (declarada pelo zelador do Hangar em
   DD/MM/AAAA)`); na própria carta só somem "estado inadequado para desenvolvimento" e a declaração
   ausente, numa vizinha só troca o nome do estado na linha da dependência, e ela segue não-pronta;
-  a anti-lavagem e a J57 dele estão em [plano-frota-preparo.md](../plano-frota-preparo.md). Um ATUALIZAR que anexa "Sem
+  o painel veta só código de sigla do catálogo não formalizado e relação não formal, e a prosa com o
+  vocabulário de dependência a CLI julga linha por linha, com o julgamento no recibo
+  ([plano-frota-preparo.md](../plano-frota-preparo.md)). O reconhecimento que destrava a J58 é só a
+  decisão da mesa da autoria do Painel Admin configurado. Um ATUALIZAR que anexa "Sem
   dependências." continua recusado. Carta reservada por sessão viva
   fica fora de despacho, mesa e zelador. Vigília e zelador só agendam com o play (SSO + duas
   ações; com ele desligado, o zelador só fecha o recibo de um PENDENTE aberto) e

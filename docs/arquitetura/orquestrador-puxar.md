@@ -68,15 +68,21 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
   `preavaliar`; se o juiz só aponta "estado inadequado para desenvolvimento" (carta no grupo backlog)
   e/ou a declaração de dependências ausente, e há identidade de gate e nenhum gate, o PRONTA vira
   `{ tipo: 'preparo', estado, declarar }` e passa pela sequência da limpeza (`zelador-aplicacao.js`:
-  J57 de estado e de declaração, anti-lavagem em todo preparo por código de carta, vocabulário e forma das relações,
+  J57 de estado e de declaração; em todo preparo, veto só no certo — código de sigla do catálogo não
+  formalizado no título, na descrição ou em comentário de não-zelador, relação não formal ou fora da
+  forma — e as linhas suspeitas (prosa com o vocabulário de dependência) julgadas uma a uma pela CLI
+  no `prosaJulgada` do PRONTA, com o julgamento nas evidências do recibo GATE/v1;
   prontidão simulada que tem de dar pronta, J58 com a exceção do tipo, PENDENTE → intenção com texto
   fixo → um PATCH com estado e descrição → verificação → recibo). O escritor resolve o estado (unstarted
   de menor `sequence`) e relê as relações sob a trava, no mesmo teto; relação nova aborta. O gate então
-  sai com a digital da releitura (D1); se não sai (recusa, abort ou erro comum, que segue depois), o
-  diário registra `PREPARADO_SEM_GATE` (contado à parte) e a carta recebe um comentário `[ZELADOR/v1]`
-  com o motivo, salvo posse alheia (lease, reserva, play). A reconciliação nunca rola o
+  sai com a digital da releitura (D1); se não sai (recusa ou abort), o diário registra
+  `PREPARADO_SEM_GATE` (contado à parte) e a carta recebe um comentário `[ZELADOR/v1]` com o motivo,
+  salvo posse alheia (lease, reserva, play); num erro comum, que segue depois, as etiquetas são relidas
+  antes: READY TO DEV presente ou releitura falha viram `PREPARADO_GATE_INCERTO`. A reconciliação nunca rola o
   preparo para a frente, e em todo tipo recusa o PENDENTE cuja descrição difere da recalculada ao
-  vivo. O retrato leva à CLI, para a candidata em Backlog, as relações e os códigos citados com o estado.
+  vivo. O retrato leva à CLI as linhas suspeitas de cada candidata e, para a em Backlog, as relações e os
+  códigos citados com o estado. Destrave da J58 só pela decisão da mesa da autoria do Painel Admin
+  (`PLANE_ADMIN_ACTOR_ID`); sem o ator configurado, nada destrava.
 - **Despacho do Hangar inteiro** (item 6, `vigilia-varredura.js`): com `ORQ_AGENDADOR=true` e a frota ok,
   cada passada lê o play, o teto diário global (`ORQ_TETO_DIA`, padrão 12, somado dos
   `vigilia/<id>.jsonl` de todo o catálogo, sem as paradas da frota) e a fila uma vez; lease ativo em
