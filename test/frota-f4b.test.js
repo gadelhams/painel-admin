@@ -24,8 +24,9 @@ import { criarEscritorZelador } from '../orquestrador/escritor-zelador-plane.js'
 import { TravaDisco } from '../orquestrador/trava.js';
 import { uuidV5 } from '../orquestrador/uuid.js';
 import { montarIdentidadesEscrita } from '../orquestrador/identidades-escrita.js';
-import { montarF4b, PAINEL, CAD, AUTOR, HUMANO } from './fixtures/frota-f4b.js';
+import { montarF4b, PAINEL, CAD, AUTOR } from './fixtures/frota-f4b.js';
 import { criarPlaneFalso } from './fixtures/zelador/plane-falso.js';
+import { ADMIN, decidir } from './fixtures/frota-preparo.js';
 
 const run = promisify(execFile);
 const COM_BWRAP = existsSync(BWRAP_PADRAO);
@@ -57,13 +58,18 @@ test('J58: o zelador não marca gate em carta cuja trava ele mesmo levantou, at�
     assert.match(semReconhecer.v.motivo, /ASTARGNE tirada pelo zelador; o zelador não marca gate até o dono reconhecer/);
     assert.deepEqual(semReconhecer.alvo.labels, []);
   } finally { await semReconhecer.c.limpar(); }
-  const reconhecida = await jobComPronta({ preparar: (c, carta) => {
-    tirou(c, carta);
-    c.avancar(60_000);
-    c.plane.comentar(carta.id, { html: '<p>[ORQ/v1 papel=decisao] DECISAO/v1 o dono decidiu: segue sem a trava.</p>', autor: HUMANO, externalSource: 'painel-decisao-v1' });
-    c.avancar(25 * 60 * 60_000); // o comentário da mesa sai da janela de 24 h do "[ORQ/v1" e das 2 h de outro ator
-  } });
-  try { assert.equal(reconhecida.v.resultado, 'APLICADO', JSON.stringify(reconhecida.v)); } finally { await reconhecida.c.limpar(); }
+  // W3 (PAINEL-62): só a decisão da mesa, da autoria do Painel Admin configurado, destrava.
+  const anterior = process.env.PLANE_ADMIN_ACTOR_ID;
+  process.env.PLANE_ADMIN_ACTOR_ID = ADMIN;
+  try {
+    const reconhecida = await jobComPronta({ preparar: (c, carta) => {
+      tirou(c, carta);
+      c.avancar(60_000);
+      decidir(c, carta);
+      c.avancar(25 * 60 * 60_000); // o comentário da mesa sai da janela das 2 h de outro ator
+    } });
+    try { assert.equal(reconhecida.v.resultado, 'APLICADO', JSON.stringify(reconhecida.v)); } finally { await reconhecida.c.limpar(); }
+  } finally { if (anterior === undefined) delete process.env.PLANE_ADMIN_ACTOR_ID; else process.env.PLANE_ADMIN_ACTOR_ID = anterior; }
 });
 
 test('J58: dependência fechada pelo zelador também é trava levantada por ele (a lavagem em duas passadas)', async () => {

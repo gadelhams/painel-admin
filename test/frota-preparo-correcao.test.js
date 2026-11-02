@@ -7,23 +7,29 @@ import { randomUUID } from 'node:crypto';
 import { HUMANO } from './fixtures/frota-f4b.js';
 import { ZELADOR_ATOR } from '../orquestrador/zelador-politica.js';
 import { ESTADO_BLOQUEADO, VOCABULARIO_DEPENDENCIA } from '../orquestrador/texto-dependencia.js';
-import { ESCOPO, EVIDENCIA, MIN, pronta, patches, vereditoDe, jobBacklog } from './fixtures/frota-preparo.js';
+import { ADMIN, ESCOPO, EVIDENCIA, MIN, decidir, pronta, patches, vereditoDe, jobBacklog } from './fixtures/frota-preparo.js';
 
 const SEM = `${ESCOPO}<p>Sem dependências.</p>`;
+// O Painel Admin configurado só durante `fn` (W3): sem ele, nenhuma decisão destrava.
+async function comAdmin(fn) {
+  const anterior = process.env.PLANE_ADMIN_ACTOR_ID;
+  process.env.PLANE_ADMIN_ACTOR_ID = ADMIN;
+  try { return await fn(); } finally { if (anterior === undefined) delete process.env.PLANE_ADMIN_ACTOR_ID; else process.env.PLANE_ADMIN_ACTOR_ID = anterior; }
+}
 const semGateNaCarta = r => r.c.plane.comentarios.get(r.alvo.id).filter(x => x.actor === ZELADOR_ATOR && /PREPARADO_SEM_GATE/.test(x.comment_html));
 
-test('J1: o preparo que só tira do Backlog passa pela anti-lavagem inteira — código, comentário, relates_to e prosa → MANTER', async () => {
+test('J1: o preparo que só tira do Backlog passa pelas mesmas defesas — código do catálogo, comentário, relates_to e prosa sem julgamento → MANTER', async () => {
   const casos = [
-    ['Sem dependências + Depende de CAD-31', { descricao: `${SEM}<p>Depende de CAD-31</p>` }],
-    ['comentário humano com código', { descricao: SEM, preparar: (c, alvo) => { c.plane.comentar(alvo.id, { html: '<p>Isso espera o CAD-31 sair.</p>', autor: HUMANO }); } }],
-    ['relates_to', { descricao: SEM, preparar: (c, alvo) => { c.plane.relacoes.get(alvo.id).relates_to.push(c.plane.novaCarta({ nome: 'Parente' }).id); } }],
-    ['Bloqueada pela migração', { descricao: `${SEM}<p>Bloqueada pela migração do banco.</p>` }],
+    ['Sem dependências + Depende de CAD-31', { descricao: `${SEM}<p>Depende de CAD-31</p>` }, /a descrição cita CAD-31; formalize a relação no Plane/],
+    ['comentário humano com código', { descricao: SEM, preparar: (c, alvo) => { c.plane.comentar(alvo.id, { html: '<p>Isso espera o CAD-31 sair.</p>', autor: HUMANO }); } }, /um comentário cita CAD-31/],
+    ['relates_to', { descricao: SEM, preparar: (c, alvo) => { c.plane.relacoes.get(alvo.id).relates_to.push(c.plane.novaCarta({ nome: 'Parente' }).id); } }, /relação relates_to na carta/],
+    ['Bloqueada pela migração', { descricao: `${SEM}<p>Bloqueada pela migração do banco.</p>` }, /o zelador não julgou: Bloqueada pela migração do banco\./],
   ];
-  for (const [nome, opcoes] of casos) {
-    const r = await jobBacklog(opcoes);
+  for (const [nome, opcoes, motivo] of casos) {
+    const r = await jobBacklog({ ...opcoes, comCad: true });
     try {
       assert.equal(r.v.resultado, 'MANTER', `${nome}: ${JSON.stringify(r.v)}`);
-      assert.match(r.v.motivo, /formalize a relação no Plane/, nome);
+      assert.match(r.v.motivo, motivo, nome);
       assert.deepEqual(r.c.plane.escritas, [], `${nome}: nada escrito`);
       assert.equal(r.alvo.state.name, 'Backlog', nome);
     } finally { await r.c.limpar(); }
@@ -126,14 +132,14 @@ test('J4: sem comentário na carta quando o gate não sai por posse alheia (rese
   } finally { await r.c.limpar(); }
 });
 
-test('J5: atividade de descrição do zelador ilegível vale do created_at dela — o DECISAO/v1 posterior a reconhece', async () => {
+test('J5: atividade de descrição do zelador ilegível vale do created_at dela — o DECISAO/v1 posterior a reconhece', async () => comAdmin(async () => {
   const r = await jobBacklog({ estadoNome: 'Todo', descricao: SEM, preparar: (c, alvo) => {
     c.plane.atividade(alvo.id, { field: 'description', old_value: { html: '?' }, new_value: SEM, actor: ZELADOR_ATOR });
   } });
   try {
     assert.equal(r.v.resultado, 'MANTER', JSON.stringify(r.v));
     assert.match(r.v.motivo, /atividade de descrição do zelador ilegível; o dono reconhece com DECISAO\/v1 posterior a 2026-10-31T12:00:00.000Z/);
-    r.c.plane.comentar(r.alvo.id, { html: '<p>[ORQ/v1 papel=decisao] DECISAO/v1 o dono decidiu: segue.</p>', autor: HUMANO, externalSource: 'painel-decisao-v1' });
+    decidir(r.c, r.alvo);
     r.c.avancar(25 * 60 * MIN);
     await r.c.zelador.rodarUmaVez();
     assert.equal((await vereditoDe(r.c, r.alvo)).resultado, 'APLICADO');
@@ -145,7 +151,7 @@ test('J5: atividade de descrição do zelador ilegível vale do created_at dela 
   try {
     assert.match(semInstante.v.motivo, /posterior a 2026-10-31T12:00:00.000Z/, 'sem instante, vale a atividade legível mais recente');
   } finally { await semInstante.c.limpar(); }
-});
+}));
 
 test('J5: descrição vazia (null) é legível — o preparo de uma carta sem descrição não trava o próprio gate', async () => {
   const r = await jobBacklog({ descricao: null });

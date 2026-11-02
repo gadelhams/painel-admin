@@ -22,7 +22,7 @@ import { digitalDaCarta, ehZelador, motivoIntocavel, nomesDe, prontidaoDoProjeto
 import { RESULTADOS_RECIBO, chaveDaMudanca, htmlIntencao, htmlRecibo, mesmoTexto, mudancaNaListaFechada, novaDescricao } from './zelador-veredito.js';
 import { ORIGEM_ZELADOR } from './escritor-zelador-plane.js';
 import { listar } from './zelador-retrato.js';
-import { COMENTARIO_PREPARO, assinaturaRelacoes, estadoAlvoDoPreparo, motivoContraOPreparo } from './zelador-preparo.js';
+import { COMENTARIO_PREPARO, assinaturaRelacoes, estadoAlvoDoPreparo, linhaSemJulgamento, linhasSuspeitas, motivoContraOPreparo, siglasDoCatalogo } from './zelador-preparo.js';
 
 const DIA_MS = 24 * 60 * 60_000;
 const TERMINAIS = ['completed', 'cancelled', 'canceled'];
@@ -91,7 +91,8 @@ export class AplicacaoZelador {
   }
 
   // Lê a carta e o catálogo de novo e diz se a mudança ainda pode ser escrita. Lança `abortar`.
-  async conferirAoVivo(cartaId, mudanca, digitalAntes) {
+  // `prosaJulgada`: o julgamento da CLI sobre as linhas suspeitas (só o preparo o exige).
+  async conferirAoVivo(cartaId, mudanca, digitalAntes, { prosaJulgada = null } = {}) {
     const { cartas, porId } = await this.j.retrato.cartasDoProjeto(this.j.projeto);
     const carta = porId.get(cartaId);
     if (!carta || carta.projetoId !== this.projetoId) throw abortar('carta sumiu do Plane', true);
@@ -108,10 +109,14 @@ export class AplicacaoZelador {
     // D6 do PAINEL-62 (janelas 13 e 14): as relações na forma do Plane, guardadas para a releitura sob a trava.
     const relacoes = preparo ? assinaturaRelacoes(d.relacoes) : null;
     if (preparo && relacoes === null) throw abortar('relações do Plane ilegíveis ou fora da forma; o preparo não sai');
-    // J1 da correção: a validação das dependências acompanha toda saída do Backlog, não só a declaração.
+    // J1: a validação das dependências acompanha toda saída do Backlog. Decisão do dono (01/11/2026):
+    // o painel veta só o certo; a prosa com o vocabulário a CLI julga, linha por linha.
     if (preparo) {
-      const contra = motivoContraOPreparo({ carta, codigo: identificadorDe(carta), comentarios: d.comentarios, relacoes: d.relacoes });
+      const contra = motivoContraOPreparo({ carta, codigo: identificadorDe(carta), comentarios: d.comentarios, relacoes: d.relacoes,
+        siglas: siglasDoCatalogo(porId), porId });
       if (contra) throw abortar(contra);
+      const falta = linhaSemJulgamento(linhasSuspeitas({ carta, comentarios: d.comentarios }), prosaJulgada);
+      if (falta !== null) throw abortar(`o zelador não julgou: ${falta}`);
     }
     // J58: o universo é toda carta aberta do projeto mais as que esperam por esta, de qualquer
     // projeto do catálogo (o motivoIntocavel já recusou relação fora da leitura).
@@ -145,7 +150,7 @@ export class AplicacaoZelador {
     const carta = this.j.r.porIdentificador.get(v.identificador);
     const digitalAntes = this.j.r.digitais.get(carta.id);
     let conferida;
-    try { conferida = await this.conferirAoVivo(carta.id, v.mudanca, digitalAntes); }
+    try { conferida = await this.conferirAoVivo(carta.id, v.mudanca, digitalAntes, { prosaJulgada: v.prosaJulgada ?? null }); }
     catch (erro) { if (erro.abortar) return { resultado: 'MANTER', motivo: erro.message }; throw erro; }
     const tentativa = randomUUID();
     const chave = chaveDaMudanca(carta.id, v.mudanca, digitalAntes, tentativa);

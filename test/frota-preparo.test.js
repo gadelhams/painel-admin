@@ -65,20 +65,21 @@ test('PAINEL-62 D13: alvo = unstarted de menor sequence, sem bloqueado/em espera
 
 // ---------- D6: anti-lavagem pelo texto e pelas relações ----------
 
-test('PAINEL-62 D6: lavagem por texto — código citado, prosa de dependência, comentário humano com código ou relates_to → MANTER, nada escrito', async () => {
+test('PAINEL-62 D6: lavagem — código do catálogo e relates_to vetam; prosa com vocabulário sem julgamento → MANTER; nada escrito', async () => {
   const casos = [
-    ['Depende de CAD-31', { descricao: `${ESCOPO}<p>Depende de CAD-31</p>` }],
-    ['Dependência: CAD-31', { descricao: `${ESCOPO}<p>Dependência: CAD-31</p>` }],
-    ['Bloqueada por', { descricao: `${ESCOPO}<p>Bloqueada pela migração do banco.</p>` }],
-    ['Requer LOR-45', { descricao: `${ESCOPO}<p>Requer LOR-45 no ar.</p>` }],
-    ['comentário humano com código', { preparar: (c, alvo) => { c.plane.comentar(alvo.id, { html: '<p>Isso espera o CAD-31 sair.</p>', autor: HUMANO }); } }],
-    ['relates_to', { preparar: (c, alvo) => { c.plane.relacoes.get(alvo.id).relates_to.push(c.plane.novaCarta({ nome: 'Parente' }).id); } }],
+    ['Depende de CAD-31', { descricao: `${ESCOPO}<p>Depende de CAD-31</p>` }, /a descrição cita CAD-31; formalize a relação no Plane/],
+    ['Dependência: CAD-31', { descricao: `${ESCOPO}<p>Dependência: CAD-31</p>` }, /a descrição cita CAD-31; formalize a relação no Plane/],
+    ['Bloqueada por', { descricao: `${ESCOPO}<p>Bloqueada pela migração do banco.</p>` }, /o zelador não julgou: Bloqueada pela migração do banco\./],
+    // LOR não é sigla do catálogo: não veta, mas o "Requer" é prosa a julgar.
+    ['Requer LOR-45', { descricao: `${ESCOPO}<p>Requer LOR-45 no ar.</p>` }, /o zelador não julgou: Requer LOR-45 no ar\./],
+    ['comentário humano com código', { preparar: (c, alvo) => { c.plane.comentar(alvo.id, { html: '<p>Ver o CAD-31 antes.</p>', autor: HUMANO }); } }, /um comentário cita CAD-31/],
+    ['relates_to', { preparar: (c, alvo) => { c.plane.relacoes.get(alvo.id).relates_to.push(c.plane.novaCarta({ nome: 'Parente' }).id); } }, /relação relates_to na carta; formalize a relação no Plane/],
   ];
-  for (const [nome, opcoes] of casos) {
-    const r = await jobBacklog(opcoes);
+  for (const [nome, opcoes, motivo] of casos) {
+    const r = await jobBacklog({ ...opcoes, comCad: true });
     try {
       assert.equal(r.v.resultado, 'MANTER', `${nome}: ${JSON.stringify(r.v)}`);
-      assert.match(r.v.motivo, /formalize a relação no Plane/, nome);
+      assert.match(r.v.motivo, motivo, nome);
       assert.deepEqual(r.c.plane.escritas, [], `${nome}: nada escrito`);
       assert.equal(r.alvo.state.name, 'Backlog', nome);
     } finally { await r.c.limpar(); }
