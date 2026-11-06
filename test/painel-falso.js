@@ -11,10 +11,20 @@ export const DONO = '1';
 export const TOKEN_DONO = 'd'.repeat(43);
 export const BORDA = 'painel.vpn.astargne.com';
 
-// Os cabeçalhos do pior caso que passa pela guarda e pela origem privilegiada: só falta a sessão.
-export function cabecalhosDaBorda({ tipo = 'application/json', sessao = false } = {}) {
+// Cookie que o portão da borda aceita (o selo, com cache, ainda diz "dono") e o autorizador da
+// ação recusa (a verificação sem cache diz 401): a sessão que caiu depois de o dono entrar.
+export const TOKEN_PORTAO = 'p'.repeat(43);
+const COOKIES = { nenhuma: null, portao: TOKEN_PORTAO, dono: TOKEN_DONO };
+
+// Os cabeçalhos do pior caso que passa pela guarda e pela origem privilegiada. `sessao` tem
+// nome, não booleano, porque o portão (PAINEL-64) mudou o que "sem sessão" prova:
+// - 'portao' (padrão): passa no portão e NÃO vale na ação — só o autorizador da rota barra;
+// - 'nenhuma': sem cookie — quem barra é o portão, antes de qualquer rota;
+// - 'dono': vale nos dois.
+export function cabecalhosDaBorda({ tipo = 'application/json', sessao = 'portao' } = {}) {
+  if (!Object.hasOwn(COOKIES, sessao)) throw new Error(`cabecalhosDaBorda: sessao "${sessao}" não existe; use nenhuma, portao ou dono`);
   return { host: BORDA, origin: `https://${BORDA}`, 'sec-fetch-site': 'same-origin', 'content-type': tipo,
-    ...(sessao ? { cookie: `astargne_session=${TOKEN_DONO}` } : {}) };
+    ...(COOKIES[sessao] ? { cookie: `astargne_session=${COOKIES[sessao]}` } : {}) };
 }
 
 export async function montarComFalsos({ ambiente = { ORQ_OWNER_USER_ID: DONO }, externos = {}, porta = 7777, sementes = {} } = {}) {
@@ -39,7 +49,7 @@ export async function montarComFalsos({ ambiente = { ORQ_OWNER_USER_ID: DONO }, 
       executarSsh: funcao('ssh', { codigo: 0, stdout: '{}\n200', stderr: '' }),
       leituraSsh: espiao('ssh-leitura'),
       sso: { verificar: funcao('sso.verificar', verificarSessao),
-        identificar: funcao('sso.identificar', t => ({ id: verificarSessao(t), nome: 'Dono', email: 'dono@exemplo' })) },
+        identificar: funcao('sso.identificar', t => ({ id: t === TOKEN_PORTAO ? DONO : verificarSessao(t), nome: 'Dono', email: 'dono@exemplo' })) },
       fetchPlane: funcao('plane.fetch', () => { throw new Error('Plane falso'); }),
       consultarPlane: espiao('plane'),
       conversar: funcao('conversar'),

@@ -319,7 +319,7 @@ test('A3.4: diário da mesa corrompido é falha LOCAL, não "Plane"', async () =
   try {
     await fs.mkdir(path.join(diretorio, 'c3po'), { recursive: true });
     await fs.writeFile(path.join(diretorio, 'c3po', 'decisoes.jsonl'), '{"tipo":"DECISAO_PENDENTE"\n{"tipo":"x"}\n');
-    const req = Object.assign(Readable.from([]), { method: 'GET', url: '/api/decisao/carta?carta=PAINEL-53', headers: cabecalhosDaBorda({ sessao: false }) });
+    const req = Object.assign(Readable.from([]), { method: 'GET', url: '/api/decisao/carta?carta=PAINEL-53', headers: cabecalhosDaBorda({ sessao: 'portao' }) });
     let texto = '';
     const res = { status: null, setHeader() {}, writeHead(s) { this.status = s; }, write(t) { texto += t; }, end(t) { if (t) texto += t; } };
     await painel.atender(req, res);

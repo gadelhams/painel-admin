@@ -67,11 +67,11 @@ da raiz (`padroes/fluxo.md`).
    + `validar-premissas.sh`. O C-3PO **não possui** ferramenta que execute ou
    confirme: desde a fase 3 (31/10/2026) ele lê e, no máximo, **propõe**; quem
    executa é o dono, pela UI — a limitação é estrutural, não comportamental.
-3. **Sem login, então porta fechada.** Escuta em `127.0.0.1` (porta **7777**
-   desde a fusão; nasceu na 7778), sem autenticação. Desde 06/10/2026 a borda
-   do tailnet publica `painel.vpn.astargne.com`; desde 06/11/2026, para todo
-   aparelho do tailnet menos o racknerd (`docs/arquitetura/invariantes.md`,
-   invariante 1).
+3. **De fora, só o dono logado.** Escuta em `127.0.0.1` (porta **7777**
+   desde a fusão; nasceu na 7778), sem login no loopback. Desde 06/10/2026 a
+   borda do tailnet publica `painel.vpn.astargne.com`; desde 06/11/2026, para
+   todo aparelho do tailnet menos o racknerd e só com a sessão do dono no
+   Cadastro Único (`docs/arquitetura/invariantes.md`, invariante 1).
 4. **Mínimo de dependências.** Backend: só `@anthropic-ai/claude-agent-sdk`
    (versão fixada). Frontend: zero deps — voz pela Web Speech API nativa
    (`SpeechRecognition` para ouvir, `speechSynthesis` para falar).

@@ -44,6 +44,12 @@ test('SSO remoto: cookie só no stdin, script fixo, sessão inválida e falha fe
   assert.equal(trechoToken(chamadas[0].args.at(-1)), trechoToken(montarComando('listarApps').args.at(-1)));
   saida = { codigo: 0, stdout: '{"ok":false,"motivo":"sessao"}\n401' };
   await assert.rejects(verificar(TOKEN), e => e.status === 401);
+  // 401 sem `motivo: sessao` é o central recusando o TOKEN_INTERNO do script, não a sessão:
+  // conta como indisponível (senão o portão da borda mandaria o dono ao login em laço).
+  for (const stdout of ['{"erro":"não autorizado"}\n401', 'não é json\n401', '\n401']) {
+    saida = { codigo: 0, stdout };
+    await assert.rejects(verificar(TOKEN), e => e.status === 502, stdout);
+  }
   saida = { codigo: 97, stdout: '', stderr: `Bearer ${TOKEN}` };
   await assert.rejects(verificar(TOKEN), e => e.status === 502 && !e.message.includes(TOKEN));
 });

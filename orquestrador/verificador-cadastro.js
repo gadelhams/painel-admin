@@ -38,11 +38,13 @@ export class VerificadorCadastro {
     const corte = resposta.stdout.lastIndexOf('\n');
     if (corte < 0) throw new ErroAcesso('verificação de sessão indisponível', 502);
     const status = Number(resposta.stdout.slice(corte + 1).trim());
-    if (status === 401) throw new ErroAcesso('sessão inválida ou expirada', 401);
-    if (status !== 200) throw new ErroAcesso('verificação de sessão indisponível', 502);
-    let corpo;
-    try { corpo = JSON.parse(resposta.stdout.slice(0, corte)); }
-    catch { throw new ErroAcesso('verificação de sessão indisponível', 502); }
+    let corpo = null;
+    try { corpo = JSON.parse(resposta.stdout.slice(0, corte)); } catch { /* conferido abaixo, por status */ }
+    // O central responde 401 também quando o TOKEN_INTERNO do script não vale. Só o 401 com
+    // `motivo: sessao` é o "não" à sessão; tratar o outro como expirada mandaria o dono ao
+    // login com a sessão boa, e o portão da borda entraria em laço com o central.
+    if (status === 401 && corpo?.motivo === 'sessao') throw new ErroAcesso('sessão inválida ou expirada', 401);
+    if (status !== 200 || !corpo) throw new ErroAcesso('verificação de sessão indisponível', 502);
     if (corpo.ok !== true || !/^[1-9]\d{0,9}$/.test(String(corpo.usuario?.id ?? ''))) {
       throw new ErroAcesso('verificação de sessão indisponível', 502);
     }

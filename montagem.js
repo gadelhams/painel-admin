@@ -74,6 +74,7 @@ import { propostasMemoria } from './memoria/propostas-memoria.js';
 import { criarDiarioConversas } from './memoria/conversas.js';
 import { criarApiMemoria, criarConfirmacoesMemoria, estadoMemoria } from './memoria/api-memoria.js';
 import { RoteadorPainel } from './http/roteador.js';
+import { PortaoBorda } from './http/portao-borda.js';
 import { criarRegistroEncomendas } from './encomendas/registro-encomendas.js';
 import { criarApiEncomendas, criarConfirmacoesEncomendas } from './encomendas/api-encomendas.js';
 
@@ -228,6 +229,8 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
   const roteador = new RoteadorPainel({
     porta,
     recusa: criarGuarda(porta),
+    // PAINEL-64: pela borda só entra a sessão do dono; o loopback segue aberto aos processos locais.
+    portao: new PortaoBorda({ porta, sessao: sessaoPainel, resposta, proprietarioId, log }),
     resposta,
     // O diário de conversas é o insumo da reflexão: só pergunta e resposta, filtradas, 14 dias.
     // Só entra o turno com a sessão SSO do dono (o loopback e o executor não alimentam a reflexão).

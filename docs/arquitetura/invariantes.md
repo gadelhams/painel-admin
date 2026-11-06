@@ -5,15 +5,34 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
 (É para cá que [`invariants.md`](../invariants.md) aponta; seção "O que continua
 inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
 
-- **Sem login, então porta fechada** (reescrita em 06/11/2026, a pedido do
-  dono; de 06/10 até lá só o Windows dele passava): escuta só em
+- **De fora, só o dono logado** (reescrita em 06/11/2026, a pedido do dono;
+  de 06/10 até lá só o Windows dele passava, sem login): escuta só em
   `127.0.0.1:7777`, nunca em `0.0.0.0`. A única entrada de fora é
   `https://painel.vpn.astargne.com`, pelo Caddy de `~/servicos/borda`, que
   encaminha todo aparelho do tailnet (`100.64.0.0/10`) **menos o
-  `astargne-racknerd`** (`100.70.33.2`), que recebe 404: é o único nó exposto
-  à internet, e quem alcança o painel lê tudo e gasta crédito do C-3PO sem
-  login. Aparelho novo no tailnet passa sem mexer em nada; por isso servidor
-  ou nó de terceiro que entrar no tailnet ganha um `not remote_ip` no mesmo ato.
+  `astargne-racknerd`** (`100.70.33.2`), que recebe 404 por ser o único nó
+  exposto à internet. Servidor ou nó de terceiro que entrar no tailnet ganha
+  um `not remote_ip` no mesmo ato.
+  **Portão** (`http/portao-borda.js`, PAINEL-64): todo pedido que não é de
+  loopback — Host da borda, ou Host de loopback com `X-Forwarded-*`, que o
+  Caddy sempre põe (medido na v2.11.6: ele preserva o Host e sobrescreve o que
+  o cliente mandar) — só passa da guarda com o cookie `astargne_session` do
+  dono (`ORQ_OWNER_USER_ID`), antes de qualquer rota e do estático. Sem sessão
+  ou expirada: a página vai uma vez ao login do Cadastro Único (`volta=1` no
+  `next` quebra o laço) e a API recebe 401 com `portao`; outra conta 403;
+  cookie duplicado 401 com a explicação; central fora ou painel sem dono 503
+  (falha fechada: com o `astargne.com` fora, o painel só abre pelo loopback,
+  por ssh). Única rota fora do portão: `GET`/`HEAD /api/sessao`, o selo.
+  O veredito vem de `orquestrador/sessao-painel.js`: guardado 60 s por hash do
+  cookie; `dono` com até 5 min **contados do início da verificação** segue
+  valendo enquanto uma revalidação única roda ao fundo (cada verificação é um
+  ssh de ~3,6 s; no máximo 4 ao mesmo tempo). É esse o teto de uma sessão
+  revogada continuar lendo; vale na admissão do pedido (um turno do C-3PO já
+  aceito não é cortado). Ação privilegiada continua com o autorizador da
+  rota, sem cache — e os testes passam pela borda com um cookie que o portão
+  aceita e a ação recusa, para o portão não esconder rota sem autorizador.
+  **O loopback fica sem login de propósito**: agentes locais, `reservar.mjs` e
+  o encaminhamento de porta do VS Code. Quem roda nesta máquina lê o painel.
   `guarda.js` recusa Host fora da lista (421, contra DNS rebinding) e método
   que muda estado vindo de outro site (403, `Sec-Fetch-Site`/`Origin`, contra
   CSRF — que já valia para o loopback antes da borda). Mudar quem passa é

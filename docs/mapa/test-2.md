@@ -2,6 +2,10 @@
 
 Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 
+## test/
+
+- `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.
+
 ## test/fixtures/
 
 - `frota-f4b.js` — Cenário da F4b montado pelas portas reais: dois projetos do catálogo (PAINEL e CAD) num Plane falso, fila, despacho, vigília, play, zelador (com o escritor de verdade) e reservas; CLIs, executor, sandbox e sessões falsos. Nada de rede nem de CLI paga.

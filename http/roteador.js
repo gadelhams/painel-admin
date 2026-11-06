@@ -1,9 +1,10 @@
-// Despacha o pedido depois da guarda. Cada grupo devolve false quando a rota não é dele.
+// Despacha o pedido depois da guarda e do portão da borda. Cada grupo devolve false quando a rota não é dele.
 
 export class RoteadorPainel {
-  constructor({ porta, recusa, resposta, conversa, voz, painel, orquestracao, alinhamento, chaves, acoes, decisao, memoria }) {
+  constructor({ porta, recusa, portao, resposta, conversa, voz, painel, orquestracao, alinhamento, chaves, acoes, decisao, memoria }) {
     this.porta = porta;
     this.recusa = recusa;
+    this.portao = portao;
     this.resposta = resposta;
     this.conversa = conversa;
     this.voz = voz;
@@ -29,6 +30,8 @@ export class RoteadorPainel {
       return;
     }
     try {
+      // Login da borda antes de qualquer rota, estático incluído; dentro do try: falha aqui é 500, não processo no chão.
+      if (await this.portao.barrar(req, res, url)) return;
       if (url.pathname === '/api/conversa' && req.method === 'POST') {
         await this.conversa.atender(req, res);
         return;

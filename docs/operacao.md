@@ -43,8 +43,9 @@ Roda como **serviço de usuário do systemd na Omarchy** desde 27/09/2026
 sobe no boot sem login e reinicia se cair). Operação: `systemctl --user
 {status,restart} painel-admin`; log em `journalctl --user -u painel-admin`.
 De qualquer aparelho do tailnet, menos o racknerd, chega-se por
-`https://painel.vpn.astargne.com` (borda do tailnet; 06/11/2026); do Windows,
-também por `localhost:7777` via
+`https://painel.vpn.astargne.com` (borda do tailnet; 06/11/2026), com o login
+do dono no Cadastro Único; se o `astargne.com` estiver fora, a borda responde
+503 e o caminho é o loopback. Do Windows, também por `localhost:7777` via
 encaminhamento do Remote-SSH do VS Code (`remote.SSH.defaultForwardedPorts`
 no settings do usuário). O gatilho
 `folderOpen` do `.vscode/tasks.json` da raiz foi removido nos dois lados.

@@ -11,7 +11,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `decisao.js` — Porta da mesa de decisão para quem só LÊ (o motor do C-3PO e o zelador): a leitura da carta, a forma de texto dela e a marca do DECISAO/v1. O escritor, a aplicação e as duas ações ficam fora daqui de propósito — só a montagem os liga.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
 - `encomendas.js` — Porta das encomendas de nave, só o lado de leitura. O registro e as duas ações moram em encomendas/ e só a montagem os liga.
-- `guarda.js` — O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão SSO do dono desde 29/10/2026 para Contas, antes para o resto.
+- `guarda.js` — Confere Host e origem de todo pedido, antes do portão de login e das rotas; não sabe de sessão.
 - `montagem.js` — Monta o painel inteiro (serviços, RoteadorPainel e o handler `(req, res)`) a partir do ambiente e das portas externas recebidas; não escuta porta, não lê `.env` e não liga laço nenhum até `iniciar()`.
 - `motor.js` — Conversa do C-3PO. As ferramentas e a voz moram em motor/; aqui só o fluxo de eventos.
 - `plane.js` — Porta do Plane. A consulta mora em plane/cliente.js; a projeção, em plane/features.js.

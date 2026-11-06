@@ -188,15 +188,16 @@ test('rotas da memória no painel montado: GET lê; sem sessão preparar recusa 
     assert.equal(vazio.status, 200);
     assert.deepEqual([vazio.corpo.estado, vazio.corpo.texto, vazio.corpo.hash, vazio.corpo.teto, vazio.corpo.historico, vazio.corpo.pendente],
       ['ausente', '', hashTexto(''), TETO_BYTES, [], null]);
-    const semSessao = await pedir('POST', '/api/c3po/memoria/preparar', { base: vazio.corpo.hash, origem: 'texto', valor: 'oi\n' }, false);
-    assert.deepEqual([semSessao.status, semSessao.corpo, semSessao.lido], [401, { erro: 'entre no Cadastro Único para confirmar esta ação' }, false]);
-    const campos = await pedir('POST', '/api/c3po/memoria/preparar', { base: vazio.corpo.hash, texto: 'oi\n' }, true);
+    const semSessao = await pedir('POST', '/api/c3po/memoria/preparar', { base: vazio.corpo.hash, origem: 'texto', valor: 'oi\n' }, 'portao');
+    // Cookie que passa no portão da borda e não vale na ação: quem recusa é o autorizador da rota.
+    assert.deepEqual([semSessao.status, semSessao.corpo, semSessao.lido], [401, { erro: 'sessão inválida ou expirada' }, false]);
+    const campos = await pedir('POST', '/api/c3po/memoria/preparar', { base: vazio.corpo.hash, texto: 'oi\n' }, 'dono');
     assert.deepEqual([campos.status, campos.corpo], [422, { erro: 'campos de preparação inválidos' }]);
-    const prep = await pedir('POST', '/api/c3po/memoria/preparar', { base: vazio.corpo.hash, origem: 'texto', valor: 'oi\n' }, true);
+    const prep = await pedir('POST', '/api/c3po/memoria/preparar', { base: vazio.corpo.hash, origem: 'texto', valor: 'oi\n' }, 'dono');
     assert.equal(prep.status, 200);
     assert.equal(prep.corpo.diff, '@@ -1,0 +1,1 @@\n+oi');
     await assert.rejects(fs.access(path.join(diretorio, 'c3po', 'MEMORIES.md')), { code: 'ENOENT' }, 'preparar gravou');
-    const conf = await pedir('POST', '/api/c3po/memoria/confirmar', { confirmacaoId: prep.corpo.confirmacaoId }, true);
+    const conf = await pedir('POST', '/api/c3po/memoria/confirmar', { confirmacaoId: prep.corpo.confirmacaoId }, 'dono');
     assert.deepEqual([conf.status, conf.corpo.hash, conf.corpo.quem], [200, hashTexto('oi\n'), 'dono']);
     assert.equal(await fs.readFile(path.join(diretorio, 'c3po', 'MEMORIES.md'), 'utf8'), 'oi\n');
     const depois = await pedir('GET', '/api/c3po/memoria');

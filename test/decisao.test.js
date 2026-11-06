@@ -388,7 +388,7 @@ test('recusa explícita do Plane ao comentário (4xx) fecha a pendência como ab
 
 // ---------- fronteira HTTP (painel montado) ----------
 
-async function pedir(painel, metodo, caminho, { corpo, sessao = true } = {}) {
+async function pedir(painel, metodo, caminho, { corpo, sessao = 'dono' } = {}) {
   const req = Object.assign(Readable.from(corpo === undefined ? [] : [Buffer.from(JSON.stringify(corpo))]),
     { method: metodo, url: caminho, headers: cabecalhosDaBorda({ sessao }) });
   let texto = '';
@@ -402,14 +402,14 @@ test('HTTP: sem PLANE_ADMIN_ACTOR_ID a gaveta lê e diz por quê; preparar com s
   const plane = criarPlaneFalso();
   const { painel, limpar } = await montarComFalsos({ ambiente: { ORQ_OWNER_USER_ID: '1', PLANE_API_KEY: GUEST_KEY }, externos: { fetchPlane: plane.fetchImpl } });
   try {
-    const carta = await pedir(painel, 'GET', '/api/decisao/carta?carta=PAINEL-53', { sessao: false });
+    const carta = await pedir(painel, 'GET', '/api/decisao/carta?carta=PAINEL-53', { sessao: 'portao' });
     assert.equal(carta.status, 200);
     assert.deepEqual(carta.corpo.escrita, { habilitada: false, motivo: 'PLANE_ADMIN_ACTOR_ID ausente no .env: a mesa fica só leitura' });
     plane.chamadas.length = 0;
     const r = await pedir(painel, 'POST', '/api/decisao/preparar', { corpo: PEDIDO });
     assert.deepEqual(r, { status: 503, corpo: { erro: 'PLANE_ADMIN_ACTOR_ID ausente no .env: a mesa fica só leitura' } });
     assert.deepEqual(plane.chamadas, []);
-    assert.equal((await pedir(painel, 'GET', '/api/decisao/carta?carta=ANYA-1', { sessao: false })).status, 422);
+    assert.equal((await pedir(painel, 'GET', '/api/decisao/carta?carta=ANYA-1', { sessao: 'portao' })).status, 422);
   } finally { await limpar(); }
 });
 
@@ -420,7 +420,7 @@ test('HTTP: com sessão do dono, preparar mostra o que muda e só o confirmar gr
     externos: { fetchPlane: plane.fetchImpl, arquivoChaveAdmin: arquivo } });
   try {
     assert.equal((await pedir(painel, 'POST', '/api/decisao/preparar', { corpo: { ...PEDIDO, extra: 1 } })).status, 422);
-    const semSessao = await pedir(painel, 'POST', '/api/decisao/preparar', { corpo: PEDIDO, sessao: false });
+    const semSessao = await pedir(painel, 'POST', '/api/decisao/preparar', { corpo: PEDIDO, sessao: 'portao' });
     assert.equal(semSessao.status, 401);
     const p = await pedir(painel, 'POST', '/api/decisao/preparar', { corpo: PEDIDO });
     assert.equal(p.status, 200);
@@ -430,7 +430,7 @@ test('HTTP: com sessão do dono, preparar mostra o que muda e só o confirmar gr
     assert.equal(c.status, 200);
     assert.equal(c.corpo.resultado, 'aplicado');
     assert.equal(plane.escritas.length, 3);
-    const depois = await pedir(painel, 'GET', '/api/decisao/carta?carta=PAINEL-53', { sessao: false });
+    const depois = await pedir(painel, 'GET', '/api/decisao/carta?carta=PAINEL-53', { sessao: 'portao' });
     assert.deepEqual(depois.corpo.comentarios.map(x => x.mesa), ['decisao', 'recibo']);
     assert.equal(depois.corpo.esperaDecisao, false);
   } finally { await limpar(); await fs.rm(dir, { recursive: true }); }

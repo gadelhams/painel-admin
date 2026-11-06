@@ -1,9 +1,9 @@
 // Servidor único do painel-admin desde a fusão de 14/08/2026: lê o ambiente, monta o painel com as dependências reais (montagem.js) e escuta em 127.0.0.1; não compõe serviço nem decide rota.
 //
 // Dashboard na raiz (/), C-3PO em /c3po/, e toda a API na mesma porta 7777.
-// Escuta só em 127.0.0.1, NUNCA em 0.0.0.0, e não tem autenticação: fora do
-// loopback, a única entrada é a borda do tailnet, aberta a todo aparelho do
-// tailnet menos o racknerd (06/11/2026); Host e origem são conferidos em guarda.js.
+// Escuta só em 127.0.0.1, NUNCA em 0.0.0.0. O loopback não tem login; fora dele, a única
+// entrada é a borda do tailnet (todo aparelho menos o racknerd), e por ela só passa a sessão
+// do dono no Cadastro Único (http/portao-borda.js, 06/11/2026). Host e origem: guarda.js.
 
 import http from 'node:http';
 import path from 'node:path';

@@ -329,7 +329,7 @@ describe('fronteira HTTP do painel (/api/contas/*)', () => {
     const { executar, chamadas } = executorFalso(saida);
     const painel = await servirComFalsos({ externos: { executarSsh: executar } });
     const pedir = async (metodo, caminho, corpo) => {
-      const r = await painel.pedir(metodo, caminho, { corpo, cabecalhos: metodo === 'GET' ? {} : cabecalhosDaBorda({ sessao: true }) });
+      const r = await painel.pedir(metodo, caminho, { corpo, cabecalhos: metodo === 'GET' ? {} : cabecalhosDaBorda({ sessao: 'dono' }) });
       return { status: r.status, corpo: r.corpo };
     };
     try {

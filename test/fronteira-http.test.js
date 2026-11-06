@@ -42,10 +42,15 @@ test('POST de outro site é recusado com 403 pela guarda; POST privilegiado sem 
   const cruzado = await pedir('POST', '/api/orquestracao/frota/preparar', { corpo: '{}',
     cabecalhos: { 'sec-fetch-site': 'cross-site', origin: 'https://atacante.exemplo', 'content-type': 'application/json' } });
   assert.deepEqual({ status: cruzado.status, corpo: cruzado.corpo }, { status: 403, corpo: { erro: 'origem recusada' } });
+  // Sem cookie, quem barra é o portão da borda, antes de qualquer rota e sem consultar o central.
+  const semCookie = await pedir('POST', '/api/orquestracao/frota/preparar', { corpo: '{}', cabecalhos: cabecalhosDaBorda({ sessao: 'nenhuma' }) });
+  assert.deepEqual({ status: semCookie.status, portao: semCookie.corpo.portao }, { status: 401, portao: 'sem-sessao' });
+  assert.deepEqual(chamadas, []);
+  // Com cookie que passa no portão e não vale na ação, quem barra é o autorizador da rota.
   const semSessao = await pedir('POST', '/api/orquestracao/frota/preparar', { corpo: '{}', cabecalhos: cabecalhosDaBorda() });
   assert.deepEqual({ status: semSessao.status, corpo: semSessao.corpo },
-    { status: 401, corpo: { erro: 'entre no Cadastro Único para confirmar esta ação' } });
-  assert.deepEqual(chamadas, []);
+    { status: 401, corpo: { erro: 'sessão inválida ou expirada' } });
+  assert.deepEqual(chamadas, ['sso.identificar', 'sso.verificar']);
   assert.deepEqual(await fs.readdir(diretorio), [], 'nada gravado no estado');
 }));
 

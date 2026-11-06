@@ -7,6 +7,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `arquivo-publico.js` — Serve um arquivo de publico/ sem sair da pasta.
 - `conversa.js` — Conversa do C-3PO em SSE. Cada evento do motor sai na hora; no fim, o par pergunta/resposta vai ao diário de conversas, se houver e se o turno trouxe a sessão SSO do dono.
 - `corpo-limitado.js` — Lê o corpo do pedido até o teto. Acima disso corta a conexão.
+- `portao-borda.js` — Portão de entrada da borda (PAINEL-64): pedido que não é de loopback só segue com a sessão do dono no Cadastro Único. Não autoriza ação privilegiada (isso é do autorizador de cada rota) nem verifica a sessão sozinho (pergunta ao selo).
 - `redirecionamento-c3po.js` — Leva /c3po à barra final e os endereços antigos /severino e /severino/ ao novo. Não atende a API.
 - `resposta-json.js` — Escreve JSON na resposta. Não lê arquivo nem o corpo do pedido.
 - `resposta.js` — Porta da resposta. JSON, arquivo estático e corpo com teto moram ao lado.
@@ -42,4 +43,4 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `rotas-sessao.js` — De quem é a sessão SSO deste navegador. Só GET; não autoriza nada.
 - `rotas-ssh.js` — Consulta SSH só de leitura da produção.
 - `rotas-voz.js` — ElevenLabs, diagnóstico do navegador e presença da transcrição.
-- `roteador.js` — Despacha o pedido depois da guarda. Cada grupo devolve false quando a rota não é dele.
+- `roteador.js` — Despacha o pedido depois da guarda e do portão da borda. Cada grupo devolve false quando a rota não é dele.

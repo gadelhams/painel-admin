@@ -50,6 +50,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `plane-mesa-falso.js` — Plane falso, em memória, só com as rotas que a mesa de decisão usa (Plane v1.4.2 lido no container em 31/10/2026): carta pelo identificador e pelo projeto, comentários (409 por external_id no PROJETO), labels, estados, atividades, users/me e o PATCH que apaga e recria as labels. Nunca abre rede.
 - `plane.test.js`
 - `politica-fala.test.js`
+- `portao-borda.test.js` — Portão de entrada da borda (PAINEL-64): pela borda só a sessão do dono lê ou aciona o painel; o loopback segue sem login. Painel MONTADO, HTTP real em porta efêmera, SSO falso.
 - `protocolo-ui.test.js`
 - `redirecionamento-c3po.test.js` — Redirecionamentos do chat: /c3po ganha a barra; /severino e /severino/ (nome antigo) vão para /c3po/.
 - `reflexao.test.js` — Reflexão noturna (PAINEL-9) com CLI falsa: aplica com histórico; apagar demais vira pendente; segredo recusa; frota não ok recusa sem chamar a CLI; a segunda execução da mesma data não faz nada; sem insumo sai sem CLI.
@@ -67,4 +68,3 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `zelador-correcao-pecas.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B6–B28): peças do zelador uma a uma — escritor, trava, sessões, diário, agendador, CLI e o play pela HTTP. Sem rede, sem CLI real.
 - `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.
 - `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.
-- `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.

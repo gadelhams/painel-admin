@@ -29,8 +29,8 @@ motor do C-3PO), `GET/POST /api/tts` (proxy ElevenLabs), `/api/contas/*`
 `simular`, `{frota,handoff,gates,despacho,play,nativo}/{preparar,confirmar}`,
 `voz/transcrever` — mecanismo em [orquestracao-v2-integracao.md](../orquestracao-v2-integracao.md); `POST /api/acoes/{preparar,confirmar}` (ação proposta pelo C-3PO, [motor.md](motor.md); `rotas-acoes.js`); `GET /api/decisao/{carta,pendentes}` e `POST /api/decisao/{,retomada/}{preparar,confirmar}` (mesa de decisão, [decisao.md](decisao.md)); `GET /api/orquestracao/voz` → `{xai}` (só a presença da chave; o C-3PO cai para este motor quando o reconhecimento do navegador não existe ou falha — `operacao.md` § Microfone);
 as rotas de escrita exigem SSO do Cadastro Único e confirmação em duas ações; `test/rotas-privilegiadas.test.js`
-varre toda rota (literais de `http/` e de `montagem.js`) pelo painel montado com POST, PUT, PATCH e DELETE pela borda, sem sessão — 401 ou 405 no próprio handler,
-sem ler corpo, tocar porta externa nem gravar no estado; as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
+varre toda rota (literais de `http/` e de `montagem.js`) pelo painel montado com POST, PUT, PATCH e DELETE pela borda, com um cookie que passa no portão de login e não vale na ação — 401 do autorizador da rota ou 405 no próprio handler,
+sem ler corpo, tocar outra porta externa nem gravar no estado (e, sem cookie, todo caminho em todo método para no portão: invariante 1); as exceções ficam listadas rota a rota com o motivo: `/api/conversa` roda pelo login da CLI (assinatura) com
 ferramentas de leitura (e, desde 31/10/2026, `propor_acao`, que só registra proposta), sem SSO por decisão do dono (29/10/2026); `/api/tts` e a transcrição pedem SSO desde a mesma data; as
 escritas da aba Contas exigem SSO desde 29/10/2026; handler só-leitura responde HEAD e o 405 leva `Allow`)
 e estáticos de `publico/` (dashboard na raiz, chat em `/c3po/`).

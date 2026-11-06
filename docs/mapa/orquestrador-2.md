@@ -15,7 +15,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `sandbox-cli.js` — Sandbox `bwrap` dos filhos do executor (J60): as CLIs dos três papéis e o comando de aceite rodam com as chaves do painel mascaradas. Não decide quem roda; só embrulha e sonda.
 - `servico-orquestracao.js` — Liga leitura, despacho, gate, handoff e frota. A porta pública continua o objeto de funções.
 - `sessao-cookie.js` — Lê o cookie astargne_session. Não verifica a sessão no Cadastro Único.
-- `sessao-painel.js` — De quem é a sessão do Cadastro Único neste navegador, para o cabeçalho do painel. Não autoriza nada.
+- `sessao-painel.js` — De quem é a sessão do Cadastro Único neste navegador: o selo do cabeçalho (`ler`) e o veredito do portão da borda (`lerParaEntrada`). Não autoriza ação privilegiada: essa confere no central sem cache, em autorizador.js.
 - `simulacao-despacho.js` — Prévia do despacho com a frota atual. Não reserva lease, não abre processo e não escreve no Plane.
 - `sso.js` — Porta das ações privilegiadas. A leitura do Painel não usa esta sessão.
 - `tentativa-despacho.js` — Tentativa real: lease, handoff e executor. A checagem mora em checagem-despacho.js.

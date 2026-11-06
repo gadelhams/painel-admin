@@ -65,7 +65,7 @@ test('leitura: a dobra fecha só com atendida do mesmo id; estado desconhecido e
 async function painel() {
   const s = await servirComFalsos();
   const arquivo = path.join(s.diretorio, 'encomendas.jsonl');
-  const post = (rota, corpo, sessao = true) => s.pedir('POST', rota, { corpo: JSON.stringify(corpo), cabecalhos: cabecalhosDaBorda({ sessao }) });
+  const post = (rota, corpo, sessao = 'dono') => s.pedir('POST', rota, { corpo: JSON.stringify(corpo), cabecalhos: cabecalhosDaBorda({ sessao }) });
   return { ...s, arquivo, post };
 }
 
@@ -73,11 +73,13 @@ test('sem sessão nada grava: preparar e confirmar respondem 401 e o diretório 
   const s = await painel();
   try {
     for (const rota of ['/api/hangar/encomendas/preparar', '/api/hangar/encomendas/confirmar']) {
-      const r = await s.post(rota, rota.endsWith('preparar') ? PEDIDO : { confirmacaoId: ID }, false);
-      assert.deepEqual({ status: r.status, corpo: r.corpo }, { status: 401, corpo: { erro: 'entre no Cadastro Único para confirmar esta ação' } });
+      // 'portao': o cookie passa no portão da borda e não vale na ação — a recusa é do autorizador da rota.
+      const r = await s.post(rota, rota.endsWith('preparar') ? PEDIDO : { confirmacaoId: ID }, 'portao');
+      assert.deepEqual({ status: r.status, corpo: r.corpo }, { status: 401, corpo: { erro: 'sessão inválida ou expirada' } });
     }
     assert.deepEqual(await fs.readdir(s.diretorio), []);
-    assert.deepEqual(s.chamadas, []);
+    // Uma leitura do selo (o portão, guardada) e uma verificação sem cache por pedido; nada além do SSO.
+    assert.deepEqual(s.chamadas, ['sso.identificar', 'sso.verificar', 'sso.verificar']);
   } finally { await s.fechar(); }
 });
 

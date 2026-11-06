@@ -60,17 +60,20 @@ async function arvore(dir) {
   return saida.sort();
 }
 
-// O pior caso que passa pela guarda e pela origem privilegiada: borda, mesma origem, tipo
-// certo (áudio na transcrição) e sem cookie. O corpo é um gerador: lê-lo deixa marca.
-async function pedir(painel, metodo, caminho, { sessao = false } = {}) {
+// O pior caso que passa pela guarda, pelo portão da borda e pela origem privilegiada: borda,
+// mesma origem, tipo certo (áudio na transcrição) e um cookie que o portão aceita mas a
+// verificação sem cache da ação recusa ('portao'). O corpo é um gerador: lê-lo deixa marca.
+async function pedir(painel, metodo, caminho, { sessao = 'portao' } = {}) {
   let lido = false;
   const tipo = caminho.endsWith('/voz/transcrever') ? 'audio/webm' : 'application/json';
   const req = Object.assign(Readable.from((function* () { lido = true; yield Buffer.from('{}'); })()),
     { method: metodo, url: caminho, headers: cabecalhosDaBorda({ tipo, sessao }) });
   const res = { status: null, cabecalhos: {}, headersSent: false, setHeader(k, v) { this.cabecalhos[k.toLowerCase()] = v; },
-    writeHead(s) { this.status = s; this.headersSent = true; }, end() {} };
+    writeHead(s, h = {}) { this.status = s; this.headersSent = true; Object.assign(this.cabecalhos, h); }, end(t) { this.texto = t; } };
   await painel.atender(req, res);
-  return { status: res.status, allow: res.cabecalhos.allow ?? null, lido };
+  let corpo = null;
+  try { corpo = JSON.parse(res.texto); } catch { /* estático ou sem corpo */ }
+  return { status: res.status, allow: res.cabecalhos.allow ?? null, local: res.cabecalhos.location ?? null, corpo, lido };
 }
 
 test('todo método de escrita em toda rota do app recusa sem sessão, sem ler corpo, tocar porta externa nem gravar estado', async () => {
@@ -90,15 +93,21 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
   const { painel, chamadas, diretorio, limpar } = await montarComFalsos();
   const estadoInicial = await arvore(diretorio);
   try {
+  // O selo do portão fica guardado a partir daqui (o relógio do falso não anda): na varredura,
+  // toda chamada a porta externa é da ROTA, e o único 401 possível é o do autorizador dela.
+  assert.equal((await pedir(painel, 'GET', '/api/sessao')).status, 200);
   for (const caminho of caminhos) {
     for (const metodo of METODOS) {
       if (EXCECOES.has(`${metodo} ${caminho}`)) continue;
       chamadas.length = 0;
-      const { status, allow, lido } = await pedir(painel, metodo, caminho);
+      const { status, allow, lido, corpo } = await pedir(painel, metodo, caminho);
       const ok = caminho.startsWith('/api/contas/') ? [401, 404] : [401, 405];
       assert.ok(ok.includes(status), `${metodo} ${caminho} respondeu ${status} sem sessão`);
       if (status === 405) assert.ok(allow, `${metodo} ${caminho}: 405 sem cabeçalho Allow`);
-      assert.deepEqual(chamadas, [], `${metodo} ${caminho} tocou porta externa antes da sessão`);
+      assert.equal(corpo?.portao, undefined, `${metodo} ${caminho} parou no portão: a varredura não exercitou a rota`);
+      // 401 é a verificação sem cache da própria rota dizendo não; nenhuma outra porta foi tocada.
+      assert.deepEqual(chamadas, status === 401 ? ['sso.verificar'] : [], `${metodo} ${caminho} tocou porta externa antes da sessão`);
+      if (status === 401) assert.equal(corpo?.erro, 'sessão inválida ou expirada', `${metodo} ${caminho}: o 401 não veio do autorizador`);
       assert.equal(lido, false, `${metodo} ${caminho} leu o corpo antes da sessão`);
       if (status === 401) privilegiadas.push(`${metodo} ${caminho}`);
     }
@@ -112,6 +121,31 @@ test('todo método de escrita em toda rota do app recusa sem sessão, sem ler co
   assert.ok(privilegiadas.length >= 20, `rotas privilegiadas varridas: ${privilegiadas.join(', ')}`);
   assert.ok(privilegiadas.filter(p => !p.includes('/api/contas/')).every(p => p.startsWith('POST ')), 'fora de Contas só POST chega à sessão');
   for (const p of ['POST /api/orquestracao/play/preparar', 'POST /api/orquestracao/play/confirmar']) assert.ok(privilegiadas.includes(p), `${p} sem SSO`);
+});
+
+// PAINEL-64: o portão vem antes de TODA rota. Sem cookie pela borda, nenhum caminho do app, em
+// nenhum método, chega a handler, porta externa (nem o SSO), corpo ou estado. A rota nova entra
+// sozinha, pela mesma lista da varredura de cima; a única exceção é o selo.
+test('sem cookie pela borda todo caminho do app para no portão, em leitura e em escrita, sem tocar porta externa', async () => {
+  const caminhos = [...await caminhosDoCodigo(), '/', '/c3po/', '/index.html', '/api/conversa', '/api/caminho-que-nao-existe'];
+  const { painel, chamadas, diretorio, limpar } = await montarComFalsos();
+  const estadoInicial = await arvore(diretorio);
+  try {
+    for (const caminho of caminhos) {
+      for (const metodo of ['GET', 'HEAD', ...METODOS]) {
+        const r = await pedir(painel, metodo, caminho, { sessao: 'nenhuma' });
+        if (caminho === '/api/sessao' && (metodo === 'GET' || metodo === 'HEAD')) { assert.equal(r.status, 200, 'o selo responde sem sessão'); continue; }
+        const pagina = !caminho.startsWith('/api/') && (metodo === 'GET' || metodo === 'HEAD');
+        assert.equal(r.status, pagina ? 302 : 401, `${metodo} ${caminho} respondeu ${r.status} sem cookie`);
+        if (pagina) assert.ok(r.local?.startsWith('https://astargne.com/login?next='), `${metodo} ${caminho} não foi ao login`);
+        else assert.equal(r.corpo?.portao, 'sem-sessao', `${metodo} ${caminho}: o 401 não veio do portão`);
+        assert.equal(r.lido, false, `${metodo} ${caminho} leu o corpo sem cookie`);
+      }
+    }
+    assert.deepEqual(chamadas, [], 'sem cookie nada externo é tocado, nem o Cadastro Único');
+    assert.deepEqual(await arvore(diretorio), estadoInicial, 'a varredura sem cookie gravou no estado');
+    assert.ok(caminhos.length > 60, `caminhos varridos: ${caminhos.length}`);
+  } finally { await limpar(); }
 });
 
 test('HEAD continua 200 nos handlers só-leitura (a guarda trata HEAD como seguro)', async () => {
@@ -133,12 +167,14 @@ test('N5: com sessão SSO a escrita de Contas segue para o CadastroUnico; sem el
     const semSessao = await pedir(montado.painel, 'POST', '/api/contas/usuarios/5/reativar');
     assert.deepEqual({ status: semSessao.status, lido: semSessao.lido }, { status: 401, lido: false });
     assert.deepEqual(ssh, []);
-    const comSessao = await pedir(montado.painel, 'POST', '/api/contas/usuarios/5/reativar', { sessao: true });
+    const comSessao = await pedir(montado.painel, 'POST', '/api/contas/usuarios/5/reativar', { sessao: 'dono' });
     assert.deepEqual({ status: comSessao.status, lido: comSessao.lido }, { status: 200, lido: true });
     assert.equal(ssh.length, 1);
     assert.match(ssh[0].comando, / -X POST http:\/\/127\.0\.0\.1:8790\/interno\/usuarios\/5\/reativar /);
-    const fechado = await pedir(semDono.painel, 'POST', '/api/contas/usuarios/5/reativar', { sessao: true });
-    assert.deepEqual({ status: fechado.status, lido: fechado.lido }, { status: 503, lido: false }, 'sem ORQ_OWNER_USER_ID falha fechada');
+    // Sem dono configurado quem fecha é o portão, para todo pedido da borda; o 503 do autorizador
+    // ("ação privilegiada não configurada") segue provado na unidade, em orquestrador-sso.test.js.
+    const fechado = await pedir(semDono.painel, 'POST', '/api/contas/usuarios/5/reativar', { sessao: 'dono' });
+    assert.deepEqual({ status: fechado.status, lido: fechado.lido, portao: fechado.corpo.portao }, { status: 503, lido: false, portao: 'sem-dono' }, 'sem ORQ_OWNER_USER_ID falha fechada');
     assert.equal(ssh.length, 1);
   } finally { await montado.limpar(); await semDono.limpar(); }
 });

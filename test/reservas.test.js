@@ -10,7 +10,7 @@ import { spawn } from 'node:child_process';
 import { ReservasCarta, sessaoAncestral, VALIDADE_RESERVA_MS } from '../orquestrador/reservas.js';
 import { ReservaServico, recusarReservadaNaMesa } from '../orquestrador/reserva-servico.js';
 import { pidDoCliente } from '../orquestrador/peer-loopback.js';
-import { servirComFalsos } from './painel-falso.js';
+import { servirComFalsos, cabecalhosDaBorda } from './painel-falso.js';
 
 const PAINEL = 'c24e3d36-2e2a-4760-a3f3-53998297a245';
 const CARTA = 'd5b2f207-6076-4507-b85a-59ea9cfa56da';
@@ -124,7 +124,10 @@ test('rota de reserva: a borda e o navegador recebem 403 sem ler o corpo nem gra
     const antes = await fs.readdir(s.diretorio, { recursive: true });
     const corpo = JSON.stringify({ carta: 'PAINEL-99', acao: 'reservar', reserva: CARTA });
     const json = { 'content-type': 'application/json' };
-    for (const cabecalhos of [{ ...json, host: 'painel.vpn.astargne.com' }, { ...json, origin: `http://127.0.0.1:${s.porta}` },
+    // Pela borda sem cookie o pedido nem chega à rota: para no portão (PAINEL-64).
+    const semCookie = await s.pedir('POST', '/api/orquestracao/reservas', { cabecalhos: { ...json, host: 'painel.vpn.astargne.com' }, corpo });
+    assert.deepEqual([semCookie.status, semCookie.corpo.portao], [401, 'sem-sessao']);
+    for (const cabecalhos of [{ ...cabecalhosDaBorda() }, { ...json, origin: `http://127.0.0.1:${s.porta}` },
       { ...json, 'sec-fetch-site': 'same-origin' }, { ...json, cookie: 'astargne_session=x' }]) {
       const r = await s.pedir('POST', '/api/orquestracao/reservas', { cabecalhos, corpo });
       assert.ok([403, 421].includes(r.status), `${JSON.stringify(cabecalhos)} → ${r.status}`);

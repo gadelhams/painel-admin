@@ -32,6 +32,10 @@
     } else if (s.estado === 'expirada') {
       quem.textContent = 'sessão expirada';
       partes.push(link('entrar', entrar));
+    } else if (s.estado === 'cookie-ambiguo') {
+      quem.textContent = 'cookie de sessão duplicado';
+      quem.title = 'Este navegador guarda mais de um cookie de sessão do astargne.com; apague os cookies do site e entre de novo.';
+      partes.push(link('abrir astargne.com', CENTRAL));
     } else if (s.estado === 'indisponivel') {
       quem.textContent = 'sessão não verificada';
       quem.title = 'O Cadastro Único não respondeu; tente recarregar.';
