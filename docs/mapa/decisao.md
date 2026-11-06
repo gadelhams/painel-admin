@@ -12,6 +12,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `leitor-carta.js` — Lê UMA carta do Plane sem cache, pelo caminho do projeto (carta, comentários, labels, estados e atividades), com a chave Guest. Não escreve nem decide.
 - `mesa.js` — Compõe a mesa de decisão a partir do ambiente: leitor Guest, escritor Painel Admin (ou o motivo de não haver), diário, aplicação e os desafios das duas ações (gravar, retomar, abandonar). Não registra rota nem autoriza.
 - `permissao.js` — Quais projetos a mesa de decisão abre: os do catálogo com Plane e sigla, menos os congelados, o Anya e o CKBL (recusados pelo id do projeto, não pela sigla). Não lê o Plane.
+- `propostas-decisao.js` — Propostas de decisão do C-3PO (PAINEL-65): confere a forma de {carta, decisão, motivo, efeitos} pela régua da mesa e devolve um id de proposta. Não lê nem grava o Plane e nunca emite confirmação.
 - `protocolo-decisao.js` — Texto dos comentários da mesa no Plane — DECISAO/v1 (a decisão do dono) e DECISAO-APLICACAO/v1 (o recibo) — e a leitura deles. Não lê nem grava o Plane.
 - `retomada-decisao.js` — O que a retomada pode fazer com uma aplicação pendente: reconfere o registro do diário (lista fechada, prosa, HTML) e recalcula o delta contra a carta ATUAL. Puro; não lê nem grava.
 - `servico-decisao.js` — O que a mesa de decisão oferece às rotas: a carta para a gaveta, o preparar (prosa, efeitos e digital, sem escrita), as aplicações pendentes e o preparo da retomada (delta recalculado) e do abandono. A escrita mora em aplicacao-decisao.js.

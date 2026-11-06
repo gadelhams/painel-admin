@@ -58,12 +58,22 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   propuser "copiar o token pro `.env` local pra simplificar", a resposta é
   não — é a arquitetura da fatia, não um detalhe.
 - **O motor lê e só propõe** (fase 3, 31/10/2026; até então "só-leitura até a
-  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das dez
+  fase 3", `docs/00_PLANO.md`): o motor roda com `tools: []` + allowlist das catorze
   ferramentas MCP — limitação **estrutural**, não promessa de comportamento. As
-  duas que não são leitura, `propor_acao` e `propor_memoria` (31/10/2026,
-  PAINEL-8), registram uma proposta e devolvem o id dela, nunca um id de
-  confirmação; preparar, confirmar, executar e gravar são do dono, pela UI, com
-  SSO + duas ações. Nenhum módulo que o motor importa (fecho transitivo) alcança
+  três que não são leitura, `propor_acao`, `propor_memoria` (31/10/2026,
+  PAINEL-8) e `propor_decisao` (06/11/2026, PAINEL-65), registram uma proposta
+  e devolvem o id dela, nunca um id de confirmação; preparar, confirmar,
+  executar e gravar são do dono, pela UI, com SSO + duas ações.
+  **Decisão definida em conversa** (PAINEL-65): o dono quis que o C-3PO
+  registrasse a decisão que os dois fecham no chat. O desenho em que o modelo
+  gravava depois de um "sim" na conversa foi reprovado na revisão — o front
+  manda turnos sozinho (abertura e rascunho da gaveta, contexto do Hangar) e o
+  histórico da conversa é gravável por processo local, então "mensagem do
+  dono" não prova intenção. Ficou assim: o C-3PO **propõe** decisão, motivo e
+  efeitos; o cartão do chat mostra o texto exato e os efeitos em destaque,
+  prepara sozinho (sem gravar) e **um toque do dono** grava, pelas mesmas
+  `/api/decisao/{preparar,confirmar}` da gaveta. A intenção chega ao servidor
+  por um canal que o modelo não lê nem escreve. Nenhum módulo que o motor importa (fecho transitivo) alcança
   `acoes/executor-acoes.js`, `acoes/api-acoes.js` (`test/acoes.test.js`), o
   escritor da mesa de decisão (`carta_plane` só lê) nem o escritor da memória, a API dela, a pendente ou a reflexão
   (`test/fronteiras-modulos.test.js`). **Escrita da memória L1**
@@ -125,7 +135,7 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   **Fechado antes do piloto (R3, 29/10/2026):** o que gasta crédito pago
   (`POST /api/tts` e a transcrição) exige a sessão SSO também no loopback, e o
   executor não tem o cookie. `/api/conversa` fica aberto por decisão do dono:
-  roda pelo login da CLI, com as ferramentas do C-3PO (leitura e `propor_acao`); o pior que
+  roda pelo login da CLI, com as ferramentas do C-3PO (leitura e as três `propor_*`); o pior que
   o executor faz por ali é gastar cota da assinatura e deixar propostas que só o
   dono, com SSO, confirma. O diário de conversas (insumo da reflexão da memória L1) só
   registra o turno com a sessão do dono (31/10/2026).

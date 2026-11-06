@@ -9,7 +9,7 @@ vivo tinha; provas e evidências ficaram em
 - **Autenticação do motor**: o login do Claude Code já existente na máquina;
   funciona headless **sem `ANTHROPIC_API_KEY`** — nenhuma credencial criada.
 - **Só-leitura estrutural** (`motor.js`; desde 31/10/2026 "lê e só propõe", [motor.md](motor.md)): `tools: []` + servidor MCP em
-  processo com só as ferramentas do catálogo (treze desde 31/10/2026) + `allowedTools` nelas +
+  processo com só as ferramentas do catálogo (catorze desde 06/11/2026) + `allowedTools` nelas +
   `permissionMode: 'dontAsk'` (o que não está pré-aprovado é negado sem prompt).
 - **`.env`**: `npm start` usa `--env-file-if-exists` **e** `servidor.js` faz
   `process.loadEnvFile` defensivo — `node servidor.js` seco segue funcionando.

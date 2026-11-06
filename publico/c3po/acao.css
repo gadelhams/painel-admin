@@ -14,3 +14,11 @@
 .acao-estado.acao-erro { color: #f87171; }
 .acao-estado.acao-ok { color: #4ade80; }
 .acao-saida { max-height: 16rem; overflow: auto; padding: .5rem; background: rgba(0, 0, 0, .35); font: .78rem/1.35 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Cartão "Decisão proposta" (PAINEL-65): os efeitos vêm do C-3PO, por isso ficam em destaque. */
+.decisao-sub { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+.decisao-efeitos, .decisao-mudancas { margin: 0; padding-left: 1.1rem; }
+.decisao-efeitos { font-weight: 600; color: #e8b54a; }
+.decisao-motivo { white-space: pre-wrap; }
+.decisao-aviso { color: #e8b54a; font-size: .86rem; }
+.decisao-carta { font-size: .9rem; opacity: .9; }

@@ -7,6 +7,7 @@ import '../c3po/fluxo-sse.js';
 import '../c3po/acao-proposta.js';
 // E o cartão de memória proposta (PAINEL-8): o diff e o mesmo preparar → confirmar do /c3po/.
 import '../c3po/memoria-proposta.js';
+import '../c3po/decisao-proposta.js';
 import { $ } from './util.js';
 
 const MAX_CONTEXTO = 400;
@@ -92,6 +93,10 @@ export async function perguntar(contexto, pergunta) {
         } else if (evento === 'proposta_memoria') {
           const r = $('hg-conversa-resp');
           r.append(globalThis.CartaoMemoria.criar(dados));
+          r.scrollTop = r.scrollHeight;
+        } else if (evento === 'proposta_decisao') {
+          const r = $('hg-conversa-resp');
+          r.append(globalThis.CartaoDecisao.criar(dados));
           r.scrollTop = r.scrollHeight;
         } else if ((evento === 'inicio' || evento === 'fim') && dados.sessao) {
           gravarSessao(dados.sessao);

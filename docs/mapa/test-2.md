@@ -4,6 +4,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 
 ## test/
 
+- `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.
 - `zelador.test.js` — Peças do zelador (F3) uma a uma: trava do agendador (J52), lease (J53), ato humano (J57), prontidão (J58), evidência (J69), escritor (J56/J68), sessões estritas (J67), diário (J45–J50), CLI (J21/J25) e fim do job (J41–J44, J70). Sem rede, sem CLI real.
 
 ## test/fixtures/

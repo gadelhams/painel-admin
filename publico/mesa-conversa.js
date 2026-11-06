@@ -81,7 +81,9 @@
     fechar() { this.abortador?.abort(); this.abortador = null; this.enviar.disabled = false; }
 
     // Um turno: a fala do C-3PO cresce com os tokens; `coletar` devolve o texto sem mostrá-lo.
-    async turno(mensagem, { coletar = false } = {}) {
+    // `doDono: false` é o turno que o painel manda sozinho (a abertura): nele uma proposta de
+    // decisão não vira cartão — o dono não disse nada, e a carta que o C-3PO leu é texto de terceiros.
+    async turno(mensagem, { coletar = false, doDono = true } = {}) {
       this.abortador?.abort();
       const meu = new AbortController();
       this.abortador = meu;
@@ -100,6 +102,8 @@
             pensando.textContent = `consultando ${dados.nome}…`;
           } else if (evento === 'proposta' && globalThis.CartaoAcao) {
             this.historico.append(globalThis.CartaoAcao.criar(dados));
+          } else if (evento === 'proposta_decisao' && globalThis.CartaoDecisao && !coletar && doDono) {
+            this.historico.append(globalThis.CartaoDecisao.criar(dados));
           } else if ((evento === 'inicio' || evento === 'fim') && dados.sessao) {
             this.estado.sessao = dados.sessao;
           } else if (evento === 'erro') {
@@ -121,7 +125,7 @@
 
     mandar(mensagem, { oculta = false } = {}) {
       if (!oculta) this.linha('eu', mensagem);
-      return this.turno(mensagem);
+      return this.turno(mensagem, { doDono: !oculta });
     }
 
     async rascunho() {

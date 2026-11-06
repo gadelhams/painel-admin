@@ -22,7 +22,7 @@ const METODOS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 // exigem SSO e não são mais exceção.
 const EXCECOES = new Map([
   ['POST /api/orquestracao/simular', 'prévia sem lease, processo ou escrita no Plane'],
-  ['POST /api/conversa', 'roda pelo login da CLI (assinatura) com ferramentas só de leitura; aberto por decisão do dono (29/10/2026)'],
+  ['POST /api/conversa', 'roda pelo login da CLI (assinatura) com ferramentas de leitura e de proposta (ação, memória, decisão: registram, não gravam); sem autorizador próprio por decisão do dono (29/10/2026) — pela borda já passou pelo portão de login'],
   ['POST /api/diagnostico/voz', 'telemetria do microfone no log local; não muda estado nem gasta API'],
   // F4 item 9 (31/10/2026): sem SSO por decisão do contrato — quem reserva é o agente local, sem
   // cookie. Fecha por Host/endereço de loopback, sem cabeçalho de navegador, e pelo processo do

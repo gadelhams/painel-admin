@@ -2,7 +2,7 @@
 
 Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os caminhos em crase são relativos à raiz do projeto, não a `docs/`).
 
-Porta da conversa. O catálogo das treze ferramentas (onze de leitura, entre elas `encomendas`, `diario_zelador` e `carta_plane` desde 31/10, mais `propor_acao` e `propor_memoria`) mora em
+Porta da conversa. O catálogo das catorze ferramentas (onze de leitura, entre elas `encomendas`, `diario_zelador` e `carta_plane` desde 31/10, mais `propor_acao`, `propor_memoria` e, desde 06/11/2026, `propor_decisao`) mora em
 `motor/ferramentas.js`; o envelope de falha do coletor, em `motor/envelope-coletor.js`;
 a leitura de `.md`, em `motor/doc-projeto.js`; a voz, em `motor/persona.js`. `tools: []` continua
 aqui, e também o isolamento do processo do modelo (PAINEL-52, 28/10/2026): `env` por lista
@@ -40,6 +40,13 @@ ação com portão:
   três leituras fechadas (`status --short`, `diff --stat`, `log --oneline -n 15`);
   `execFile` sem shell, `GIT_OPTIONAL_LOCKS=0`, ambiente por lista branca, 10 s,
   6 000 caracteres, filtro de segredo. Diff de conteúdo fica de fora.
+- `propor_decisao` {carta, decisao, motivo?, destravar, produto?, estado?} (PAINEL-65,
+  `motor/decisao-proposta.js` sobre `decisao/propostas-decisao.js`, pela porta `decisao.js`):
+  confere a carta (`cartaDaMesa`), a prosa (`validarProsa`) e os efeitos (`validarPedido`) pela
+  régua da mesa, guarda a proposta em memória por 30 min (teto de 50) e devolve o id; não lê nem
+  grava o Plane. `motor.js` emite `proposta_decisao` só para o `tool_use_id` dessa ferramenta e
+  com o que o REGISTRO guarda, nunca com o texto do resultado (uma carta ou um doc com JSON de
+  proposta dentro não vira cartão). O resto é do cartão: [decisao.md](decisao.md) § Conversa.
 - `propor_acao` {projeto, comandoId}: `acoes/propostas.js` confere catálogo e
   contrato `.orquestrador.json` (`comandoPermitido`, a mesma lista fechada do
   executor de cartas; sem contrato, recusa nomeada), guarda a proposta em memória

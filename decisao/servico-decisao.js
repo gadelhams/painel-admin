@@ -39,8 +39,10 @@ export function criarServicoDecisao({ leitor, escritor = null, motivoSemEscrita 
       guardar: { identificador: r.alvo.identificador, sigla: r.alvo.sigla, numero: r.alvo.numero, projetoId: r.alvo.projeto.projetoId,
         pasta: r.alvo.projeto.pasta, cartaId: r.cartaId, decisao: prosa.decisao, motivo: prosa.motivo, pedido, delta, html,
         digital: digital(r), quando },
+      // `versao`: a digital da carta lida agora. O cartão do chat (PAINEL-65) a compara quando
+      // precisa preparar de novo: comentário ou descrição que mudou não aparece em `mudancas`.
       resposta: { carta: r.alvo.identificador, titulo: String(r.carta.name ?? ''), comentario: textoDeHtml(html),
-        mudancas: delta.linhas, avisos: delta.avisos, aviso: AVISO },
+        mudancas: delta.linhas, avisos: delta.avisos, aviso: AVISO, versao: digital(r) },
     };
   }
 

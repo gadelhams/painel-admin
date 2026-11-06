@@ -8,7 +8,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `chaves.js` — Porta da tela Chaves. Catálogo, troca, confirmação e HTTP moram em chaves/.
 - `coletores.js` — Porta única dos coletores. Rotas e ferramentas do C-3PO importam daqui.
 - `contas.js` — Porta da aba Contas. A tabela, o ssh e a fronteira HTTP moram em contas/.
-- `decisao.js` — Porta da mesa de decisão para quem só LÊ (o motor do C-3PO e o zelador): a leitura da carta, a forma de texto dela e a marca do DECISAO/v1. O escritor, a aplicação e as duas ações ficam fora daqui de propósito — só a montagem os liga.
+- `decisao.js` — Porta da mesa de decisão para quem só LÊ ou PROPÕE (o motor do C-3PO e o zelador): a leitura da carta, a forma de texto dela, a marca do DECISAO/v1 e o registro de propostas de decisão, que não toca o Plane. O escritor, a aplicação e as duas ações ficam fora daqui de propósito — só a montagem os liga.
 - `decisoes-c3po.js` — Visão de decisões para o C-3PO (24/10/2026, pedido do dono): a mesma classificação da aba Decisões e do bloco "Astargne", em texto para a conversa — o que depende do dono, o que está bloqueado e por quê, o que espera terceiros.
 - `encomendas.js` — Porta das encomendas de nave, só o lado de leitura. O registro e as duas ações moram em encomendas/ e só a montagem os liga.
 - `guarda.js` — Confere Host e origem de todo pedido, antes do portão de login e das rotas; não sabe de sessão.

@@ -8,6 +8,8 @@ import { propostas } from './acoes/propostas.js';
 import { FERRAMENTA_MEMORIA, propostasMemoriaDaMensagem } from './motor/memoria-proposta.js';
 import { blocoMemoria } from './motor/memoria-l1.js';
 import { propostasMemoria } from './memoria/propostas-memoria.js';
+import { FERRAMENTA_DECISAO, propostasDecisaoDaMensagem } from './motor/decisao-proposta.js';
+import { propostasDecisao } from './decisao.js';
 import { criarLeitorMemoria } from './memoria/arquivo-memoria.js';
 
 const MODELO = 'claude-sonnet-5';
@@ -49,6 +51,7 @@ export function opcoesDaConversa(sessaoAnterior, ambiente = process.env, memoria
       'mcp__c3po__carta_plane',
       FERRAMENTA_PROPOSTA,
       FERRAMENTA_MEMORIA,
+      FERRAMENTA_DECISAO,
     ],
     permissionMode: 'dontAsk',
     includePartialMessages: true,
@@ -69,6 +72,7 @@ export async function* conversar(mensagem, sessaoAnterior, { lerMemoria = leitor
   let concluida = false;
   const idsProposta = new Set();
   const idsMemoria = new Set();
+  const idsDecisao = new Set();
   try {
     for await (const m of consulta) {
       switch (m.type) {
@@ -87,6 +91,7 @@ export async function* conversar(mensagem, sessaoAnterior, { lerMemoria = leitor
             if (bloco.type === 'tool_use') {
               if (bloco.name === FERRAMENTA_PROPOSTA) idsProposta.add(bloco.id);
               if (bloco.name === FERRAMENTA_MEMORIA) idsMemoria.add(bloco.id);
+              if (bloco.name === FERRAMENTA_DECISAO) idsDecisao.add(bloco.id);
               yield { tipo: 'ferramenta', nome: bloco.name.replace(/^mcp__c3po__/, '') };
             }
           }
@@ -95,6 +100,7 @@ export async function* conversar(mensagem, sessaoAnterior, { lerMemoria = leitor
           // O cartão de ação do chat: leva id de proposta, nunca de confirmação.
           for (const p of propostasDaMensagem(m, idsProposta, propostas)) yield { tipo: 'proposta', ...p };
           for (const p of propostasMemoriaDaMensagem(m, idsMemoria, propostasMemoria)) yield { tipo: 'proposta_memoria', ...p };
+          for (const p of propostasDecisaoDaMensagem(m, idsDecisao, propostasDecisao)) yield { tipo: 'proposta_decisao', ...p };
           break;
         case 'result':
           if (m.subtype === 'success') {

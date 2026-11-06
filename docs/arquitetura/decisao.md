@@ -103,3 +103,23 @@ com o C-3PO e grava a decisão no Plane. Plano e escolhas em
   parou; na primeira abertura o C-3PO lê a carta e diz a pergunta e o que ela trava) e o
   registro. "Pedir rascunho" preenche decisão e motivo a partir de um JSON pedido ao C-3PO;
   qualquer outra chave da resposta é descartada e os efeitos voltam desmarcados.
+- **Conversa** (PAINEL-65, 06/11/2026; `decisao/propostas-decisao.js`,
+  `publico/c3po/decisao-proposta.js`): quando o dono decide no chat (C-3PO, popup do Hangar ou a
+  própria gaveta), o C-3PO chama `propor_decisao` e o chat desenha o cartão "Decisão proposta"
+  com decisão, motivo e os **efeitos propostos pelo C-3PO em destaque** — aqui, e só aqui, os
+  efeitos vêm do modelo (decisão do dono; na gaveta continuam desmarcados). O cartão chama
+  `POST /api/decisao/preparar` ao nascer (nada é gravado; mostra as mudanças, o comentário e os
+  avisos calculados pelo servidor) e "Gravar no Plane" chama `/confirmar`: **um toque**, a mesma
+  sessão do dono e o mesmo caminho de escrita, sem rota nova. O cartão mostra o título lido no
+  Plane (é ele que diz QUAL carta o identificador aponta). Preparo vencido (2 min) no toque:
+  prepara de novo e só grava direto se a `versao` da carta (a digital, que o preparar devolve
+  desde 06/11/2026: muda com comentário, descrição, título, labels e estado), as mudanças e os
+  avisos são os que estavam na tela; senão mostra o novo e espera outro toque. O 409 da mesa tem
+  dois sentidos e só o texto os separa: "recusado; nada foi gravado…" deixa preparar de novo; o
+  resto é resultado incerto e manda para a aba Decisões, sem repetir. Só três cartões preparam
+  sozinhos a cada 2 min (cada preparo é um ssh do autorizador e um desafio pendente); os outros
+  esperam o toque em Preparar. Na gaveta, o turno de abertura (que o painel manda sozinho) e o
+  de rascunho não fazem nascer cartão: só turno digitado pelo dono. O desfecho aparece no cartão; o C-3PO não o
+  conhece e nunca diz que gravou (se precisar, relê a carta). Sem sessão (loopback) o cartão
+  explica e não oferece Gravar. A proposta em si não deixa rastro: o diário e o Plane só
+  recebem o que o toque gravou.

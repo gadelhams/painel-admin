@@ -110,6 +110,8 @@ class ConversaC3po {
             this.palco.proposta(dados);
           } else if (evento === 'proposta_memoria') {
             this.palco.propostaMemoria(dados);
+          } else if (evento === 'proposta_decisao') {
+            this.palco.propostaDecisao(dados);
           } else if (evento === 'inicio' || evento === 'fim') {
             if (dados.sessao) {
               this.sessao = dados.sessao;

@@ -56,6 +56,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 
 - `acao-proposta.js` — Cartão "Ação proposta" do chat do C-3PO: Preparar mostra o comando exato, Confirmar roda com a sessão do dono e mostra o resultado. Não propõe nem decide.
 - `chat.js` — Liga o palco, o fluxo e os modos de voz. O console chama mandarMensagemC3po.
+- `decisao-proposta.js` — Cartão "Decisão proposta" do chat do C-3PO (PAINEL-65): mostra a decisão, o motivo e os efeitos que o C-3PO propôs, prepara sozinho para exibir o que muda no Plane e grava com UM toque do dono. Não propõe nem decide; sem a sessão do dono nada é gravado.
 - `escuta.js` — Microfone do C-3PO. Dois motores: Web Speech e gravação + transcrição xAI.
 - `fluxo-sse.js` — Fluxo da conversa: lê o SSE e manda o turno. A voz e o microfone ficam fora.
 - `locutor.js` — Alto-falante do C-3PO: ElevenLabs, e o Antônio quando ela cai.

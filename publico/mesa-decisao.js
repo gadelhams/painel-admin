@@ -2,7 +2,8 @@
 //
 // Um componente só para as duas portas de entrada. O que vem do Plane chega como texto
 // (o servidor tira o HTML) e entra por textContent. Os efeitos começam desmarcados sempre
-// (abrir, rascunho do C-3PO): marcá-los é ato do dono.
+// (abrir, rascunho do C-3PO): marcá-los é ato do dono. O cartão "Decisão proposta" do chat
+// (c3po/decisao-proposta.js) é outro caminho: lá o C-3PO propõe os efeitos e o cartão os destaca.
 
 (() => {
   const SEM_SESSAO = 'Sem a sessão do dono no Cadastro Único nada é gravado; entre em https://astargne.com e volte a esta aba.';
@@ -263,6 +264,11 @@
   }
 
   // Hangar (módulo ES) e quem mais quiser: um botão com data-mesa="SIGLA-N" abre a gaveta.
+  // Decisão gravada pelo cartão do chat (PAINEL-65) com a gaveta aberta nessa carta: relê.
+  document.addEventListener('decisao-gravada', (e) => {
+    if (G && !G.raiz.hidden && atual?.carta === e.detail?.carta) carregarCarta();
+  });
+
   document.addEventListener('click', (e) => {
     const b = e.target.closest?.('[data-mesa]');
     if (!b) return;

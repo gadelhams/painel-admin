@@ -24,7 +24,7 @@ const CONFIRMACAO = '0a1b2c3d-0000-4000-8000-00000000d3c1';
 const SEM_SESSAO = { erro: 'entre no Cadastro Único para confirmar esta ação' };
 const sse = (evento, dados) => `event: ${evento}\ndata: ${JSON.stringify(dados)}\n\n`;
 
-async function fixtures(page, { comSessao = true, pendentes = [] } = {}) {
+async function fixtures(page, { comSessao = true, pendentes = [], proporDecisao = false } = {}) {
   if (comSessao) await page.context().addCookies([{ name: 'sessao-simulada', value: 'dono', url: 'http://127.0.0.1:17777' }]);
   const chamadas = [];
   const errosPagina = [];
@@ -66,8 +66,11 @@ async function fixtures(page, { comSessao = true, pendentes = [] } = {}) {
           + sse('token', { texto: 'Aqui está:\n{"decisao": "Usar a fonte A", "motivo": "única com licença",' })
           + sse('token', { texto: ' "efeitos": {"destravar": true, "estado": "Done"}, "confirmacaoId": "x"}' }) + sse('fim', { sessao: 'sessao-mesa' }) });
       }
+      // `proporDecisao`: o modelo (simulado) propõe decisão em TODO turno, até no de abertura, que o dono não digitou.
+      const proposta = proporDecisao ? sse('proposta_decisao', { id: '0a1b2c3d-0000-4000-8000-0000000dec15', carta: 'ALFA-3', decisao: 'Usar a fonte A', motivo: '',
+        efeitos: { destravar: true, produto: 'manter', estado: null } }) : '';
       return route.fulfill({ status: 200, contentType: 'text/event-stream', body: sse('inicio', { sessao: 'sessao-mesa' })
-        + sse('ferramenta', { nome: 'carta_plane' }) + sse('token', { texto: 'A pergunta, Mestre: qual fonte usar. Ela trava o módulo Coleta.' })
+        + sse('ferramenta', { nome: 'carta_plane' }) + proposta + sse('token', { texto: 'A pergunta, Mestre: qual fonte usar. Ela trava o módulo Coleta.' })
         + sse('fim', { sessao: 'sessao-mesa' }) });
     }
     if (!sessao) return json(SEM_SESSAO, 401);
@@ -198,5 +201,32 @@ test('sem a sessão do dono, gravar explica e nada é gravado', async ({ page })
     'entre no Cadastro Único para confirmar esta ação. Sem a sessão do dono no Cadastro Único nada é gravado; entre em https://astargne.com e volte a esta aba.');
   await expect(page.getByRole('button', { name: 'Confirmar e gravar' })).toHaveCount(0);
   expect(audit.estado.gravou).toBe(0);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('PAINEL-65 na gaveta: proposta de decisão no turno oculto de abertura não vira cartão; no turno do dono vira, e gravar por ele relê a carta', async ({ page }) => {
+  const audit = await fixtures(page, { proporDecisao: true });
+  await page.goto('/#/decisoes');
+  await page.locator('.linha-decisoes-tab').getByRole('button', { name: 'Discutir com o C-3PO' }).click();
+  await expect(page.locator('#mesa-historico')).toContainText('A pergunta, Mestre');
+  // A abertura é mandada pelo painel, não pelo dono: o C-3PO leu a carta (texto de terceiros) e nada mais.
+  await expect(page.locator('#mesa-historico .decisao-cartao')).toHaveCount(0);
+  expect(audit.chamadas.filter((c) => c.caminho === '/api/decisao/preparar')).toHaveLength(0);
+  await page.locator('#mesa-pergunta').fill('decidi: fonte A');
+  await page.locator('#mesa-enviar').click();
+  const cartao = page.locator('#mesa-historico .decisao-cartao');
+  await expect(cartao).toHaveCount(1);
+  await expect(cartao.locator('.decisao-carta')).toHaveText('ALFA-3 · Qual fonte usar?');
+  await expect(cartao.locator('.decisao-mudancas li')).toHaveCount(2);
+  let releituras = 0;
+  page.on('request', (r) => { if (r.method() === 'GET' && r.url().includes('/api/decisao/carta')) releituras += 1; });
+  await cartao.getByRole('button', { name: 'Gravar no Plane' }).click();
+  await expect(cartao.locator('.acao-estado')).toContainText('Gravado no Plane · aplicado');
+  await expect.poll(() => releituras).toBeGreaterThan(0);
+  expect(audit.estado.gravou).toBe(1);
+  // Pelo cartão: a gaveta leu a carta ao abrir, o cartão preparou sozinho e confirmou com o toque,
+  // e a gaveta releu a carta depois de gravar. O formulário da gaveta não foi usado.
+  expect(audit.chamadas.filter((c) => c.caminho.startsWith('/api/decisao/')).map((c) => c.caminho))
+    .toEqual(['/api/decisao/carta', '/api/decisao/preparar', '/api/decisao/confirmar', '/api/decisao/carta']);
   expect(audit.errosPagina).toEqual([]);
 });

@@ -15,6 +15,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `correcoes-memoria.test.js` — Correções da varredura pré-aceite da memória L1 e da reflexão (validador de invariantes, 31/10/2026): diário só com a sessão do dono, queda entre o histórico e o rename, edição de fora avisada, travas, pendente, histórico com linha ruim, neutralização das marcas, filtro de segredo e a reflexão (20 h, marca antes, teto acumulado, insumo pelo fim).
 - `correcoes-mesa.test.js` — Correções da varredura pré-aceite da mesa de decisão (validador de invariantes, 31/10/2026): substituição com "$" na descrição, marcador por nó de texto, lista fechada relida na escrita e na retomada, CKBL fora, digital, janela das atividades, retomada recalculada, abandonar pendência, rótulo pela fase, chave por operação, redirect e o filtro de segredo com o ambiente real.
 - `css-partes.test.js` — CSS partido por aba (PAINEL-51): todo .css de publico/ é carregado, todo <link> existe, toda classe do HTML tem dono e tokens só em tokens.css. Não confere cascata nem visual.
+- `decisao-proposta.test.js` — Decisão proposta pelo C-3PO (PAINEL-65): propor_decisao só registra pela régua da mesa, o cartão do chat nasce só do resultado dela e do registro, e nada disso alcança o Plane. Nada de LLM: as mensagens do SDK são montadas à mão.
 - `decisao.test.js` — Mesa de decisão (PAINEL-53): protocolo DECISAO/v1, lista fechada de efeitos, escritor Painel Admin e a ordem de escrita do confirmar e da retomada.
 - `decisoes-c3po.test.js`
 - `despacho-controlado.test.js`
@@ -67,4 +68,3 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `zelador-correcao-job.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B1–B26): cada teste fecha um achado no job do zelador, pelas portas reais, com Plane, CLI, sessões e relógio falsos.
 - `zelador-correcao-pecas.test.js` — Correção da F3 (varredura pré-aceite de 31/10/2026, B6–B28): peças do zelador uma a uma — escritor, trava, sessões, diário, agendador, CLI e o play pela HTTP. Sem rede, sem CLI real.
 - `zelador-job.test.js` — Job do zelador por janela (F3): cada teste fecha um J do parecer de 31/10/2026 com Plane, CLI, sessões e relógio falsos e o git de um repositório temporário.
-- `zelador-simulacao.test.js` — Simulação ponta a ponta do zelador (F3): um job completo num projeto falso com 5 cartas, pelas portas reais (play, leases, diário, escritor, git), com Plane, CLI, sessões e consumo falsos.

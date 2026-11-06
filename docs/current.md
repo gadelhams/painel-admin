@@ -20,7 +20,8 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
   relação e a prosa o zelador julga (PAINEL-62, [preparo](plano-frota-preparo.md)).
   A nave diz quando o play está ligado mas nada roda e quando sai a próxima
   volta, a 1ª 2 min após o arranque (PAINEL-61).
-- **Mesa de decisão** grava como Painel Admin por SSO
+- **Mesa de decisão** grava como Painel Admin por SSO; decisão fechada no
+  chat vira cartão do C-3PO, gravado com um toque
   ([plano](plano-mesa-de-decisao.md)). **Memória L1** do C-3PO editável em
   `/c3po/#memoria`; reflexão 03:30 por timer.
 - Rollback provado; tag `painel-estavel-20261101` ([operacao](operacao.md)).

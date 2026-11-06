@@ -13,6 +13,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 ## e2e/tests/
 
 - `c3po-acoes.spec.mjs`
+- `c3po-decisao.spec.mjs`
 - `c3po-memoria.spec.mjs`
 - `hangar.spec.mjs`
 - `mesa-decisao.spec.mjs`

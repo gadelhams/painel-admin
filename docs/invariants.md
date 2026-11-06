@@ -7,7 +7,7 @@ muda código confere a lista.
 1. **De fora, só o dono logado** — escuta só em `127.0.0.1:7777` (loopback sem login); de fora, só a borda do tailnet, sem o racknerd e com a sessão do dono (`http/portao-borda.js`); Host/origem: `guarda.js`. (§1)
 2. **SSH só-leitura** em `/api/producao/ssh` e na `consulta_ssh` (lista fixa, sob demanda) — única exceção: o `ssh` de `contas.js` muda só o banco do CadastroUnico, por `/interno/*`, pela tabela fechada `OPERACOES` e com SSO do dono; infra continua SSH manual + `validador-deploy`. (§2)
 3. **O `TOKEN_INTERNO` do CadastroUnico nunca sai do servidor** — não entra no `.env` do painel, não é lido, logado nem devolvido em HTTP; o script remoto monta o cabeçalho lá. (§3)
-4. **O motor lê e só propõe** — `tools: []` + treze ferramentas MCP; `propor_*` registram; executar e gravar a L1 é do dono (SSO + duas ações) ou da reflexão, fora do motor; sem `.env`. (§4)
+4. **O motor lê e só propõe** — `tools: []` + 14 ferramentas MCP; `propor_*` (ação, memória, decisão) registram; executar e gravar é do dono (SSO + duas ações) ou da reflexão, fora do motor; sem `.env`. (§4)
 5. **Voz não fura o canon de deploy** — ação que mude estado no `astargne.com` exige `validador-deploy` + validação de premissas. (§5)
 6. **Segredo só no `.env`** (salvo chaves de escrita do Plane — orquestrador-\*, zelador, Painel Admin: arquivo 600 lido por operação, ator fixo) — Guest só lê; orquestrador: projeto único; zelador: play, lista fechada; mesa (sem Anya/CKBL): lista fechada, SSO + confirmação. Nunca no navegador, código, log, commit ou HTTP; Chaves troca por SSO + duas ações, grava 600, só nomes voltam. Resíduos: janela releitura→PATCH da mesa; filtro de segredo. (§6)
 

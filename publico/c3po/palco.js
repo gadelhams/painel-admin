@@ -42,6 +42,13 @@ class Palco {
     return cartao;
   }
 
+  propostaDecisao(dados) {
+    const cartao = globalThis.CartaoDecisao.criar(dados);
+    this.historico.appendChild(cartao);
+    this.historico.scrollTop = this.historico.scrollHeight;
+    return cartao;
+  }
+
   nota(classe, texto) {
     const div = document.createElement('div');
     div.className = classe;
