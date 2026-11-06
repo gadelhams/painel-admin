@@ -20,6 +20,10 @@ const TOLERADA_MS = 5 * 60_000;
 const MAX_GUARDADAS = 50;
 // Cada verificação é um ssh ao servidor: cookies distintos em rajada não podem virar
 // dezenas de conexões (o MaxStartups do sshd de lá recusaria também as do autorizador).
+// O teto vale para cookie DESCONHECIDO: quem já foi visto como dono verifica sempre, senão
+// qualquer aparelho do tailnet, mandando cookies lixo ao selo (que não passa pelo portão),
+// esgotaria as vagas e derrubaria o dono aos 5 min. Pelo mesmo motivo o despejo tira
+// primeiro quem não é dono. Fica o resíduo: sob essa rajada, o PRIMEIRO login do dono espera.
 const MAX_EM_VOO = 4;
 
 export class SessaoPainel {
@@ -67,7 +71,8 @@ export class SessaoPainel {
   #verificar(chave, token) {
     const andando = this.emVoo.get(chave);
     if (andando) return andando;
-    if (this.emVoo.size >= MAX_EM_VOO) return Promise.resolve({ estado: 'indisponivel' });
+    const jaDono = this.guardadas.get(chave)?.valor.estado === 'dono';
+    if (!jaDono && this.emVoo.size >= MAX_EM_VOO) return Promise.resolve({ estado: 'indisponivel' });
     const promessa = this.#consultar(chave, token).finally(() => this.emVoo.delete(chave));
     this.emVoo.set(chave, promessa);
     return promessa;
@@ -85,8 +90,14 @@ export class SessaoPainel {
       valor = { estado: 'expirada' };
     }
     this.guardadas.delete(chave);
-    if (this.guardadas.size >= MAX_GUARDADAS) this.guardadas.delete(this.guardadas.keys().next().value);
+    if (this.guardadas.size >= MAX_GUARDADAS) this.#despejar();
     this.guardadas.set(chave, { em: inicio, valor });
     return valor;
+  }
+
+  // A menos usada que NÃO é do dono; só entre donos (que é um só) vale a ordem pura.
+  #despejar() {
+    for (const [k, g] of this.guardadas) if (g.valor.estado !== 'dono') { this.guardadas.delete(k); return; }
+    this.guardadas.delete(this.guardadas.keys().next().value);
   }
 }

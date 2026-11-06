@@ -18,7 +18,11 @@ export class RoteadorPainel {
   }
 
   async atender(req, res) {
-    const url = new URL(req.url, `http://127.0.0.1:${this.porta}`);
+    // Alvo que o construtor de URL recusa (`http://[`, só por socket cru no loopback) é 400,
+    // não rejeição solta: o Node encerraria o processo.
+    let url;
+    try { url = new URL(req.url, `http://127.0.0.1:${this.porta}`); }
+    catch { this.resposta.json(res, { erro: 'endereço inválido' }, 400); return; }
     const recusa = this.recusa({
       metodo: req.method,
       host: req.headers.host,

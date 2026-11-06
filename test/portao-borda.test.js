@@ -131,6 +131,17 @@ test('o veredito não fica preso à conexão: no mesmo socket, o pedido sem cook
   assert.deepEqual(recebido.match(/HTTP\/1\.1 \d+/g), ['HTTP/1.1 200', 'HTTP/1.1 401']);
 }));
 
+test('alvo de pedido que não é URL responde 400 e o processo segue de pé', () => comPainel(async ({ porta, pedir }) => {
+  const soquete = net.connect(porta, '127.0.0.1');
+  let recebido = '';
+  soquete.on('data', d => { recebido += d; });
+  await new Promise(r => soquete.once('connect', r));
+  soquete.write(`GET http://[ HTTP/1.1\r\nHost: 127.0.0.1:${porta}\r\nConnection: close\r\n\r\n`);
+  await new Promise(r => soquete.once('close', r));
+  assert.match(recebido, /^HTTP\/1\.1 400 /);
+  assert.equal((await pedir('GET', '/api/sessao')).status, 200);
+}));
+
 // Pelo painel montado a borda sem cookie para no portão, e com cookie cai no ramo "cookie" da
 // reserva: o ramo do Host só se prova aqui, na unidade.
 test('reserva: Host da borda sem cookie é recusado pela própria rota (ramo do Host)', () => {

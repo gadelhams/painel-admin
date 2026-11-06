@@ -167,3 +167,37 @@ test('cookie de sessão duplicado tem estado próprio e não consulta o central;
   await s.lerParaEntrada(cookie(TOKEN));
   assert.deepEqual(Object.keys(await s.ler(cookie(TOKEN))).sort(), ['email', 'estado', 'nome']);
 });
+
+// Varredura de aceite (06/11/2026): o selo não passa pelo portão, então cookie lixo chega aqui
+// de qualquer aparelho do tailnet. Ele não pode tirar do dono a capacidade de se verificar.
+test('entrada: cookies lixo enchendo as vagas e o cache não derrubam o dono (nem a revalidação, nem a entrada dele)', async () => {
+  let t = 0; const presos = []; let doDono = 0;
+  const tk = i => cookie(String(i).padStart(43, 'x'));
+  const s = new SessaoPainel({ proprietarioId: '1', agora: () => t, identificar: async token => {
+    if (token === TOKEN) { doDono++; return dono(); }
+    await new Promise(r => presos.push(r)); // o ssh do cookie lixo fica pendurado
+    throw new ErroAcesso('sessão inválida ou expirada', 401);
+  } });
+  await s.lerParaEntrada(cookie(TOKEN));
+  const lixo = Array.from({ length: 4 }, (_, i) => s.ler(tk(i)));
+  await new Promise(r => setImmediate(r));
+  assert.deepEqual(await s.ler(tk(99)), { estado: 'indisponivel' }, 'as 4 vagas estão tomadas pelo lixo');
+  t = 60_000;
+  assert.equal((await s.lerParaEntrada(cookie(TOKEN))).estado, 'dono');
+  await new Promise(r => setImmediate(r));
+  assert.equal(doDono, 2, 'a revalidação do dono roda mesmo com as vagas tomadas');
+  t = 60_000 + 300_000;
+  assert.equal((await s.lerParaEntrada(cookie(TOKEN))).estado, 'dono', 'vencida a tolerância, o dono ainda verifica (bloqueante) por cima do teto');
+  assert.equal(doDono, 3);
+  presos.forEach(r => r());
+  await Promise.all(lixo);
+
+  // Dono parado enquanto 60 cookies lixo passam pelo cache de 50: a entrada dele fica.
+  const c = new SessaoPainel({ proprietarioId: '1', identificar: async token => { if (token === TOKEN) { doDono++; return dono(); } throw new ErroAcesso('x', 401); } });
+  await c.lerParaEntrada(cookie(TOKEN));
+  const antes = doDono;
+  for (let i = 0; i < 60; i++) await c.ler(tk(i));
+  assert.ok(c.guardadas.size <= 50);
+  await c.lerParaEntrada(cookie(TOKEN));
+  assert.equal(doDono, antes, 'a entrada do dono não foi despejada: nenhuma verificação nova');
+});

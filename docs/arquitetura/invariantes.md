@@ -26,7 +26,10 @@ inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
   O veredito vem de `orquestrador/sessao-painel.js`: guardado 60 s por hash do
   cookie; `dono` com até 5 min **contados do início da verificação** segue
   valendo enquanto uma revalidação única roda ao fundo (cada verificação é um
-  ssh de ~3,6 s; no máximo 4 ao mesmo tempo). É esse o teto de uma sessão
+  ssh de ~3,6 s; no máximo 4 ao mesmo tempo para cookie desconhecido — quem já
+  foi visto como dono verifica sempre e não é despejado por cookie lixo, senão
+  qualquer aparelho do tailnet derrubaria o dono pelo selo, que não passa pelo
+  portão; resíduo: sob essa rajada o PRIMEIRO login do dono espera). É esse o teto de uma sessão
   revogada continuar lendo; vale na admissão do pedido (um turno do C-3PO já
   aceito não é cortado). Ação privilegiada continua com o autorizador da
   rota, sem cache — e os testes passam pela borda com um cookie que o portão
