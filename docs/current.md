@@ -5,8 +5,9 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
 
 ## No ar
 
-- `painel-admin.service` em `127.0.0.1:7777` (`/` e `/c3po/`); do Windows,
-  `https://painel.vpn.astargne.com`. Backlog do **Plane** (Guest "painel").
+- `painel-admin.service` em `127.0.0.1:7777` (`/` e `/c3po/`); de todo
+  aparelho do tailnet menos o racknerd, `https://painel.vpn.astargne.com`.
+  Backlog do **Plane** (Guest "painel").
 - **Hangar** é a entrada: naves, droids das sessões vivas, C-3PO, Steam por
   nave ([hangar](arquitetura/hangar.md)). Abas: Projetos · Backlog · Decisões ·
   Orquestração · Contas · Chaves · Docs.

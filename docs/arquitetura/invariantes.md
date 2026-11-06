@@ -5,15 +5,19 @@ Parte da [arquitetura do painel](../arquitetura.md) (índice e adjudicação; os
 (É para cá que [`invariants.md`](../invariants.md) aponta; seção "O que continua
 inegociável" do `CLAUDE.md` antigo, reconciliada com o portão v2.)
 
-- **Sem login, então porta fechada** (reescrita em 06/10/2026, a pedido do
-  dono): escuta só em `127.0.0.1:7777`, nunca em `0.0.0.0`. A única entrada
-  de fora é `https://painel.vpn.astargne.com`, pelo Caddy de
-  `~/servicos/borda`, que só encaminha o IP de tailnet do Windows do dono
-  (`100.87.142.59`); qualquer outro nó, o racknerd inclusive, recebe 404.
+- **Sem login, então porta fechada** (reescrita em 06/11/2026, a pedido do
+  dono; de 06/10 até lá só o Windows dele passava): escuta só em
+  `127.0.0.1:7777`, nunca em `0.0.0.0`. A única entrada de fora é
+  `https://painel.vpn.astargne.com`, pelo Caddy de `~/servicos/borda`, que
+  encaminha todo aparelho do tailnet (`100.64.0.0/10`) **menos o
+  `astargne-racknerd`** (`100.70.33.2`), que recebe 404: é o único nó exposto
+  à internet, e quem alcança o painel lê tudo e gasta crédito do C-3PO sem
+  login. Aparelho novo no tailnet passa sem mexer em nada; por isso servidor
+  ou nó de terceiro que entrar no tailnet ganha um `not remote_ip` no mesmo ato.
   `guarda.js` recusa Host fora da lista (421, contra DNS rebinding) e método
   que muda estado vindo de outro site (403, `Sec-Fetch-Site`/`Origin`, contra
-  CSRF — que já valia para o loopback antes da borda). Abrir para mais
-  aparelhos é mudar o `remote_ip` do Caddyfile, nunca tirar a restrição.
+  CSRF — que já valia para o loopback antes da borda). Mudar quem passa é
+  mexer nos `remote_ip` do Caddyfile, nunca tirar a restrição.
 - **SSH só-leitura** (`/api/producao/ssh` e, desde 31/10/2026, a ferramenta
   `consulta_ssh` do C-3PO, a mesma classe e a mesma lista `CONSULTAS_SSH` de
   `coletores/ssh-leitura.js`, fonte única conferida em teste; saiu de `http/` em 31/10 para o motor alcançá-la pela porta `coletores.js`): apenas `uptime`,

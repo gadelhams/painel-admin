@@ -1,8 +1,9 @@
 // O painel não tem login para ler: quem alcança a porta lê tudo e gasta crédito
 // pelo C-3PO e pela voz; mudar estado (Contas, Chaves, frota, gates…) pede a sessão
 // SSO do dono desde 29/10/2026 para Contas, antes para o resto. Desde 06/10/2026 ele
-// é alcançável de dois jeitos — loopback e a borda do tailnet, que só deixa
-// passar o Windows do dono — e esta guarda fecha o que sobra dos dois:
+// é alcançável de dois jeitos — loopback e a borda do tailnet, que desde
+// 06/11/2026 deixa passar todo aparelho do tailnet menos o racknerd (o único
+// exposto à internet) — e esta guarda fecha o que sobra dos dois:
 //
 // - Host fora da lista: DNS rebinding (um site cujo nome passa a apontar
 //   para 127.0.0.1 lê e aciona o painel como se fosse "mesma origem").
