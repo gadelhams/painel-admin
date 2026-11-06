@@ -1,15 +1,16 @@
-// Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira do play.
+// Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo ou sem prazo) ou desliga. A mesma fronteira do play.
 import { ErroAcesso } from './sso.js';
 import { criarDesafios } from './desafio-duas-acoes.js';
 import { criarApiDuasAcoes } from './api-duas-acoes.js';
 
 import { UUID } from './uuid.js';
+import { SEM_PRAZO } from './liberacao-nativa.js';
 
 export function criarConfirmacoesNativo({ liberacao, agora }) {
   return criarDesafios({
     agora,
     async validar({ projeto, horas }) {
-      if (!UUID.test(projeto ?? '') || !Number.isInteger(horas)) throw new ErroAcesso('projeto ou prazo inválidos', 422);
+      if (!UUID.test(projeto ?? '') || (horas !== SEM_PRAZO && !Number.isInteger(horas))) throw new ErroAcesso('projeto ou prazo inválidos', 422);
       let validacao;
       try { validacao = await liberacao.validar(projeto, horas); }
       catch (erro) { throw new ErroAcesso(erro.message, 422); }

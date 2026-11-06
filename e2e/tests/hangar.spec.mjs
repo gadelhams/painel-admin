@@ -38,11 +38,12 @@ const sessoes = (extra = []) => ({
     acoes: [{ em: agora(), tipo: 'editar', ferramenta: 'Edit', arquivo: 'src/coleta.js' }, { em: agora(), tipo: 'consultar', ferramenta: 'Skill', setor: 'skills', item: 'fecho-de-entrega' }] }, ...extra],
 });
 
-async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [], semSso = false, zelador = { atual: null, porProjeto: {}, diario: [] }, playInicial = {} } = {}) {
+async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra = [], semSso = false, zelador = { atual: null, porProjeto: {}, diario: [] }, playInicial = {}, nativoIlegivel = false } = {}) {
   const chamadas = [];
   const encomendas = [];
   const errosPagina = [];
   const nativo = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', jogo: 'Jogo X pela Steam', liberada: false, ate: null, desde: null };
+  let nativoLegivel = !nativoIlegivel;
   const play = { projeto: 'P', pasta: 'alfa', titulo: 'alfa', sigla: 'ALFA', situacao: 'desligado', desde: null, suspenso: null, emCurso: null, despacho: null, ...playInicial };
   page.on('pageerror', (e) => errosPagina.push(e.message));
   await page.route('**/*', async (route) => {
@@ -64,16 +65,19 @@ async function fixtures(page, { sessao = { estado: 'sem-sessao' }, droidsExtra =
     if (url.pathname === '/api/orquestracao/frota') return json(frota);
     if (url.pathname === '/api/tts') return json({ disponivel: false });
     // Liberação nativa simulada: o preparar devolve o desafio, o confirmar grava e o GET passa a mostrar.
-    if (url.pathname === '/api/orquestracao/nativo') return json({ legivel: true, horas: [2, 4, 8, 12], projetos: [nativo] });
+    if (url.pathname === '/api/orquestracao/nativo') return json({ legivel: nativoLegivel, horas: [2, 4, 8, 12], projetos: [nativo], observacao: nativoLegivel ? 'ok' : 'Arquivo de liberação ilegível.' });
     if (url.pathname === '/api/orquestracao/nativo/preparar') {
       const corpo = chamadas.at(-1).corpo = req.postDataJSON();
-      const ate = corpo.horas ? new Date(Date.now() + corpo.horas * 3_600_000).toISOString() : null;
-      return json({ confirmacaoId: 'c1', expiraEm: new Date(Date.now() + 120_000).toISOString(), ligar: corpo.horas > 0, ate, jaEstava: false, aviso: 'Só ligue com a Steam livre.' });
+      const semPrazo = corpo.horas === 'sem-prazo';
+      const ate = corpo.horas && !semPrazo ? new Date(Date.now() + corpo.horas * 3_600_000).toISOString() : null;
+      return json({ confirmacaoId: 'c1', expiraEm: new Date(Date.now() + 120_000).toISOString(), ligar: corpo.horas !== 0, semPrazo, ate, jaEstava: false, aviso: semPrazo ? 'Sem prazo: não desliga sozinho.' : 'Só ligue com a Steam livre.' });
     }
     if (url.pathname === '/api/orquestracao/nativo/confirmar') {
       chamadas.at(-1).corpo = req.postDataJSON();
       const ultimo = chamadas.filter((c) => c.caminho === '/api/orquestracao/nativo/preparar').at(-1).corpo;
-      Object.assign(nativo, ultimo.horas ? { liberada: true, ate: new Date(Date.now() + ultimo.horas * 3_600_000).toISOString() } : { liberada: false, ate: null });
+      nativoLegivel = true;
+      Object.assign(nativo, ultimo.horas === 'sem-prazo' ? { liberada: true, semPrazo: true, ate: null, desde: new Date().toISOString() }
+        : ultimo.horas ? { liberada: true, semPrazo: false, ate: new Date(Date.now() + ultimo.horas * 3_600_000).toISOString() } : { liberada: false, semPrazo: false, ate: null });
       return json({ nome: 'alfa', ...nativo });
     }
     // Encomendas simuladas: o preparar devolve o resumo (com o texto como veio), o confirmar acrescenta a pendente.
@@ -293,6 +297,62 @@ test('nave com jogo nativo: o interruptor Steam livre prepara e confirma em duas
   ]);
   await page.locator('#hg-projetos [data-proj="beta"]').click();
   await expect(page.locator('#hg-nativo')).toBeHidden();
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('Steam livre sem prazo (PAINEL-67): "até eu cancelar" manda sem-prazo, a nave diz que não desliga sozinho e reabrir o popup mantém', async ({ page }) => {
+  const audit = await fixtures(page);
+  await page.goto('/');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-nativo-horas option')).toHaveText(['por 2 h', 'por 4 h', 'por 8 h', 'por 12 h', 'até eu cancelar']);
+  await page.selectOption('#hg-nativo-horas', { label: 'até eu cancelar' });
+  await page.locator('#hg-nativo-caixa').check();
+  await expect(page.locator('#hg-nativo-confirmar')).toHaveText('Confirmar: liberar até eu cancelar');
+  await expect(page.locator('#hg-nativo-aviso')).toHaveText('Sem prazo: não desliga sozinho.');
+  expect(audit.chamadas.at(-1).corpo).toEqual({ projeto: 'P', horas: 'sem-prazo' });
+  await page.locator('#hg-nativo-confirmar').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Liberado até você cancelar, desde \d\d\/\d\d,? \d\d:\d\d\. Não desliga sozinho/);
+  await expect(page.locator('#hg-nativo-caixa')).toBeChecked();
+  // "Até eu cancelar" não fica escolhido de sobra: gravou, a lista volta ao prazo padrão.
+  await expect(page.locator('#hg-nativo-horas')).toHaveValue('4');
+  // Outra nave e de volta: o estado vem do GET, não do que o confirmar deixou na tela.
+  await page.locator('#hg-projetos [data-proj="beta"]').click();
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Liberado até você cancelar/);
+  await expect(page.locator('#hg-nativo-caixa')).toBeChecked();
+  await page.locator('#hg-nativo-caixa').uncheck();
+  await expect(page.locator('#hg-nativo-confirmar')).toHaveText('Confirmar: desligar agora');
+  await page.locator('#hg-nativo-confirmar').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Desligado/);
+  // Escolhido e largado sem marcar: reabrir a nave também volta ao prazo padrão.
+  await page.selectOption('#hg-nativo-horas', 'sem-prazo');
+  await page.locator('#hg-projetos [data-proj="beta"]').click();
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Desligado/);
+  await expect(page.locator('#hg-nativo-horas')).toHaveValue('4');
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET').map((c) => c.corpo)).toEqual([
+    { projeto: 'P', horas: 'sem-prazo' }, { confirmacaoId: 'c1' }, { projeto: 'P', horas: 0 }, { confirmacaoId: 'c1' }]);
+  expect(audit.errosPagina).toEqual([]);
+});
+
+test('Steam livre com arquivo ilegível: a caixa fica indeterminada e o clique só prepara a regravação desligada', async ({ page }) => {
+  const audit = await fixtures(page, { nativoIlegivel: true });
+  await page.goto('/');
+  await page.locator('#hg-projetos [data-proj="alfa"]').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText('Arquivo de liberação ilegível. Clique na caixa para regravar tudo desligado.');
+  expect(await page.locator('#hg-nativo-caixa').evaluate((c) => c.indeterminate)).toBe(true);
+  await expect(page.locator('#hg-nativo-horas')).toBeDisabled();
+  await page.locator('#hg-nativo-caixa').click();
+  await expect(page.locator('#hg-nativo-confirmar')).toHaveText('Confirmar: desligar agora');
+  // Cancelar volta ao aviso, não a "Desligado": o arquivo continua ilegível.
+  await page.locator('#hg-nativo-cancelar').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Arquivo de liberação ilegível/);
+  await page.locator('#hg-nativo-caixa').click();
+  await page.locator('#hg-nativo-confirmar').click();
+  await expect(page.locator('#hg-nativo-estado')).toHaveText(/^Desligado/);
+  await expect(page.locator('#hg-nativo-horas')).toBeEnabled();
+  expect(audit.chamadas.filter((c) => c.metodo !== 'GET').map((c) => c.corpo)).toEqual([
+    { projeto: 'P', horas: 0 }, { projeto: 'P', horas: 0 }, { confirmacaoId: 'c1' }]);
   expect(audit.errosPagina).toEqual([]);
 });
 

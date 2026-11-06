@@ -1,4 +1,4 @@
-# painel-admin — estado real (02/11/2026)
+# painel-admin — estado real (06/11/2026)
 
 Só o que vale hoje, medido no Omarchy. Histórico em `historico/`;
 mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
@@ -9,7 +9,7 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
   (menos o racknerd), `https://painel.vpn.astargne.com` com o login do dono.
   Backlog do **Plane** (Guest "painel").
 - **Hangar** é a entrada: naves, droids das sessões vivas, C-3PO, Steam por
-  nave ([hangar](arquitetura/hangar.md)). Abas: Projetos · Backlog · Decisões ·
+  nave, com prazo ou até o dono cancelar ([hangar](arquitetura/hangar.md)). Abas: Projetos · Backlog · Decisões ·
   Orquestração · Contas · Chaves · Docs.
 - **Frota** F2–F4 feitas: play por nave, zelador, reserva
   (`scripts/reservar.mjs`), READY TO DEV pelo zelador, despacho do Hangar
@@ -37,6 +37,6 @@ mecanismos em [`arquitetura.md`](arquitetura.md) (um arquivo por mecanismo).
 
 ## Portão
 
-`npm test` 508 e Playwright 39 (02/11), check-docs com acervo (teto 30 mil
+`npm test` 537 e Playwright 50 (06/11), check-docs com acervo (teto 30 mil
 por doc). Sem linter: o portão monta o painel real com falsos e confere
 mapa, imports e tamanho. `main` no GitHub.

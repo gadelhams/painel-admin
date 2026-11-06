@@ -11,7 +11,7 @@ Parte do [mapa de módulos](../mapa.md); gerado, não edite.
 - `api-frota.js` — Duas ações da frota: preparar valida contra o catálogo e guarda a versão-base; confirmar grava se a frota não mudou. A sessão que preparou é a que confirma.
 - `api-gate.js` — Duas ações do gate: preparar guarda a proposta; confirmar marca a etiqueta. A sessão que preparou é a que confirma; a marca não inicia execução.
 - `api-handoff.js` — Duas ações do handoff: preparar guarda a entrada; confirmar grava o comentário. A sessão que preparou é a que confirma; texto não autoriza execução.
-- `api-nativo.js` — Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo) ou desliga. A mesma fronteira do play.
+- `api-nativo.js` — Duas ações da liberação do jogo nativo: preparar valida projeto e prazo; confirmar liga (com prazo ou sem prazo) ou desliga. A mesma fronteira do play.
 - `api-play.js` — Duas ações do play por nave: preparar valida projeto e direção; confirmar liga ou desliga, sob a trava. A mesma fronteira do "Steam livre".
 - `argumentos-cli.js` — Argumentos fixos de cada CLI. O lançamento mora em papel-cli.js.
 - `arquivo-lease.js` — Um arquivo de lease por carta. Não escreve o diário.

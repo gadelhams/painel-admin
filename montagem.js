@@ -257,7 +257,7 @@ export function montarPainel({ ambiente = process.env, porta = 7777, diretorioEs
       apiDespacho: confirmar(criarApiDespacho, criarConfirmacoesDespacho, { servico: orquestracao }),
       // Play por nave: SSO + duas ações nas duas direções; o confirmar grava sob a trava global.
       apiPlay: confirmar(criarApiPlay, criarConfirmacoesPlay, { play, atividade }),
-      // Jogo nativo: o dono libera por nave, com prazo, quando a Steam está livre; SSO + duas ações nas duas direções.
+      // Jogo nativo: o dono libera por nave, com prazo ou até cancelar, quando a Steam está livre; SSO + duas ações nas duas direções.
       apiNativo: confirmar(criarApiNativo, criarConfirmacoesNativo, { liberacao: liberacaoNativa }),
       apiVoz,
       xai: () => Boolean(ambiente.XAI_API_KEY),

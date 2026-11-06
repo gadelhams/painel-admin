@@ -104,6 +104,23 @@ ações: a liberação do jogo nativo, o play e o registro da encomenda de nave 
   estado da orquestração, gravado por tmp + rename e serializado no
   processo). `GET /api/orquestracao/nativo` é aberto e não diz quem ligou;
   arquivo ilegível, forma estranha ou prazo vencido contam como desligado.
+  O prazo "até eu cancelar" (PAINEL-67, 06/11/2026; `horas: "sem-prazo"` no
+  preparar) é a exceção pedida pelo dono para quando viaja e deixa a máquina
+  ligada: grava `semPrazo: true` com `ate: null`, a leitura devolve
+  `liberada: true, semPrazo: true, ate: null`, não vence e atravessa o
+  reinício do painel e do PC; só o desligar (duas ações) apaga. Registro sem
+  `ate` e sem a marca por extenso é forma estranha, não liberação eterna;
+  registro de projeto fora do catálogo também. Como um registro guardado sem
+  valer voltaria a liberar para sempre, o desligar de arquivo ilegível não é
+  "já estava": regrava o arquivo do zero (na tela, a caixa fica indeterminada
+  e o clique só prepara essa regravação). A lista de prazos volta a 4 h a
+  cada abertura e a cada gravação. Resíduos: o aviso de que está sem prazo só
+  aparece no popup da nave, que lê o estado ao abrir (outra aba aberta antes
+  mostra o que leu); nada na cena do Hangar lembra o dono de desligar quando
+  voltar a jogar; e duas mudanças de código guardam o sem prazo sem apagar,
+  para ele voltar a valer depois: reverter o painel para antes da PAINEL-67
+  (lê tudo desligado) e tirar o `jogoNativo` do projeto no catálogo (o bloco
+  some e nada regrava). Nos dois casos, desligue antes de mudar o código.
   Quem consome hoje é o pré-flight nativo do CKBL
   (`docs/native-test-strategy-20261017.md` de lá); o executor da frota ainda
   não abre jogo (PAINEL-34).
